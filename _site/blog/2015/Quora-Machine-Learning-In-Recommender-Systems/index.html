@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Suvash Sedhain | How exactly is machine learning used in recommendation engines?</title>
+  <meta name="description" content="A simple, whitespace theme for academics. Based on [*folio](https://github.com/bogoli/-folio) design.
+">
+
+  <link rel="shortcut icon" href="http://localhost:4000/assets/img/favicon.ico">
+
+  <link rel="stylesheet" href="http://localhost:4000/assets/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/blog/2015/Quora-Machine-Learning-In-Recommender-Systems/">
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    
+    <span class="site-title">
+        
+        <a href="/"><strong>Suvash</strong>  Sedhain</a>
+    </span>
+    
+
+    <nav class="site-nav">
+
+      <div class="trigger">
+        <!-- About -->
+        <a class="page-link" href="http://localhost:4000/">about</a>
+
+        <!-- Blog -->
+        <a class="page-link" href="http://localhost:4000/blog/">blog</a>
+
+        <!-- Pages -->
+        
+          
+        
+          
+        
+          
+        
+          
+            <a class="page-link" href="http://localhost:4000/projects/">Projects</a>
+          
+        
+          
+            <a class="page-link" href="http://localhost:4000/publications/">Publications</a>
+          
+        
+
+        <!-- CV link -->
+        <!-- <a class="page-link" href="http://localhost:4000/assets/pdf/CV.pdf">vitae</a> -->
+
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">How exactly is machine learning used in recommendation engines?</h1>
+    <p class="post-meta">March 15, 2015</p>
+  </header>
+
+  <article class="post-content">
+    <p>Before diving into the detail, I would like to say that Collaborative Filtering algorithms are inherently based on similarity metrics, whether it’s in user/item space (as in neighbourhood models) or latent space (as in factor models).
+To answer the main question “where do ML techniques are used in recommendation engines”, I would like to answer for various recommender system models with some examples</p>
+
+<h4 id="content-based-recommendation-cbr">Content Based Recommendation (CBR):</h4>
+
+<p>CBR provides personalized recommendation by matching user’s interests with description and attributes of items. For CBR, we can use standard ML techniques like Logistic Regression, SVM, Decision tree etc. based on user and item features for making predictions for eg: extent of like or dislike. Then, we can easily convert the result to ranked recommendation</p>
+
+<h4 id="collaborative-filtering-cf">Collaborative filtering (CF)</h4>
+
+<p>Neighborhood models** are heuristics based models which uses similarity metrics, for eg : pearson similarity, cosine similarity,  for finding similar users and items. It is based on, very reasonable, heuristic that a person will like the items that are similar to previously liked items. Rating prediction in item based neighborhood models is given by weighted average of ratings on similar items as shown below</p>
+
+<script type="math/tex; mode=display">\hat{r}_{u,i} = b_{u,i} + \frac{\sum_{j \in N(i,k,u)}{s_{i,j} (r_{u,j} -   b_{u,j})}}{\sum_{j \in N(i,k,u)} s_{i,j} }</script>
+
+<p>where, <script type="math/tex">N(i, k, u)</script> is a set of k items that are similar to i and rated by the user <script type="math/tex">u</script>; <script type="math/tex">s_{i,j}</script> is a similarity function (cosine or pearson correlation).
+As there is no learning involved in above equation, any ML guy will say that this sucks (although it works pretty well in practice). So, in a quest of 1 million bucks (Netflix challenge), some smart people (Yehuda Koren et al.) thought about it and reformulated it as</p>
+
+<script type="math/tex; mode=display">\hat{r}_{u,i} = b_{u,i} + \sum_{j \in N(i,k,u)}{\theta_{i,j}^{u} (r_{u,j} -   b_{u,j})}</script>
+
+<p>Now any ML guy will say “<em>Ohhh wait, it looks like linear regression  with *<script type="math/tex">\theta_{i,j}^{u}</script>  as *parameters</em>”. Now the ML guy is happy :).</p>
+
+<p>So, Instead of using ad-hoc heuristic based <script type="math/tex">s_{i,j}</script> to weight the ratings, now  the weights, <script type="math/tex">\theta_{i,j}^{u}</script>, are learned. Note that, it  was crucial in winning Netflix prize. This is just an instance, out of many, of ML in recommendation.</p>
+
+<p><strong>Matrix Factorization</strong> learns user and item latent factors (<script type="math/tex">U</script> an <script type="math/tex">V</script>) by minimizing reconstruction error on observed ratings. Formally, in an optimization framework it is given as</p>
+
+<script type="math/tex; mode=display">\begin{aligned} {\text{min}}\sum_{u,i} (r_{ui} - U_{u}^{T} V_{i})^{2} + \lambda (\left \| U \right \|_{2} ^{2} + \left \| V \right \|_{2}^{2})  \end{aligned}</script>
+
+<p>First of all, when there is an optimization technique involved, it’s definitely a ML thing.
+Let’s make this more clear by converting it to our own favorite Linear regression problem. <strong><em>So if you fix any one of the latent factor, say <script type="math/tex">U</script>, then it becomes linear regression on <script type="math/tex">V</script>.</em></strong> This way of optimization is well known in literature as ALS(alternating Least Squares). Again, ML guy who knows linear regression is very happy :).</p>
+
+<p>Bayesian ML people, who  not only want point estimates but also uncertainty of the estimates, will reformulate the same problem into probabilistic setting and learn in their own bayesian way.  For detail refer to the <a href="http://www.gatsby.ucl.ac.uk/~amnih/papers/bpmf.pdf" target="_blank"> paper.</a></p>
+
+<p>Similarly, neural network guys have used Restricted Boltzmann machine for rating prediction (this was also crucial in winning Netflix challenge). For detail refer to the <a href="http://www.cs.toronto.edu/~rsalakhu/papers/rbmcf.pdf" target="_blank"> paper </a>.</p>
+
+<h4 id="machine-learning-and-cold-start">Machine learning and Cold Start</h4>
+
+<p>Cold start is a situation when a recommender system doesn’t have any historical information about user or item and is unable to make personalized recommendations. Cold start is the worst nightmare of any recommender system researcher. So one way to deal with cold start is eliciting new user’s preferences via initial interview. However, interview based elicitation is not useful as user often get bored when they are asked a series of questions. Now, ML guy can use his decision tree knowledge to learn a model that smartly chooses a minimum set of the question while learning user’s preference.</p>
+
+<p>Furthermore, there is a vast literature on Learning to rank for recommendation. Although, Learning to rank shares  DNA with Information retrieval, its more ML technique.</p>
+
+<p>In a nutshell, Machine learning is very common in recommendation algorithms. Hence, the use of ML in recommendation solely depend upon your objective and reformulating the problem into your favorite ML algorithm (smart people, sometimes, come up with revolutionary new learning algorithms!!! ).</p>
+
+
+  </article>
+
+  
+
+</div>
+
+      </div>
+    </div>
+
+    <footer>
+
+  <div class="wrapper">
+    &copy; Copyright 2017 Suvash Sedhain.
+    Powered by <a href="http://jekyllrb.com/" target="_blank">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank">GitHub Pages</a>.
+
+    
+  </div>
+
+</footer>
+
+
+    <!-- Load jQuery -->
+<script src="//code.jquery.com/jquery-1.12.4.min.js"></script>
+
+<!-- Load Common JS -->
+<script src="http://localhost:4000/assets/js/common.js"></script>
+
+
+<!-- Load KaTeX -->
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.js"></script>
+<script src="http://localhost:4000/assets/js/katex.js"></script>
+
+
+
+
+<!-- Include custom icon fonts -->
+<link rel="stylesheet" href="http://localhost:4000/assets/css/font-awesome.min.css">
+<link rel="stylesheet" href="http://localhost:4000/assets/css/academicons.min.css">
+
+<!-- Google Analytics -->
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-XXXXXXXX-X', 'auto');
+ga('send', 'pageview');
+</script>
+
+
+  </body>
+
+</html>
