@@ -1,5 +1,11 @@
+---
+layout: post
+title: Implementing Matrix Factorisation using Tensorflow.
+date: 2015-03-15
+description: My quora response
+---
 
-In this post, we go through a step by step process to implement matrix factorisation model using tensorflow library.
+Neural networks are powerful machine learning architecture that allows us to express various machine learning models. In this post, we go through step by step process to implement matrix factorisation model using tensorflow library.
 
 <h3>Install Dependencies</h3>
 
@@ -40,11 +46,11 @@ class Data(object):
             self.items[item] = self.nitems
             self.nitems += 1
 
-    def import_data(self, filename, parser, shape=None, 
+    def import_data(self, filename, parser, shape=None,
                     contains_header=False, debug=False):
         r = envoy.run('wc -l {}'.format(filename))
         num_lines = int(r.std_out.strip().partition(' ')[0])
-        bar = progressbar.ProgressBar(maxval=num_lines, 
+        bar = progressbar.ProgressBar(maxval=num_lines,
                                       widgets=["Loading data: ",
                                      progressbar.Bar(
                                          '=', '[', ']'),
@@ -137,7 +143,7 @@ class Data(object):
 def loadDataset(filename, usermap, itemmap, parser, shape=None):
     r = envoy.run('wc -l {}'.format(filename))
     num_lines = int(r.std_out.strip().partition(' ')[0])
-    bar = progressbar.ProgressBar(maxval=num_lines, 
+    bar = progressbar.ProgressBar(maxval=num_lines,
                                   widgets=["Loading data: ",
                                   progressbar.Bar(
                                      '=', '[', ']'),
@@ -197,28 +203,28 @@ class TensorflowMF:
         self.num_items = num_items
         self.reg = reg
         self.initialize_values()
-        
+
     def initialize_values(self):
         self.b =  tf.Variable(0.0, name="global_bias")
-        self.b_u =  tf.Variable(tf.truncated_normal([self.num_users, 1], 
-                                                    stddev=0.01, mean=0), 
+        self.b_u =  tf.Variable(tf.truncated_normal([self.num_users, 1],
+                                                    stddev=0.01, mean=0),
                                                     name="user_bias")
-        self.b_i =  tf.Variable(tf.truncated_normal([self.num_items, 1], 
-                                                    stddev=0.01, mean=0), 
+        self.b_i =  tf.Variable(tf.truncated_normal([self.num_items, 1],
+                                                    stddev=0.01, mean=0),
                                                     name="item_bias")
-        self.U = tf.Variable(tf.truncated_normal([self.num_users, rank], 
-                                                  stddev=0.01, mean=0), 
+        self.U = tf.Variable(tf.truncated_normal([self.num_users, rank],
+                                                  stddev=0.01, mean=0),
                                                   name="users")
-        self.V = tf.Variable(tf.truncated_normal([self.num_items, rank], 
-                                                 stddev=0.01, mean=0), 
+        self.V = tf.Variable(tf.truncated_normal([self.num_items, rank],
+                                                 stddev=0.01, mean=0),
                                                  name="items")
-          
-             
+
+
     def predict(self, users, items):
         U_ = tf.squeeze(tf.nn.embedding_lookup(self.U, users))
         V_ = tf.squeeze(tf.nn.embedding_lookup(self.V, items))
-        prediction = tf.nn.sigmoid((tf.reduce_sum(tf.mul(U_, V_), 
-                                                  reduction_indices=[1]))) 
+        prediction = tf.nn.sigmoid((tf.reduce_sum(tf.mul(U_, V_),
+                                                  reduction_indices=[1])))
         ubias = tf.squeeze(tf.nn.embedding_lookup(self.b_u, users))
         ibias = tf.squeeze(tf.nn.embedding_lookup(self.b_i, items))
         prediction =   self.b + ubias + ibias + tf.squeeze(prediction)
@@ -231,16 +237,16 @@ class TensorflowMF:
         reg_loss += tf.reduce_sum(tf.square(self.b_u))
         reg_loss += tf.reduce_sum(tf.square(self.b_i))
         return reg_loss * self.reg
-    
+
     def loss(self, users_items_ratings):
         users, items, ratings = users_items_ratings
         prediction = self.predict(users, items)
-        err_loss = tf.nn.l2_loss(prediction - ratings) 
+        err_loss = tf.nn.l2_loss(prediction - ratings)
         reg_loss = self.regLoss()
         self.total_loss = err_loss + reg_loss
         tf.scalar_summary("loss", self.total_loss)
         return self.total_loss
-    
+
     def fit(self, users_items_ratings, test_users_items_ratings=None, n_iter=10):
         cost = self.loss(users_items_ratings)
         optimiser = tf.train.AdamOptimizer(0.01).minimize(cost)
@@ -251,11 +257,11 @@ class TensorflowMF:
                 sess.run(optimiser)
                 if i%20 == 0:
                     print self.evalTestError(test_users_items_ratings).eval()
-                    
+
     def evalTestError(self, test_user_items_ratings):
         testusers, testitems, testratings = test_user_items_ratings
         testprediction = self.predict(testusers, testitems)
-        return tf.sqrt(tf.nn.l2_loss(testprediction - 
+        return tf.sqrt(tf.nn.l2_loss(testprediction -
                                      testratings) * 2.0 / len(testusers))
 ```
 
@@ -287,9 +293,9 @@ parser = UserItemRatingParser("\t")
 d = Data()
 d.import_data(train_path, parser)
 train = d.R
-test, cold_start_user_item_ratings = loadDataset(test_path, 
-                                                 d.users, 
-                                                 d.items, 
+test, cold_start_user_item_ratings = loadDataset(test_path,
+                                                 d.users,
+                                                 d.items,
                                                  parser)
 ```
 
