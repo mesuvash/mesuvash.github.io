@@ -6,4 +6,5 @@ group :jekyll_plugins do
     gem 'jekyll-scholar'
     gem 'jemoji'
     gem 'jekyll-admin'
+    gem 'jekyll-archives'
 end
