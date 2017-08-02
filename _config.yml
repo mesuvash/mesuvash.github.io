@@ -79,6 +79,7 @@ gems:
     - jekyll-paginate
     - jekyll/scholar
     - jemoji
+    - jekyll-archives
 
 # Jekyll-Scholar
 scholar:
