@@ -101,6 +101,8 @@ GEM
       jekyll (~> 3.3)
       sinatra (~> 1.4)
       sinatra-contrib (~> 1.4)
+    jekyll-archives (2.1.1)
+      jekyll (>= 2.4)
     jekyll-avatar (0.4.2)
       jekyll (~> 3.0)
     jekyll-coffeescript (1.0.1)
@@ -244,9 +246,10 @@ DEPENDENCIES
   github-pages
   jekyll
   jekyll-admin
+  jekyll-archives
   jekyll-paginate
   jekyll-scholar
   jemoji
 
 BUNDLED WITH
-   1.15.3
+   2.0.1
