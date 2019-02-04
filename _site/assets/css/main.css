@@ -85,7 +85,7 @@ h6, .h6 { font-size: 0.75rem; }
 
 .button-blue:disabled, .button-blue.is-disabled { opacity: .5; }
 
-.highlight { -webkit-text-size-adjust: none; }
+.highlight { -webkit-text-size-adjust: none; background: #eef; }
 
 .highlight .c, .highlight .cs, .highlight .cm, .highlight .cp, .highlight .c1 { color: #666; font-style: italic; }
 
@@ -529,3 +529,5 @@ sup { position: relative; vertical-align: middle; top: -0.9ex; }
 h1, h2, h3, h4, h5, h6 { font-weight: 100; }
 
 div.equation { margin: 0.5rem 0; }
+
+.center-image { margin: 0 auto; display: block; }
