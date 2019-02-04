@@ -4,7 +4,6 @@ title: Large scale similarity via hashing
 date: 2019-01-30
 description: Machine Learning
 ---
-# Locality Sensitive Hashing for Large Scale Similarity
 
 Similarity computation is a very common task in real-world machine learning and data mining problems such as recommender systems,spam detection, online advertising etc. Consider a tweet recommendation problem where one has to find tweets similar to the tweet user previously clicked. This problem becomes extremely challenging when there are billions of tweets created each day.
 
