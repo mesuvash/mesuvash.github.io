@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Large scale similarity via hashing
-date: 2015-03-15
+date: 2019-01-30
 description: Machine Learning
 ---
 # Locality Sensitive Hashing for Large Scale Similarity
@@ -174,11 +174,6 @@ $$
 **Hence, k-simhash can approximate cosine similarity.**
 
 In the next post, I will discuss how to compute minhash and simhash efficiently in a distributed environment.
-
-
-
-
-
 
 
 <!-- - References
