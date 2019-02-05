@@ -84,8 +84,8 @@ $$
     S \subset U & = |t_1 \cap t_2| \Rightarrow  \lbrace u_2\rbrace \\
     |U| & = n \Rightarrow 4\\
     |S| &= d \Rightarrow 1 \\
-    k & \text{ be the number of hash function} \\
-        & \ \ \ \ \ \  \text{i.e dimensionality of hashing}
+    k & \text{ be the  dimensionality of hashing} \\
+        & \ \ \ \ \ \  \text{i.e number of hash functions}
 \end{aligned}
 $$
 
