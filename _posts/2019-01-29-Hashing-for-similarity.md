@@ -194,7 +194,7 @@ In the figure above, for the vector $$\vec{t}$$, the pink shaded area correspond
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/dot_product_two_vector.svg" height="350"></div>
 
-Lets consider two vector $$t_1$$, $$t_2$$ and $$\theta$$ is an angle between them as shown in figure above. For a randomly drawn a vector $$\vec{h}$$ passing through origin
+Lets consider two vector $$\vec{t_1}$$, $$\vec{t_2}$$ and $$\theta$$ is an angle between them as shown in figure above. For a randomly drawn a vector $$\vec{h}$$ passing through origin
 
 $$
 \begin{aligned}
