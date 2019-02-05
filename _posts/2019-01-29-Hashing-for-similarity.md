@@ -62,6 +62,7 @@ where the number indicates the number of times user $$u$$ clicked tweet $$t$$. N
 </div>
 
 and the cosine similarity is given as
+
 $$ 
     cosine(\vec{t_1}, \vec{t_2})  = \frac{ \langle \vec{t_1}, \vec{t_2} \rangle }{\|\vec{t_1}\| \|\vec{t_2}\|} =  \frac{2}{\sqrt{(5) * (77)}} = 0.1019
 $$
@@ -82,7 +83,8 @@ $$
     S \subset U & = |t_1 \cap t_2| \Rightarrow  \lbrace u_2\rbrace \\
     |U| & = n \Rightarrow 4\\
     |S| &= d \Rightarrow 1 \\
-    k & = \text{dimensionality of hash signature}
+    k & \text{ be the number of hash function} \\
+        & \ \ \ \ \ \  \text{i.e dimensionality of hashing}
 \end{aligned}
 $$
 
