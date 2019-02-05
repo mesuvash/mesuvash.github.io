@@ -207,7 +207,7 @@ is true only if vector $$\vec{h}$$ lies in purple or white shaded area (i.e othe
 
 $$
 \begin{aligned}
-P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total radians in blue or  pink region}}{2 \times \pi})\\
+P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total angle corresponding to blue or  pink region}}{2 \times \pi})\\
 & = (1 - \frac{\theta}{\pi})\\
 \theta & = ( 1 - P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack) \times \pi , \ \text{voila!!}
 
