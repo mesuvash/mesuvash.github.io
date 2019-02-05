@@ -68,7 +68,7 @@ $$
     cosine(\vec{t_1}, \vec{t_2})  = \frac{ \langle \vec{t_1}, \vec{t_2} \rangle }{\|\vec{t_1}\| \|\vec{t_2}\|} =  \frac{2}{\sqrt{(5) * (77)}} = 0.1019
 $$
 
-#### Limitation
+#### Limitations
 Pairwise similarity scales quadratically $$\Theta(n^2)$$ both in terms of time and space complexity. Hence, finding similar items is very challenging for a large number of items. In the following section, we discuss locality sensitive hashing to address these limitations.
 
 ## Locality Sensitive Hashing (LSH)
