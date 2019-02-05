@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Large scale similarity via hashing
+title: Large scale similarity and hashing
 date: 2019-01-30
 description: Machine Learning
 ---
@@ -15,23 +15,28 @@ In this post, we will discuss the two most common similarity metric, namely Jacc
 Jaccard similarity is one of the most popular metrics used to compute the similarity between two sets. Given set $$A$$ and $$B$$, jaccard similarity is defined as 
 
 $$ 
-    jaccard(A, B) = \frac{| A \cap B | }{| A \cup B|}
+\begin{aligned}
+    jaccard(A, B) = \frac{| A \cap B | }{| A \cup B|}    
+\end{aligned}
 $$
 
 Let's define tweet as 
 
 $$
+\begin{aligned}
  t_1 = \{u_1, u_2\} \\
  t_2 = \{u_2, u_3, u_4\}
+ \end{aligned}
 $$ 
 
 where each tweet is represented by a set of users who liked the tweet. The jaccard similarity between $$t_1$$ and $$t_2$$
 ​​is given by
 
 $$ 
+\begin{aligned}
     jaccard(t_1, t_2) = \frac{ 1 }{4}
+\end{aligned}
 $$
-
 
 ## Cosine similarity
 
@@ -69,15 +74,35 @@ Pairwise similarity scales quadratically $$\Theta(n^2)$$ both in terms of time a
 Hashing is a very widely used technique that assigns pseudo-random value/bucket to objects. Hash functions must be uniform i.e. each bucket is equally likely. Locality Sensitive Hashing(LSH) is a hashing based dimensionality reduction method that preserves item similarity. More precisely, LSH hashes items to kk buckets such that similar items map to the same bucket with high probability.
 
 #### Minhash
+First, lets define
+
+$$
+\begin{aligned}
+    U & = |t_1 \cup t_2| \Rightarrow \lbrace u_1, u_2, u_3, u_ 4\rbrace\\
+    S \subset U & = |t_1 \cap t_2| \Rightarrow  \lbrace u_2\rbrace \\
+    |U| & = n \Rightarrow 4\\
+    |S| &= d \Rightarrow 1 \\
+    k & = \text{dimensionality of hash signature}
+\end{aligned}
+$$
+
 Let $$h(*) \in f(*)\rightarrow N$$ be a hash function that maps an object to a positive integer. The minhash is defined as
 
 $$
+\begin{aligned}
 minhash_h(t = \lbrace u_1, u_2...\rbrace) = argmin_u \ h(u_i)
+\end{aligned}
 $$
 
-a function that returns the item with smallest hash value.Now, a k-dimensional minhash is defned by kk hash functions $$\{h_1, h_2, ...., h_k\rbrace$$
+a function that returns the item with smallest hash value. Now, a k-dimensional minhash signature is defned by $$k$$ hash functions 
 
-Given $$k\text{-}minhash(t)k-minhash(t)$$, jaccard similarity of item $$t_1$$
+$$
+\begin{aligned}
+\lbrace minhash_{h_1}, minhash_{h_k}, ...., minhash_{h_k}\rbrace
+\end{aligned}
+$$
+
+Given $$k\text{-}minhash(t)$$, jaccard similarity of item $$t_1$$
 & $$t_2$$ is defined as
 
 $$
@@ -86,6 +111,8 @@ $$
         & \approx \frac{\sum_{i}^{} \text{1} \lbrack k\text{-}minhash(t_1)_i = k\text{-}minhash(t_2)_i \rbrack}{k}    
 \end{aligned}
 $$
+
+where $$1\lbrack . \rbrack$$ is an indicator function.
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/confused.gif" height="150"></div>
 
@@ -118,15 +145,29 @@ $$
 Let $$\vec{h_i}$$ be a random vector passing through origin. Let’s define a simhash function for tweet $$t$$
 
 $$
-simhash_{\vec{h}}(\vec{t}) = sgn(\langle \vec{t}, \vec{h} \rangle)
+\begin{aligned}
+simhash_{\vec{h}}(\vec{t}) = sgn(\langle \vec{t}, \vec{h} \rangle) 
+\end{aligned}
 $$
 
-as a sign of dot product between $$h$$ and $$t$$.
+where,
+
+$$
+\begin{aligned}
+ sgn(x)  = \begin{cases}
+                1 & \text{ if } x \gt 0 \\
+                0 & \text{ if } x = 0 \\
+                -1 & \text{ if } x \lt 0 
+                \end{cases}
+\end{aligned}
+$$
 
 Given simhash, $$k\text{-}simhash$$ can be defined as
 
 $$
+\begin{aligned}
 k\text{-}simhash(t) = \lbrack simhash_{\vec{h_1}}(\vec{t}), simhash_{\vec{h_2}}(\vec{t}) ....., simhash_{\vec{h_k}}(\vec{t})\rbrack
+\end{aligned}
 $$
 
 
@@ -134,7 +175,7 @@ Now, the angle between $$t_1$$ and $$t_2$$ is defined as
 
 $$
 \begin{aligned}
-    \theta & =  (1 - P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack) \times \pi \\
+    \theta & =  (1 - P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack) \times \pi \\
     & \approx (1- \frac{\sum_{i=1}^{} \text{1} \lbrack simhash_{\vec{h_i}}(\vec{t_1}) = simhash_{\vec{h_i}}(\vec{t_2}) \rbrack}{k})  \times \pi 
 \end{aligned}
 $$
@@ -147,21 +188,23 @@ In this section, we discuss the intuition behind approximation of cosine similar
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/dot_hyperplane.svg" height="350"></div>
 
-In the figure above, for the vector $$\vec{t}$$, the pink shaded area corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \gt 1simhash$$, for eg $$simhash_{\vec{h_1}}(\vec{t})$$. On the other hand, the white region corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \lt 0$$,for eg $$simhash_{\vec{h_2}}(\vec{t})$$
+In the figure above, for the vector $$\vec{t}$$, the pink shaded area corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \gt 1simhash$$, for eg $$simhash_{\vec{h_1}}(\vec{t})$$. On the other hand, the white region corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \lt 0$$, for eg $$simhash_{\vec{h_2}}(\vec{t})$$
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/dot_product_two_vector.svg" height="350"></div>
 
 Lets consider two vector $$t_1$$, $$t_2$$ and $$\theta$$ is an angle between them as shown in figure above. For a randomly drawn a vector hh passing through origin
 
 $$
+\begin{aligned}
 \lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack 
+\end{aligned}
 $$
 
 is true only if vector hh lies in purple or white shaded area (i.e other than pink and blue shaded area). From this observation, we can define
 
 $$
 \begin{aligned}
-P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack  & = (1 - \frac{\text{blue or  pink region}}{2 \times \pi})\\
+P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total radians in blue or  pink region}}{2 \times \pi})\\
 & = (1 - \frac{\theta}{\pi})\\
 \theta & = ( 1 - P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack) \times \pi , \ \text{voila!!}
 
