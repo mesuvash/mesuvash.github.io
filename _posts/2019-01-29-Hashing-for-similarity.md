@@ -1,12 +1,12 @@
 ---
 layout: post
-title: Large scale similarity and hashing
+title: Hashing for large scale similarity
 date: 2019-01-30
 description: Machine Learning
 comments: true
 ---
 
-Similarity computation is a very common task in real-world machine learning and data mining problems such as recommender systems,spam detection, online advertising etc. Consider a tweet recommendation problem where one has to find tweets similar to the tweet user previously clicked. This problem becomes extremely challenging when there are billions of tweets created each day.
+Similarity computation is a very common task in real-world machine learning and data mining problems such as recommender systems, spam detection, online advertising etc. Consider a tweet recommendation problem where one has to find tweets similar to the tweet user previously clicked. This problem becomes extremely challenging when there are billions of tweets created each day.
 
 In this post, we will discuss the two most common similarity metric, namely Jaccard similarity and Cosine similarity; and Locality Sensitive Hashing based approximation of those metrics.
 
