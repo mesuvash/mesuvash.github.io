@@ -139,7 +139,7 @@ $$
 \end{aligned}
 $$
 
-**Hence, k-minhash can approximate jaccard similarity.**
+**Hence, minhash can approximate jaccard similarity.**
 
 ### Simhash
 Let $$\vec{h_i}$$ be a random vector passing through origin. Let’s define a simhash function for tweet $$t$$
@@ -188,32 +188,32 @@ In this section, we discuss the intuition behind approximation of cosine similar
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/dot_hyperplane.svg" height="350"></div>
 
-In the figure above, for the vector $$\vec{t}$$, the pink shaded area corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \gt 1simhash$$, for eg $$simhash_{\vec{h_1}}(\vec{t})$$. On the other hand, the white region corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \lt 0$$, for eg $$simhash_{\vec{h_2}}(\vec{t})$$
+In the figure above, for the vector $$\vec{t}$$, the pink shaded area corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \gt 0$$, for eg. $$simhash_{\vec{h_1}}(\vec{t})$$. On the other hand, the white region corresponds to the half-space where $$simhash_{\vec{*}}(\vec{t}) \lt 0$$, for eg. $$simhash_{\vec{h_2}}(\vec{t})$$
 
 <div><img class="center-image" src="/assets/img/blogs/lsh/dot_product_two_vector.svg" height="350"></div>
 
-Lets consider two vector $$t_1$$, $$t_2$$ and $$\theta$$ is an angle between them as shown in figure above. For a randomly drawn a vector hh passing through origin
+Lets consider two vector $$t_1$$, $$t_2$$ and $$\theta$$ is an angle between them as shown in figure above. For a randomly drawn a vector $$\vec{h}$$ passing through origin
 
 $$
 \begin{aligned}
-\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack 
+\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack 
 \end{aligned}
 $$
 
-is true only if vector hh lies in purple or white shaded area (i.e other than pink and blue shaded area). From this observation, we can define
+is true only if vector $$\vec{h}$$ lies in purple or white shaded area (i.e other than pink and blue shaded area). From this observation, we can define
 
 $$
 \begin{aligned}
-P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total radians in blue or  pink region}}{2 \times \pi})\\
+P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total radians in blue or  pink region}}{2 \times \pi})\\
 & = (1 - \frac{\theta}{\pi})\\
-\theta & = ( 1 - P\lbrack k\text{-}simhash_h(t_1) = k\text{-}simhash_h(t_2)\rbrack) \times \pi , \ \text{voila!!}
+\theta & = ( 1 - P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack) \times \pi , \ \text{voila!!}
 
 
 \end{aligned}
 
 $$
 
-**Hence, k-simhash can approximate cosine similarity.**
+**Hence, simhash can approximate cosine similarity.**
 
 In the next post, I will discuss how to compute minhash and simhash efficiently in a distributed environment.
 
