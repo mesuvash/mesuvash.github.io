@@ -3,6 +3,7 @@ layout: post
 title: Large scale similarity and hashing
 date: 2019-01-30
 description: Machine Learning
+comments: true
 ---
 
 Similarity computation is a very common task in real-world machine learning and data mining problems such as recommender systems,spam detection, online advertising etc. Consider a tweet recommendation problem where one has to find tweets similar to the tweet user previously clicked. This problem becomes extremely challenging when there are billions of tweets created each day.
@@ -218,8 +219,3 @@ $$
 **Hence, simhash can approximate cosine similarity.**
 
 In the next post, I will discuss how to compute minhash and simhash efficiently in a distributed environment.
-
-
-<!-- - References
-  - https://users.soe.ucsc.edu/~niejiazhong/slides/kumar.pdf
-  - https://www.cs.rice.edu/~as143/Doc/Anshumali_Shrivastava.pdf (Page 13) -->
