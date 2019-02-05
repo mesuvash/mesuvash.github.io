@@ -41,7 +41,7 @@ text:
     older: 'Older'
 
 # Comments
-#disqus_shortname: al-folio # put your disqus shortname
+disqus_shortname: ssedhain
 
 # Optional features
 show_social_icons:  false
