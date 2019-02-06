@@ -30,7 +30,7 @@ $$
  \end{aligned}
 $$ 
 
-where each tweet is represented by a set of users who liked the tweet. The jaccard similarity between $$t_1$$ and $$t_2$$
+where each tweet is represented by a set of users who clicked the tweet. The jaccard similarity between $$t_1$$ and $$t_2$$
 ​​is given by
 
 $$ 
