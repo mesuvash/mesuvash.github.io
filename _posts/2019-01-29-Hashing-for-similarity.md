@@ -219,3 +219,6 @@ $$
 **Hence, simhash approximates cosine similarity.**
 
 In the next post, I will discuss how to compute minhash and simhash efficiently in a distributed environment.
+
+<br>
+<br>
