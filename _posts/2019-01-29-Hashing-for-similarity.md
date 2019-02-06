@@ -218,7 +218,7 @@ $$
 
 **Hence, simhash approximates cosine similarity.**
 
-In the next post, I will discuss more in details about implementation of minhash and simhash.
+In the next post, I will discuss more about implementation of minhash and simhash.
 
 <br>
 <br>
