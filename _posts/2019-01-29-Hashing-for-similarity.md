@@ -142,7 +142,7 @@ $$
 \end{aligned}
 $$
 
-**Hence, minhash can approximate jaccard similarity.**
+**Hence, minhash approximates jaccard similarity.**
 
 ### Simhash
 Let $$\vec{h_i}$$ be a random vector passing through origin. Let’s define a simhash function for tweet $$t$$
@@ -216,6 +216,6 @@ P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total angl
 
 $$
 
-**Hence, simhash can approximate cosine similarity.**
+**Hence, simhash approximates cosine similarity.**
 
 In the next post, I will discuss how to compute minhash and simhash efficiently in a distributed environment.
