@@ -73,7 +73,7 @@ Pairwise similarity scales quadratically $$\Theta(n^2)$$ both in terms of time a
 
 ## Locality Sensitive Hashing (LSH)
 
-Hashing is a very widely used technique that assigns pseudo-random value/bucket to objects. Hash functions must be uniform i.e. each bucket is equally likely. Locality Sensitive Hashing(LSH) is a hashing based dimensionality reduction method that preserves item similarity. More precisely, LSH hashes items to kk buckets such that similar items map to the same bucket with high probability.
+Hashing is a very widely used technique that assigns pseudo-random value/bucket to objects. Hash functions must be uniform i.e. each bucket is equally likely. Locality Sensitive Hashing(LSH) is a hashing based dimensionality reduction method that preserves item similarity. More precisely, LSH hashes items to $$k$$ buckets such that similar items map to the same bucket with high probability.
 
 #### Minhash
 First, lets define
