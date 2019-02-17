@@ -101,7 +101,7 @@ a function that returns the item with smallest hash value. Now, a k-dimensional 
 
 $$
 \begin{aligned}
-\lbrace minhash_{h_1}, minhash_{h_k}, ...., minhash_{h_k}\rbrace
+\lbrace minhash_{h_1}, minhash_{h_2}, ...., minhash_{h_k}\rbrace
 \end{aligned}
 $$
 
