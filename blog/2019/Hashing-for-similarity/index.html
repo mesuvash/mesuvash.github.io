@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Suvash Sedhain | Hashing for large scale similarity</title>
+  <meta name="description" content="A simple, whitespace theme for academics. Based on [*folio](https://github.com/bogoli/-folio) design.
+">
+
+  <link rel="shortcut icon" href="/assets/img/favicon.ico">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="canonical" href="/blog/2019/Hashing-for-similarity/">
+  <script type="text/x-mathjax-config"> MathJax.Hub.Config({ TeX: { equationNumbers: { autoNumber: "all" } } }); </script>
+  <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          processEscapes: true
+        }
+      });
+    </script>
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Suvash Sedhain" />
+</head>
+
+<body>
+
+  <header class="site-header">
+
+  <div class="wrapper">
+
+    
+    <span class="site-title">
+        
+        <a href="/"><strong>Suvash</strong>  Sedhain</a>
+    </span>
+    
+
+    <nav class="site-nav">
+
+      <div class="trigger">
+        <!-- About -->
+        <a class="page-link" href="/">about</a>
+
+        <!-- Blog -->
+        <a class="page-link" href="/blog/">blog</a>
+
+        <!-- Pages -->
+        
+          
+        
+          
+        
+          
+        
+          
+            <a class="page-link" href="/projects/">Projects</a>
+          
+        
+          
+            <a class="page-link" href="/publications/">Publications</a>
+          
+        
+          
+        
+
+        <!-- CV link -->
+        <!-- <a class="page-link" href="/assets/pdf/CV.pdf">vitae</a> -->
+
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+
+  <div class="page-content">
+    <div class="wrapper">
+      <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Hashing for large scale similarity</h1>
+    <p class="post-meta">January 30, 2019</p>
+  </header>
+
+  <article class="post-content">
+    <p>Similarity computation is a very common task in real-world machine learning and data mining problems such as recommender systems, spam detection, online advertising etc. Consider a tweet recommendation problem where one has to find tweets similar to the tweet user previously clicked. This problem becomes extremely challenging when there are billions of tweets created each day.</p>
+
+<p>In this post, we will discuss the two most common similarity metric, namely Jaccard similarity and Cosine similarity; and Locality Sensitive Hashing based approximation of those metrics.</p>
+
+<h2 id="jaccard-similarity">Jaccard Similarity</h2>
+<p>Jaccard similarity is one of the most popular metrics used to compute the similarity between two sets. Given set <script type="math/tex">A</script> and <script type="math/tex">B</script>, jaccard similarity is defined as</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+    jaccard(A, B) = \frac{| A \cap B | }{| A \cup B|}    
+\end{aligned}</script>
+
+<p>Let’s define tweet as</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+ t_1 = \{u_1, u_2\} \\
+ t_2 = \{u_2, u_3, u_4\}
+ \end{aligned}</script>
+
+<p>where each tweet is represented by a set of users who clicked the tweet. The jaccard similarity between <script type="math/tex">t_1</script> and <script type="math/tex">t_2</script>
+​​is given by</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+    jaccard(t_1, t_2) = \frac{ 1 }{4}
+\end{aligned}</script>
+
+<h2 id="cosine-similarity">Cosine similarity</h2>
+
+<p>Cosine similarity is a vector space metric where similarity between two vector <script type="math/tex">\vec{a}</script> and <script type="math/tex">\vec{b}</script> is defined as
+<script type="math/tex">cosine(\vec{a}, \vec{b}) = \frac{ \langle \vec{a}, \vec{b} \rangle }{\|\vec{a}\| \|\vec{b}\|} \\</script>
+where,  <script type="math/tex">\langle . \rangle</script> is a dot product and  <script type="math/tex">\| .\|</script> is  <script type="math/tex">L_2</script> norm operator.</p>
+
+<p>Jaccard similarity ignores the weights as it’s a set based distance metric for e.g. number of user clicks. Lets define</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+t_1 & = \{u_1 =2, u_2=1\} \\
+t_2 & = \{u_2=2, u_3=8, u_4=3\}
+\end{aligned} %]]></script>
+
+<p>where the number indicates the number of times user <script type="math/tex">u</script> clicked tweet <script type="math/tex">t</script>. Now, the tweets can be represented in user’s vector space as</p>
+
+<div>
+<img class="center-image" src="/assets/img/blogs/lsh/vector_features.png" height="100" />
+</div>
+
+<p>and the cosine similarity is given as</p>
+
+<script type="math/tex; mode=display">cosine(\vec{t_1}, \vec{t_2})  = \frac{ \langle \vec{t_1}, \vec{t_2} \rangle }{\|\vec{t_1}\| \|\vec{t_2}\|} =  \frac{2}{\sqrt{(5) * (77)}} = 0.1019</script>
+
+<h4 id="limitations">Limitations</h4>
+<p>Pairwise similarity scales quadratically <script type="math/tex">\Theta(n^2)</script> both in terms of time and space complexity. Hence, finding similar items is very challenging for a large number of items. In the following section, we discuss locality sensitive hashing to address these limitations.</p>
+
+<h2 id="locality-sensitive-hashing-lsh">Locality Sensitive Hashing (LSH)</h2>
+
+<p>Hashing is a very widely used technique that assigns pseudo-random value/bucket to objects. Hash functions must be uniform i.e. each bucket is equally likely. Locality Sensitive Hashing(LSH) is a hashing based dimensionality reduction method that preserves item similarity. More precisely, LSH hashes items to <script type="math/tex">k</script> buckets such that similar items map to the same bucket with high probability. Such hash signatures can be used for efficient neighborhood search as well as to compute similarity between items on the fly.</p>
+
+<h4 id="minhash">Minhash</h4>
+<p>First, lets define</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+    U & = |t_1 \cup t_2| \Rightarrow \lbrace u_1, u_2, u_3, u_ 4\rbrace\\
+    S \subset U & = |t_1 \cap t_2| \Rightarrow  \lbrace u_2\rbrace \\
+    |U| & = n \Rightarrow 4\\
+    |S| &= d \Rightarrow 1 \\
+    k & \text{ be the  dimensionality of hashing} \\
+        & \ \ \ \ \ \  \text{i.e number of hash functions}
+\end{aligned} %]]></script>
+
+<p>Let <script type="math/tex">h(*) \in f(*)\rightarrow N</script> be a hash function that maps an object to a positive integer. The minhash is defined as</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+minhash_h(t = \lbrace u_1, u_2...\rbrace) = argmin_u \ h(u_i)
+\end{aligned}</script>
+
+<p>a function that returns the item with smallest hash value. Now, a k-dimensional minhash signature is defned by <script type="math/tex">k</script> hash functions</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+\lbrace minhash_{h_1}, minhash_{h_2}, ...., minhash_{h_k}\rbrace
+\end{aligned}</script>
+
+<p>Given <script type="math/tex">k\text{-}minhash(t)</script>, jaccard similarity of item <script type="math/tex">t_1</script>
+&amp; <script type="math/tex">t_2</script> is defined as</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+        jaccard(t_1, t_2) & = P\lbrack minhash(t_1) = minhash(t_2)\rbrack \\
+        & \approx \frac{\sum_{i}^{} \text{1} \lbrack k\text{-}minhash(t_1)_i = k\text{-}minhash(t_2)_i \rbrack}{k}    
+\end{aligned} %]]></script>
+
+<p>where <script type="math/tex">1\lbrack . \rbrack</script> is an indicator function.</p>
+
+<div><img class="center-image" src="/assets/img/blogs/lsh/confused.gif" height="150" /></div>
+
+<p><strong>Minhash explained</strong></p>
+
+<p>Although theoretical proof is quite rigorous, the key idea is very intuitive. First, let’s define,</p>
+
+<blockquote>
+  <p>a) How many ways can we shuffle <script type="math/tex">U</script> such that <script type="math/tex">u_2</script> is the first element?</p>
+
+  <p>Ans: 3!</p>
+
+  <p>b) More generally, how many ways can we shuffle <script type="math/tex">U</script> such that <script type="math/tex">u \in S</script> is the first element?</p>
+
+  <p>Ans: <script type="math/tex">d \times (n-1)!</script></p>
+</blockquote>
+
+<p>Hashing a set of items is equivalent to generating a random permutation of the set. So, <script type="math/tex">minhash_h(t_1) = minhash_h(t_2)</script>, only if the hash function <script type="math/tex">h</script> assigns smallest value to <script type="math/tex">u \in S</script> i.e <script type="math/tex">u_2</script>. From this observation, we can conclude</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+    P\lbrack minhash_h(t_1) = minhash_h(t_2)\rbrack = &  \frac{d(n-1)!}{n!} \\
+     = & \ \ \frac{d}{n} \\
+     = & \frac{|S|}{|U|} \\
+     = & \frac{|t_1 \cap t_2|}{|t_1 \cup t_2|}, \ \text{voila!!}
+\end{aligned} %]]></script>
+
+<p><strong>Hence, minhash approximates jaccard similarity.</strong></p>
+
+<h3 id="simhash">Simhash</h3>
+<p>Let <script type="math/tex">\vec{h_i}</script> be a random vector passing through origin. Let’s define a simhash function for tweet <script type="math/tex">t</script></p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+simhash_{\vec{h}}(\vec{t}) = sgn(\langle \vec{t}, \vec{h} \rangle) 
+\end{aligned}</script>
+
+<p>where,</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+ sgn(x)  = \begin{cases}
+                1 & \text{ if } x \gt 0 \\
+                0 & \text{ if } x = 0 \\
+                -1 & \text{ if } x \lt 0 
+                \end{cases}
+\end{aligned} %]]></script>
+
+<p>Given simhash, <script type="math/tex">k\text{-}simhash</script> can be defined as</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+k\text{-}simhash(t) = \lbrack simhash_{\vec{h_1}}(\vec{t}), simhash_{\vec{h_2}}(\vec{t}) ....., simhash_{\vec{h_k}}(\vec{t})\rbrack
+\end{aligned}</script>
+
+<p>Now, the angle between <script type="math/tex">t_1</script> and <script type="math/tex">t_2</script> is defined as</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+    \theta & =  (1 - P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack) \times \pi \\
+    & \approx (1- \frac{\sum_{i=1}^{} \text{1} \lbrack simhash_{\vec{h_i}}(\vec{t_1}) = simhash_{\vec{h_i}}(\vec{t_2}) \rbrack}{k})  \times \pi 
+\end{aligned} %]]></script>
+
+<div><img class="center-image" src="/assets/img/blogs/lsh//tellmehow.gif" height="200" /></div>
+
+<p><strong>Simhash explained</strong></p>
+
+<p>In this section, we discuss the intuition behind approximation of cosine similarity using simhash.</p>
+
+<div><img class="center-image" src="/assets/img/blogs/lsh/dot_hyperplane.svg" height="350" /></div>
+
+<p>In the figure above, for the vector <script type="math/tex">\vec{t}</script>, the pink shaded area corresponds to the half-space where <script type="math/tex">simhash_{\vec{*}}(\vec{t}) \gt 0</script>, for eg. <script type="math/tex">simhash_{\vec{h_1}}(\vec{t})</script>. On the other hand, the white region corresponds to the half-space where <script type="math/tex">simhash_{\vec{*}}(\vec{t}) \lt 0</script>, for eg. <script type="math/tex">simhash_{\vec{h_2}}(\vec{t})</script></p>
+
+<div><img class="center-image" src="/assets/img/blogs/lsh/dot_product_two_vector.svg" height="350" /></div>
+
+<p>Lets consider two vector <script type="math/tex">\vec{t_1}</script>, <script type="math/tex">\vec{t_2}</script> and <script type="math/tex">\theta</script> is an angle between them as shown in figure above. For a randomly drawn a vector <script type="math/tex">\vec{h}</script> passing through origin</p>
+
+<script type="math/tex; mode=display">\begin{aligned}
+\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack 
+\end{aligned}</script>
+
+<p>is true only if vector <script type="math/tex">\vec{h}</script> lies in purple or white shaded area (i.e other than pink and blue shaded area). From this observation, we can define</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{aligned}
+P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack  & = (1 - \frac{\text{total angle corresponding to blue or  pink region}}{2 \times \pi})\\
+& = (1 - \frac{\theta}{\pi})\\
+\theta & = ( 1 - P\lbrack simhash_h(t_1) = simhash_h(t_2)\rbrack) \times \pi , \ \text{voila!!}
+
+
+\end{aligned} %]]></script>
+
+<p><strong>Hence, simhash approximates cosine similarity.</strong></p>
+
+<p>In the next post, I will discuss more about implementation of minhash and simhash.</p>
+
+<p><br />
+<br /></p>
+
+  </article>
+
+  
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+      var disqus_shortname  = 'ssedhain';
+      var disqus_identifier = '/blog/2019/Hashing-for-similarity';
+      var disqus_title      = "Hashing for large scale similarity";
+      (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  
+
+</div>
+
+    </div>
+  </div>
+
+  <footer>
+
+  <div class="wrapper">
+    &copy; Copyright 2019 Suvash Sedhain.
+    Powered by <a href="http://jekyllrb.com/" target="_blank">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank">GitHub Pages</a>.
+
+    
+  </div>
+
+</footer>
+
+
+  <!-- Load jQuery -->
+<script src="//code.jquery.com/jquery-1.12.4.min.js"></script>
+
+<!-- Load Common JS -->
+<script src="/assets/js/common.js"></script>
+
+
+<!-- Load KaTeX -->
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.js"></script>
+<script src="/assets/js/katex.js"></script>
+
+
+
+
+<!-- Include custom icon fonts -->
+<link rel="stylesheet" href="/assets/css/font-awesome.min.css">
+<link rel="stylesheet" href="/assets/css/academicons.min.css">
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-133907900-1"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'UA-133907900-1');
+</script>
+
+
+</body>
+
+</html>
