@@ -290,7 +290,7 @@ img { max-width: 100%; height: auto; }
 }
 
 .post-list > li {
-    padding: 24px 0;
+    /* padding: 24px 0; */
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -303,6 +303,7 @@ img { max-width: 100%; height: auto; }
     line-height: 1.4;
     margin-bottom: 4px;
     font-weight: 600;
+    margin-top: 0;
 }
 
 .post-list .post-title a {
