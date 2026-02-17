@@ -1,4 +1,8 @@
 source 'https://rubygems.org'
+gem 'csv'
+gem 'base64'
+gem 'bigdecimal'
+gem 'webrick'
 group :jekyll_plugins do
     gem 'github-pages'
     gem 'jekyll'
