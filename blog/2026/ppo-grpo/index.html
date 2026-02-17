@@ -375,13 +375,13 @@
 </p>
 
 <p>
-    We train a <strong>critic</strong> (value function) $V_\gamma(s_t)$ that predicts, from any
+    We train a <strong>critic</strong> (value function) $V_\phi(s_t)$ that predicts, from any
     partial response, the expected final reward. Then we compute advantages using GAE:
 </p>
 
 <div class="eq-block">
     <div class="eq-label">TD (temporal difference) error:</div>
-    $$\delta_t = r_t + V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
+    $$\delta_t = r_t + \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
 </div>
 
 <p>
@@ -389,10 +389,10 @@
     score). So for non-terminal tokens, $\delta_t$ simplifies to:
 </p>
 
-$$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
+$$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
 
 <p>This is the critic saying: "after generating this token, I now think the response will be
-    worth $V(s_{t+1})$ instead of $V(s_t)$ — so this token's contribution was the difference."</p>
+    worth $V_\phi(s_{t+1})$ instead of $V_\phi(s_t)$ — so this token's contribution was the difference."</p>
 
 <div class="eq-block">
     <div class="eq-label">GAE advantage:</div>
@@ -457,7 +457,7 @@ $$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
 
 <div class="eq-block">
     <div class="eq-label">Full PPO objective:</div>
-    $$\mathcal{L}_{\text{PPO}}(\theta, \gamma) = \underbrace{L^{\text{clip}}(\theta)}_{\text{policy improvement}} + \underbrace{w_1 \, H(\theta)}_{\text{entropy bonus}} - \underbrace{w_2 \, \text{KL}(\theta)}_{\text{stay near original}} - \underbrace{w_3 \, L(\gamma)}_{\text{critic loss}}$$
+    $$\mathcal{L}_{\text{PPO}}(\theta, \phi) = \underbrace{L^{\text{clip}}(\theta)}_{\text{policy improvement}} + \underbrace{w_1 \, H(\theta)}_{\text{entropy bonus}} - \underbrace{w_2 \, \text{KL}(\theta)}_{\text{stay near original}} - \underbrace{w_3 \, L(\phi)}_{\text{critic loss}}$$
 </div>
 
 <p>Each term serves a purpose:</p>
@@ -480,7 +480,7 @@ $$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
         <td>Prevent reward hacking — keep the model "sane" and coherent</td>
     </tr>
     <tr>
-        <td>$L(\gamma)$</td>
+        <td>$L(\phi)$</td>
         <td>Critic/value function loss</td>
         <td>Train the critic to better estimate future rewards</td>
     </tr>
@@ -499,7 +499,7 @@ $$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
     </div>
     <div class="step">
         <strong>Estimate advantages.</strong> Run each (prompt, partial_response) through the critic
-        to get $V_\gamma(s_t)$ at every token position. Compute GAE advantages.
+        to get $V_\phi(s_t)$ at every token position. Compute GAE advantages.
     </div>
     <div class="step">
         <strong>Update policy.</strong> For several mini-batch epochs, compute the clipped surrogate
@@ -606,7 +606,7 @@ $$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
 
 <div class="eq-block">
     <div class="eq-label">Critic loss:</div>
-    $$L(\gamma) = \mathbb{E}_t \Big[\big(V_\gamma(s_t) - R_\text{target}(s_t)\big)^2\Big]$$
+    $$L(\phi) = \mathbb{E}_t \Big[\big(V_\phi(s_t) - R_\text{target}(s_t)\big)^2\Big]$$
 </div>
 
 <p>Where $R_\text{target}(s_t)$ is the actual return from position $t$ onward. In the simplest
