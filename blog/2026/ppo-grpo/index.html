@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | PPO & GRPO for LLM Alignment</title>
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        .arch-table td:first-child {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>PPO & GRPO for LLM Alignment</h1>
+    <p class="post-meta">January 15, 2025</p>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    A first-principles guide for ML engineers with minimal RL background.<br>
+    Inspired by <a href="https://yugeten.github.io/posts/2025/01/ppogrpo/">Yuge Shi's guide</a>.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#why-rl">Why RL for LLMs?</a></li>
+        <li><a href="#big-picture">The Big Picture: RLHF Pipeline</a></li>
+        <li><a href="#reward-model">The Reward Model — Architecture & Training</a></li>
+        <li><a href="#policy-gradients">Policy Gradients: The Core Idea</a></li>
+        <li><a href="#ppo">PPO — Step by Step</a></li>
+        <li><a href="#critic">The Critic Model — Architecture & Training</a></li>
+        <li><a href="#grpo">GRPO — Dropping the Critic</a></li>
+        <li><a href="#comparison">PPO vs GRPO: When to Use What</a></li>
+        <li><a href="#practical">Practical Notes</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="why-rl">1. Why RL for LLMs?</h2>
+
+<p>
+    After pre-training (next-token prediction on web text) and supervised fine-tuning (SFT on
+    curated demonstrations), your LLM can generate fluent text. But it still has problems:
+    it might be confidently wrong, toxic, or unhelpful. SFT alone can't fix this well because:
+</p>
+
+<ul>
+    <li><strong>Ranking is easier than generating.</strong> Humans can easily say "response A is better
+        than response B" but struggle to write the perfect response from scratch. RL lets us
+        exploit this ranking signal.</li>
+    <li><strong>SFT optimizes per-token likelihood.</strong> It doesn't directly optimize for
+        "was the whole response good?" — which is what we actually care about.</li>
+    <li><strong>Exploration.</strong> RL lets the model try different responses and learn from
+        what works, rather than only imitating fixed demonstrations.</li>
+</ul>
+
+<p>
+    The core idea: train a <strong>reward model</strong> to mimic human judgment, then use RL
+    to steer the LLM toward higher-reward responses.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">2. The Big Picture: RLHF Pipeline</h2>
+
+<div class="diagram">
+<svg width="520" height="380" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arrow1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <filter id="shadow1"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Step 1 -->
+  <rect x="60" y="16" width="400" height="64" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="260" y="40" text-anchor="middle" font-weight="600" font-size="14" fill="#2563eb">Step 1</text>
+  <text x="260" y="60" text-anchor="middle" font-size="13" fill="#1a1a1a">Collect preference data — humans rank response A vs B</text>
+  <!-- Arrow -->
+  <line x1="260" y1="80" x2="260" y2="112" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow1)"/>
+  <!-- Step 2 -->
+  <rect x="60" y="116" width="400" height="64" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="260" y="140" text-anchor="middle" font-weight="600" font-size="14" fill="#2563eb">Step 2</text>
+  <text x="260" y="160" text-anchor="middle" font-size="13" fill="#1a1a1a">Train a reward model — learns to score (prompt, response) pairs</text>
+  <!-- Arrow -->
+  <line x1="260" y1="180" x2="260" y2="212" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow1)"/>
+  <!-- Step 3 -->
+  <rect x="60" y="216" width="400" height="64" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="260" y="240" text-anchor="middle" font-weight="600" font-size="14" fill="#2563eb">Step 3</text>
+  <text x="260" y="260" text-anchor="middle" font-size="13" fill="#1a1a1a">RL fine-tune — generate, score, update policy</text>
+  <!-- Arrow -->
+  <line x1="260" y1="280" x2="260" y2="312" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow1)"/>
+  <!-- Result -->
+  <rect x="160" y="316" width="200" height="48" rx="24" fill="#2563eb" filter="url(#shadow1)"/>
+  <text x="260" y="345" text-anchor="middle" font-weight="600" font-size="14" fill="#fff">Aligned LLM</text>
+</svg>
+</div>
+
+<p>
+    That's the whole thing. The complexity lives in Step 2 and Step 3.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="reward-model">3. The Reward Model — Architecture & Training</h2>
+
+<h3>What it is</h3>
+<p>
+    A reward model takes a (prompt, response) pair and outputs a single scalar score: how good
+    is this response? Think of it as a learned proxy for human judgment.
+</p>
+
+<h3>Architecture</h3>
+<p>
+    It's literally a language model with a scalar head on top. Concretely:
+</p>
+
+<ul>
+    <li>Start with a pre-trained LLM (often the same checkpoint you're about to fine-tune, or
+        a similar-sized model).</li>
+    <li>Remove the language modeling head (the vocabulary projection layer).</li>
+    <li>Add a single linear layer that maps the final hidden state to a scalar:
+        <code>hidden_dim -> 1</code>.</li>
+    <li>The scalar is typically extracted from the last token position of the response
+        (the EOS token), since it has attended to the entire sequence.</li>
+</ul>
+
+<div class="diagram">
+<svg width="520" height="380" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#555"/></marker>
+    <filter id="shadow2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Input tokens -->
+  <g transform="translate(72, 20)">
+    <rect width="100" height="32" rx="4" fill="#e8e8e4" stroke="#bbb" stroke-width="1"/>
+    <text x="50" y="20" text-anchor="middle" font-size="11" fill="#333">prompt tokens</text>
+  </g>
+  <g transform="translate(184, 20)">
+    <rect width="116" height="32" rx="4" fill="#e8e8e4" stroke="#bbb" stroke-width="1"/>
+    <text x="58" y="20" text-anchor="middle" font-size="11" fill="#333">response tokens</text>
+  </g>
+  <g transform="translate(312, 20)">
+    <rect width="52" height="32" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="26" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">EOS</text>
+  </g>
+  <!-- Arrow down -->
+  <line x1="230" y1="56" x2="230" y2="88" stroke="#555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <!-- Transformer block -->
+  <rect x="100" y="92" width="260" height="72" rx="8" fill="#f9fafb" stroke="#555" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="230" y="120" text-anchor="middle" font-weight="600" font-size="14" fill="#1a1a1a">Transformer</text>
+  <text x="230" y="142" text-anchor="middle" font-size="12" fill="#555">pre-trained LLM backbone</text>
+  <!-- Annotation -->
+  <text x="380" y="128" font-size="11" fill="#888" font-style="italic">frozen or fine-tuned</text>
+  <!-- Arrow down -->
+  <line x1="230" y1="164" x2="230" y2="196" stroke="#555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <!-- Hidden state label -->
+  <rect x="112" y="200" width="236" height="28" rx="14" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+  <text x="230" y="219" text-anchor="middle" font-size="12" fill="#92400e">hidden state at EOS position only</text>
+  <!-- Arrow down -->
+  <line x1="230" y1="232" x2="230" y2="258" stroke="#555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <!-- Linear head -->
+  <rect x="140" y="262" width="180" height="48" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="230" y="290" text-anchor="middle" font-weight="600" font-size="13" fill="#2563eb">Linear(d -> 1)</text>
+  <!-- Annotation -->
+  <text x="340" y="290" font-size="11" fill="#888" font-style="italic">new layer</text>
+  <!-- Arrow down -->
+  <line x1="230" y1="310" x2="230" y2="336" stroke="#555" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <!-- Output -->
+  <rect x="130" y="340" width="200" height="32" rx="16" fill="#2563eb"/>
+  <text x="230" y="361" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">R(prompt, response)</text>
+</svg>
+</div>
+
+<h3>Training data</h3>
+<p>
+    You need a dataset of comparisons. For each prompt, humans see two (or more) model responses
+    and rank them. The dataset looks like:
+</p>
+
+<div class="diagram">
+<svg width="480" height="140" viewBox="0 0 480 140" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs><filter id="shadow3"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.06"/></filter></defs>
+  <!-- Row 1 -->
+  <rect x="16" y="12" width="448" height="34" rx="6" fill="#f9fafb" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow3)"/>
+  <text x="32" y="34" font-size="13" fill="#555">(</text>
+  <text x="40" y="34" font-size="13" fill="#1a1a1a">prompt</text>
+  <text x="92" y="34" font-size="13" fill="#555">,</text>
+  <text x="108" y="34" font-size="13" fill="#16a34a" font-weight="600">response_chosen</text>
+  <text x="250" y="34" font-size="13" fill="#555">,</text>
+  <text x="268" y="34" font-size="13" fill="#dc2626" font-weight="600">response_rejected</text>
+  <text x="418" y="34" font-size="13" fill="#555">)</text>
+  <!-- Row 2 -->
+  <rect x="16" y="54" width="448" height="34" rx="6" fill="#f9fafb" stroke="#e0e0e0" stroke-width="1" filter="url(#shadow3)"/>
+  <text x="32" y="76" font-size="13" fill="#555">(</text>
+  <text x="40" y="76" font-size="13" fill="#1a1a1a">prompt</text>
+  <text x="92" y="76" font-size="13" fill="#555">,</text>
+  <text x="108" y="76" font-size="13" fill="#16a34a" font-weight="600">response_chosen</text>
+  <text x="250" y="76" font-size="13" fill="#555">,</text>
+  <text x="268" y="76" font-size="13" fill="#dc2626" font-weight="600">response_rejected</text>
+  <text x="418" y="76" font-size="13" fill="#555">)</text>
+  <!-- Ellipsis -->
+  <text x="240" y="118" text-anchor="middle" font-size="18" fill="#999" letter-spacing="4">...</text>
+</svg>
+</div>
+
+<h3>Training objective: Bradley-Terry model</h3>
+
+<p>
+    We want the reward model to assign a higher score to the chosen response than the rejected one.
+    We use the Bradley-Terry preference model, which says:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Probability that response $i$ is preferred over response $j$:</div>
+    $$P(r_i \succ r_j) = \frac{\exp(R_\phi(p, r_i))}{\exp(R_\phi(p, r_i)) + \exp(R_\phi(p, r_j))} = \sigma\big(R_\phi(p, r_i) - R_\phi(p, r_j)\big)$$
+</div>
+
+<p>
+    This is just a sigmoid applied to the score difference. If the chosen response scores much
+    higher than the rejected one, the sigmoid is close to 1 (high probability, low loss). The
+    training loss is the negative log-likelihood:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Reward model loss:</div>
+    $$\mathcal{L}(\phi) = -\log \sigma\big(R_\phi(p, r_\text{chosen}) - R_\phi(p, r_\text{rejected})\big)$$
+</div>
+
+<div class="note">
+    <strong>Intuition:</strong> This is almost identical to binary cross-entropy. We're training
+    a classifier that says "which response is better?" but parameterized through scalar scores.
+    The key insight: we don't need absolute scores, just correct <em>relative ordering</em>.
+    That's why the loss only depends on the score <em>difference</em>.
+</div>
+
+<h3>Training details</h3>
+<ul>
+    <li>The backbone LM weights are typically fine-tuned end-to-end (not frozen) for best results,
+        but this is expensive. Some setups freeze the backbone and only train the head + last few layers.</li>
+    <li>Training is standard supervised learning — no RL. Batch of pairs, compute loss, backprop.</li>
+    <li>Typical dataset sizes: 50k-500k comparison pairs.</li>
+    <li>Once trained, the reward model is <strong>frozen</strong> during RL. It's only used for inference.</li>
+</ul>
+
+<div class="warning">
+    <strong>Key limitation:</strong> The reward model only scores <em>complete</em> responses.
+    It takes the entire (prompt, response) and gives one number. It cannot score partial responses
+    or individual tokens. This matters a lot for understanding why PPO needs a critic.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="policy-gradients">4. Policy Gradients: The Core Idea</h2>
+
+<p>
+    Before PPO, let's build the intuition for <em>why</em> it works.
+</p>
+
+<h3>The setup</h3>
+<p>
+    Your LLM is a <strong>policy</strong> $\pi_\theta$. Given a prompt, it generates a response
+    by sampling tokens one at a time. Each token is an "action." The full response is a sequence
+    of actions. The reward model scores the complete response.
+</p>
+
+<p>Our goal: adjust $\theta$ (the LLM weights) so the model produces higher-reward responses.</p>
+
+<h3>The fundamental problem</h3>
+<p>
+    We can't just do gradient descent on the reward directly, because the reward depends on
+    <em>discrete</em> token choices (sampling is non-differentiable). We need a way to get
+    gradients through the sampling process.
+</p>
+
+<h3>The REINFORCE trick</h3>
+<p>
+    The key insight from the REINFORCE algorithm (Williams, 1992): we don't need to differentiate
+    <em>through</em> the sampling. Instead, we can use the <strong>log-derivative trick</strong>:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Policy gradient:</div>
+    $$\nabla_\theta \mathbb{E}[R] = \mathbb{E}\Big[\sum_{t} \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot R\Big]$$
+</div>
+
+<p>In plain English:</p>
+<ol>
+    <li>Sample a response from your current policy.</li>
+    <li>Score it with the reward model -> get $R$.</li>
+    <li>If $R$ is high: <strong>increase</strong> the probability of those tokens (positive gradient).</li>
+    <li>If $R$ is low: <strong>decrease</strong> the probability of those tokens (negative gradient).</li>
+</ol>
+
+<div class="note">
+    <strong>Intuition:</strong> This is conceptually similar to SFT, but instead of always pushing
+    up the probability of the target tokens, we weight the gradient by how good the reward was.
+    Good responses get reinforced; bad ones get suppressed.
+</div>
+
+<h3>The problem with vanilla REINFORCE</h3>
+<p>
+    Using the raw reward $R$ for every token is noisy. Consider: if you generate a 200-token
+    response and get a reward of 0.8, <em>which tokens</em> were responsible? The early tokens?
+    The late ones? All of them equally? This is the <strong>credit assignment problem</strong>.
+</p>
+
+<p>
+    Also, rewards might all be positive (e.g., 0.3 to 0.9), meaning every token gets reinforced,
+    just by different amounts. We want to push up tokens that are <em>better than expected</em> and
+    push down tokens that are <em>worse than expected</em>. This is where the <strong>advantage
+    function</strong> comes in.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="ppo">5. PPO — Step by Step</h2>
+
+<h3>The advantage function</h3>
+<p>
+    Instead of weighting the gradient by raw reward $R$, we use the <strong>advantage</strong>:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Advantage:</div>
+    $$A_t = Q(s_t, a_t) - V(s_t)$$
+</div>
+
+<p>Where:</p>
+<ul>
+    <li>$Q(s_t, a_t)$: the expected total reward if we take action $a_t$ in state $s_t$ and then
+        act optimally afterward. ("How good is this specific action here?")</li>
+    <li>$V(s_t)$: the expected total reward from state $s_t$ under the current policy.
+        ("How good is this state on average?")</li>
+    <li>$A_t$: the advantage — "was this action better or worse than what we'd typically do here?"</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> Suppose at token position 50, the model usually produces responses
+    worth ~0.7 reward. If a particular token choice leads to a reward of 0.9, the advantage is
+    positive (+0.2) — reinforce it. If it leads to 0.5, the advantage is negative (-0.2) — suppress it.
+    The advantage function provides a <em>per-token</em> training signal from a <em>per-response</em>
+    reward.
+</div>
+
+<p>
+    But wait — computing $Q$ and $V$ exactly is intractable. We need to estimate them.
+    This is where the <strong>critic</strong> comes in. (We'll cover the critic architecture in
+    the <a href="#critic">next section</a>.)
+</p>
+
+<h3>Generalized Advantage Estimation (GAE)</h3>
+
+<p>
+    In the LLM setting, the reward model only gives a score at the very end of the response.
+    There are no intermediate rewards. So how do we estimate per-token advantages?
+</p>
+
+<p>
+    We train a <strong>critic</strong> (value function) $V_\gamma(s_t)$ that predicts, from any
+    partial response, the expected final reward. Then we compute advantages using GAE:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">TD (temporal difference) error:</div>
+    $$\delta_t = r_t + V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
+</div>
+
+<p>
+    In the LLM setting, $r_t = 0$ for all tokens except the last one (where $r_T$ = reward model
+    score). So for non-terminal tokens, $\delta_t$ simplifies to:
+</p>
+
+$$\delta_t = V_\gamma(s_{t+1}) - V_\gamma(s_t)$$
+
+<p>This is the critic saying: "after generating this token, I now think the response will be
+    worth $V(s_{t+1})$ instead of $V(s_t)$ — so this token's contribution was the difference."</p>
+
+<div class="eq-block">
+    <div class="eq-label">GAE advantage:</div>
+    $$A^{\text{GAE}}_t = \sum_{k=0}^{T-t-1} (\gamma\lambda)^k \, \delta_{t+k}$$
+</div>
+
+<p>
+    $\gamma$ (discount factor, ~0.99) and $\lambda$ (GAE parameter, ~0.95) control how far ahead
+    we look. This is an exponentially-weighted sum of TD errors — a smooth blend between
+    "just look one step ahead" ($\lambda=0$) and "use the full remaining return" ($\lambda=1$).
+</p>
+
+<h3>The clipping mechanism</h3>
+
+<p>
+    Now we have per-token advantages. The naive approach: use them directly in the policy gradient.
+    But here's the danger — if we update too aggressively, the policy can change drastically in
+    one step and collapse (catastrophic forgetting, degenerate outputs, etc.).
+</p>
+
+<p>PPO's solution: <strong>clip the policy update</strong> to prevent large changes.</p>
+
+<p>First, define the probability ratio:</p>
+
+<div class="eq-block">
+    <div class="eq-label">Probability ratio:</div>
+    $$c_t = \frac{\pi_\theta(a_t | s_t)}{\pi_{\theta_\text{old}}(a_t | s_t)}$$
+</div>
+
+<p>
+    If $c_t = 1$, the new policy assigns the same probability as the old policy to this token.
+    If $c_t = 1.5$, the new policy is 50% more likely to generate this token than before.
+</p>
+
+<p>The PPO clipped objective:</p>
+
+<div class="eq-block">
+    <div class="eq-label">PPO clipped surrogate objective:</div>
+    $$L^{\text{clip}}(\theta) = \mathbb{E}_t \Big[\min\big(c_t \cdot A_t, \;\; \text{clip}(c_t, \, 1-\epsilon, \, 1+\epsilon) \cdot A_t\big)\Big]$$
+</div>
+
+<p>Where $\epsilon$ is typically 0.2. Here's what this does:</p>
+
+<ul>
+    <li><strong>If $A_t > 0$</strong> (good action): the objective wants to increase $c_t$
+        (make this token more likely). But the clip caps the benefit at $c_t = 1+\epsilon$.
+        Beyond that, there's no extra gradient — you've moved enough.</li>
+    <li><strong>If $A_t < 0$</strong> (bad action): the objective wants to decrease $c_t$
+        (make this token less likely). But the clip caps the penalty at $c_t = 1-\epsilon$.
+        You can't over-correct.</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> PPO puts a leash on the policy. It says: "improve, but not too
+    much in any single step." This gives you stable training — each update makes a small,
+    controlled step in the right direction.
+</div>
+
+<h3>The full PPO objective</h3>
+
+<p>The complete loss function combines several terms:</p>
+
+<div class="eq-block">
+    <div class="eq-label">Full PPO objective:</div>
+    $$\mathcal{L}_{\text{PPO}}(\theta, \gamma) = \underbrace{L^{\text{clip}}(\theta)}_{\text{policy improvement}} + \underbrace{w_1 \, H(\theta)}_{\text{entropy bonus}} - \underbrace{w_2 \, \text{KL}(\theta)}_{\text{stay near original}} - \underbrace{w_3 \, L(\gamma)}_{\text{critic loss}}$$
+</div>
+
+<p>Each term serves a purpose:</p>
+
+<table>
+    <tr><th>Term</th><th>What it does</th><th>Why</th></tr>
+    <tr>
+        <td>$L^{\text{clip}}$</td>
+        <td>Clipped policy gradient</td>
+        <td>Make the model produce better responses</td>
+    </tr>
+    <tr>
+        <td>$H(\theta)$</td>
+        <td>Entropy bonus: $-\mathbb{E}[\log \pi_\theta(a_t|s_t)]$</td>
+        <td>Prevent the model from becoming too deterministic too fast</td>
+    </tr>
+    <tr>
+        <td>$\text{KL}(\theta)$</td>
+        <td>KL divergence from the original SFT model</td>
+        <td>Prevent reward hacking — keep the model "sane" and coherent</td>
+    </tr>
+    <tr>
+        <td>$L(\gamma)$</td>
+        <td>Critic/value function loss</td>
+        <td>Train the critic to better estimate future rewards</td>
+    </tr>
+</table>
+
+<h3>PPO training loop — one iteration</h3>
+
+<div class="steps">
+    <div class="step">
+        <strong>Sample.</strong> Given a batch of prompts, generate responses using the current
+        policy $\pi_{\theta_\text{old}}$. Record the log-probability of each token under this policy.
+    </div>
+    <div class="step">
+        <strong>Score.</strong> Pass each (prompt, response) to the frozen reward model. Get scalar
+        rewards.
+    </div>
+    <div class="step">
+        <strong>Estimate advantages.</strong> Run each (prompt, partial_response) through the critic
+        to get $V_\gamma(s_t)$ at every token position. Compute GAE advantages.
+    </div>
+    <div class="step">
+        <strong>Update policy.</strong> For several mini-batch epochs, compute the clipped surrogate
+        objective and update $\theta$. The "old" log-probs from Step 1 stay fixed — we only re-compute
+        the "new" log-probs under the updating $\theta$.
+    </div>
+    <div class="step">
+        <strong>Update critic.</strong> Using the same data, train the critic by regressing its
+        predictions toward the actual observed returns (reward model scores).
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="critic">6. The Critic Model — Architecture & Training</h2>
+
+<p>
+    The critic (also called the value model or value function) is the most often glossed-over part
+    of PPO for LLMs.
+</p>
+
+<h3>What problem it solves</h3>
+<p>
+    The reward model gives one score for the <em>entire</em> response. But we need a training
+    signal for <em>each token</em>. The critic bridges this gap: given a prompt and a
+    <em>partial</em> response (up to token $t$), it predicts the expected final reward.
+</p>
+
+<h3>Architecture</h3>
+<p>
+    It's another LLM with a scalar head — structurally identical to the reward model:
+</p>
+
+<div class="diagram">
+<svg width="520" height="400" viewBox="0 0 520 400" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arrow4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#555"/></marker>
+    <filter id="shadow4"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Input tokens -->
+  <g transform="translate(60, 20)">
+    <rect width="100" height="32" rx="4" fill="#e8e8e4" stroke="#bbb" stroke-width="1"/>
+    <text x="50" y="20" text-anchor="middle" font-size="11" fill="#333">prompt tokens</text>
+  </g>
+  <g transform="translate(172, 20)">
+    <rect width="64" height="32" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="32" y="20" text-anchor="middle" font-size="11" fill="#2563eb">tok 1</text>
+  </g>
+  <g transform="translate(248, 20)">
+    <rect width="64" height="32" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="32" y="20" text-anchor="middle" font-size="11" fill="#2563eb">tok 2</text>
+  </g>
+  <text x="336" y="40" font-size="14" fill="#999">...</text>
+  <g transform="translate(362, 20)">
+    <rect width="64" height="32" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="32" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">tok t</text>
+  </g>
+  <!-- Arrow down -->
+  <line x1="250" y1="56" x2="250" y2="88" stroke="#555" stroke-width="1.5" marker-end="url(#arrow4)"/>
+  <!-- Transformer block -->
+  <rect x="100" y="92" width="300" height="72" rx="8" fill="#f9fafb" stroke="#555" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="250" y="120" text-anchor="middle" font-weight="600" font-size="14" fill="#1a1a1a">Transformer</text>
+  <text x="250" y="142" text-anchor="middle" font-size="12" fill="#555">from SFT or reward model checkpoint</text>
+  <!-- Arrow down to hidden states -->
+  <line x1="250" y1="164" x2="250" y2="196" stroke="#555" stroke-width="1.5" marker-end="url(#arrow4)"/>
+  <!-- Hidden states — multiple positions highlighted -->
+  <rect x="80" y="200" width="340" height="32" rx="16" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="250" y="221" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">hidden states at EVERY token position</text>
+  <!-- Arrow down -->
+  <line x1="250" y1="236" x2="250" y2="262" stroke="#555" stroke-width="1.5" marker-end="url(#arrow4)"/>
+  <!-- Linear head -->
+  <rect x="140" y="266" width="220" height="48" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="250" y="294" text-anchor="middle" font-weight="600" font-size="13" fill="#2563eb">Linear(d -> 1) per position</text>
+  <!-- Arrow down -->
+  <line x1="250" y1="314" x2="250" y2="340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow4)"/>
+  <!-- Multiple outputs -->
+  <g transform="translate(100, 344)">
+    <rect width="60" height="32" rx="16" fill="#2563eb"/>
+    <text x="30" y="21" text-anchor="middle" font-size="12" fill="#fff" font-weight="600">V(s1)</text>
+  </g>
+  <g transform="translate(176, 344)">
+    <rect width="60" height="32" rx="16" fill="#2563eb"/>
+    <text x="30" y="21" text-anchor="middle" font-size="12" fill="#fff" font-weight="600">V(s2)</text>
+  </g>
+  <text x="268" y="364" font-size="14" fill="#999">...</text>
+  <g transform="translate(290, 344)">
+    <rect width="60" height="32" rx="16" fill="#2563eb"/>
+    <text x="30" y="21" text-anchor="middle" font-size="12" fill="#fff" font-weight="600">V(st)</text>
+  </g>
+</svg>
+</div>
+
+<div class="warning">
+    <strong>Key difference from reward model:</strong> The reward model produces one score at the
+    end (EOS position). The critic produces a value estimate at <em>every token position</em>.
+    At position $t$, the critic sees the prompt + response tokens up to $t$ (thanks to causal
+    masking) and predicts the final reward.
+</div>
+
+<h3>Training</h3>
+<p>
+    The critic is trained <strong>during</strong> the RL loop (not beforehand). Its loss is simple
+    regression — predict the actual observed reward:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Critic loss:</div>
+    $$L(\gamma) = \mathbb{E}_t \Big[\big(V_\gamma(s_t) - R_\text{target}(s_t)\big)^2\Big]$$
+</div>
+
+<p>Where $R_\text{target}(s_t)$ is the actual return from position $t$ onward. In the simplest
+    case (no intermediate rewards, discount $\gamma \approx 1$), this is just the reward model
+    score for the complete response. So the critic at every token position is being trained
+    to predict the final reward, given only a partial response.</p>
+
+<h3>Initialization</h3>
+<p>Common choices:</p>
+<ul>
+    <li><strong>From the reward model checkpoint</strong> — a reasonable starting point since the
+        reward model already understands response quality. Just swap the head.</li>
+    <li><strong>From the SFT model</strong> — the model that generated the responses. It understands
+        the distribution.</li>
+    <li><strong>From scratch (random head, pre-trained backbone)</strong> — works but converges
+        slower.</li>
+</ul>
+
+<h3>Why this is expensive</h3>
+<p>
+    During PPO training, you have <strong>four models in memory</strong>:
+</p>
+
+<table>
+    <tr><th>Model</th><th>Role</th><th>Updated?</th></tr>
+    <tr><td>Policy (LLM)</td><td>Generates responses, gets updated</td><td>Yes</td></tr>
+    <tr><td>Reference policy</td><td>Frozen copy for KL penalty</td><td>No</td></tr>
+    <tr><td>Reward model</td><td>Scores complete responses</td><td>No</td></tr>
+    <tr><td>Critic</td><td>Estimates per-token values</td><td>Yes</td></tr>
+</table>
+
+<p>
+    That's roughly <strong>4x the memory</strong> of a single LLM. If your policy is 7B parameters,
+    you need memory for ~28B parameters (plus optimizer states for the two that are being trained).
+    This is the single biggest practical obstacle to PPO.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="grpo">7. GRPO — Dropping the Critic</h2>
+
+<p>
+    Group Relative Policy Optimization (GRPO), introduced in the DeepSeek-Math paper, asks:
+    <em>can we get per-token advantages without a critic?</em>
+</p>
+
+<h3>The key insight</h3>
+<p>
+    Instead of training a separate model to estimate "how good is this partial response," just
+    generate <strong>multiple responses</strong> for the same prompt and compare them against
+    each other.
+</p>
+
+<h3>How it works</h3>
+
+<div class="steps">
+    <div class="step">
+        <strong>Sample a group.</strong> For each prompt, generate $G$ responses (e.g., $G = 8$ or $16$)
+        using the current policy. This gives you a group $\mathcal{G} = \{r_1, r_2, \ldots, r_G\}$.
+    </div>
+    <div class="step">
+        <strong>Score all of them.</strong> Pass each response through the reward model to get
+        scores $R_1, R_2, \ldots, R_G$.
+    </div>
+    <div class="step">
+        <strong>Normalize within the group.</strong> Compute the advantage for each response as
+        its z-score within the group:
+    </div>
+</div>
+
+<div class="eq-block">
+    <div class="eq-label">GRPO advantage:</div>
+    $$A_i = \frac{R_i - \text{mean}(\mathcal{G})}{\text{std}(\mathcal{G})}$$
+</div>
+
+<p>
+    That's it. No critic. No GAE. No temporal difference learning. The advantage for response $i$
+    is just: "how much better (or worse) was this response compared to the group average?"
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of it like grading on a curve. Instead of trying to estimate
+    an absolute "expected value" at each token (which requires a critic), we generate a bunch of
+    responses and say: "the ones that scored above average — reinforce those. The ones below average
+    — suppress those." The group itself provides the baseline that the critic was trying to learn.
+</div>
+
+<h3>What about per-token signal?</h3>
+<p>
+    In GRPO, the same advantage $A_i$ is applied to <em>every token</em> in response $i$.
+    This is cruder than PPO's per-token advantages from GAE. But it turns out to work well in
+    practice — especially because:
+</p>
+<ul>
+    <li>With a large enough group size, the normalization provides a strong signal.</li>
+    <li>The clipping mechanism still prevents over-correction.</li>
+    <li>For tasks with verifiable answers (math, code), the reward signal is clearer.</li>
+</ul>
+
+<h3>The GRPO objective</h3>
+
+<div class="eq-block">
+    <div class="eq-label">GRPO objective:</div>
+    $$\mathcal{L}_{\text{GRPO}}(\theta) = \mathbb{E}_t \Big[\min\big(c_t \cdot A_i, \;\; \text{clip}(c_t, 1-\epsilon, 1+\epsilon) \cdot A_i\big)\Big] - w_1 \, \mathbb{D}_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$$
+</div>
+
+<p>
+    Notice: same clipped surrogate as PPO, same KL penalty, but <strong>no critic loss term</strong>
+    and <strong>no entropy bonus</strong> (it's optional). The advantage $A_i$ is the z-score
+    from above, applied uniformly to all tokens in response $i$.
+</p>
+
+<h3>Memory comparison</h3>
+
+<table>
+    <tr><th></th><th>PPO</th><th>GRPO</th></tr>
+    <tr><td>Policy</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Reference policy</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Reward model</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Critic</td><td>Yes</td><td><strong>No</strong></td></tr>
+    <tr><td>Approx. memory</td><td>~4x policy size</td><td>~3x policy size</td></tr>
+</table>
+
+<p>
+    The trade-off: GRPO needs more <strong>compute per iteration</strong> (generating $G$ responses
+    per prompt instead of 1), but less <strong>memory</strong> (no critic). In practice, the memory
+    savings often matter more — it's the difference between "fits on your cluster" and "doesn't."
+</p>
+
+<!-- ============================================================ -->
+<h2 id="comparison">8. PPO vs GRPO: When to Use What</h2>
+
+<table>
+    <tr><th>Factor</th><th>PPO</th><th>GRPO</th></tr>
+    <tr>
+        <td>Credit assignment</td>
+        <td>Per-token (fine-grained via GAE)</td>
+        <td>Per-response (coarser)</td>
+    </tr>
+    <tr>
+        <td>Memory</td>
+        <td>High (4 models)</td>
+        <td>Lower (3 models)</td>
+    </tr>
+    <tr>
+        <td>Implementation complexity</td>
+        <td>High (critic training, GAE)</td>
+        <td>Lower (no critic)</td>
+    </tr>
+    <tr>
+        <td>Sample efficiency</td>
+        <td>Better (more info per sample)</td>
+        <td>Worse (needs group of samples)</td>
+    </tr>
+    <tr>
+        <td>Works best when</td>
+        <td>Long responses, nuanced rewards</td>
+        <td>Verifiable tasks (math, code), shorter responses</td>
+    </tr>
+    <tr>
+        <td>Training stability</td>
+        <td>Harder to tune (critic can destabilize)</td>
+        <td>Generally more stable</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>DeepSeek's approach:</strong> DeepSeek-R1 used GRPO with rule-based rewards (no learned
+    reward model for math tasks — just "is the answer correct?"). This simplifies the pipeline
+    even further: no reward model training, no critic, just sample -> check -> normalize -> update.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="practical">9. Practical Notes</h2>
+
+<h3>The full picture — what you actually need to train</h3>
+<div class="steps">
+    <div class="step">
+        <strong>SFT your base model.</strong> This is your starting policy $\pi_\text{ref}$. You'll
+        also use a frozen copy as the reference for KL penalty.
+    </div>
+    <div class="step">
+        <strong>Collect preference data.</strong> Use your SFT model to generate responses, have
+        humans (or an AI judge) rank them.
+    </div>
+    <div class="step">
+        <strong>Train a reward model</strong> on the preference data. (Skip this if you have
+        rule-based rewards — e.g., code passes tests, math answer is correct.)
+    </div>
+    <div class="step">
+        <strong>Run RL.</strong> PPO if you can afford the memory and want fine-grained credit
+        assignment. GRPO if you want simplicity and lower memory.
+    </div>
+</div>
+
+<h3>Common pitfalls</h3>
+<ul>
+    <li><strong>Reward hacking.</strong> The model finds degenerate responses that get high reward
+        scores but are actually bad. The KL penalty is your main defense. Monitor response quality
+        during training, not just reward scores.</li>
+    <li><strong>Critic lag.</strong> In PPO, if the critic is poorly trained, the advantages are
+        garbage and training diverges. Warm-starting the critic from the reward model helps.</li>
+    <li><strong>KL coefficient tuning.</strong> Too low -> reward hacking. Too high -> the model
+        barely moves from the SFT checkpoint. Start around 0.01-0.1 and adjust.</li>
+    <li><strong>Group size in GRPO.</strong> Too small -> noisy advantage estimates. Too large ->
+        expensive. 8-64 responses per prompt is typical.</li>
+</ul>
+
+<h3>Rule-based rewards vs learned reward models</h3>
+<p>
+    If your task has verifiable outcomes (correct answer, code compiles, recommendation leads to
+    click/engagement), consider skipping the learned reward model entirely and using rule-based
+    rewards with GRPO. This eliminates an entire source of noise and reward hacking.
+</p>
+
+<hr>
+
+<p style="color: var(--muted); font-size: 0.9em;">
+    <strong>References:</strong>
+    Schulman et al., "Proximal Policy Optimization Algorithms" (2017) &middot;
+    Shao et al., "DeepSeekMath: Pushing the Limits of Mathematical Reasoning" (2024) &middot;
+    DeepSeek-AI, "DeepSeek-R1" (2025) &middot;
+    Yuge Shi, <a href="https://yugeten.github.io/posts/2025/01/ppogrpo/">"A Vision Researcher's Guide to PPO & GRPO"</a> (2025)
+</p>
+
+</article>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
