@@ -237,7 +237,7 @@
 </div>
 
 <p>
-    This is just a sigmoid applied to the score difference. If the chosen response scores much
+    Where $\sigma(x) = 1/(1 + e^{-x})$ is the sigmoid function. This is just a sigmoid applied to the score difference. If the chosen response scores much
     higher than the rejected one, the sigmoid is close to 1 (high probability, low loss). The
     training loss is the negative log-likelihood:
 </p>
@@ -281,6 +281,12 @@
     Your LLM is a <strong>policy</strong> $\pi_\theta$. Given a prompt, it generates a response
     by sampling tokens one at a time. Each token is an "action." The full response is a sequence
     of actions. The reward model scores the complete response.
+</p>
+
+<p>
+    In RL notation: the <strong>state</strong> $s_t$ is the prompt plus all tokens generated so far
+    (up to position $t$), and the <strong>action</strong> $a_t$ is the next token chosen. The policy
+    $\pi_\theta(a_t | s_t)$ is just the LLM's next-token probability distribution.
 </p>
 
 <p>Our goal: adjust $\theta$ (the LLM weights) so the model produces higher-reward responses.</p>
@@ -341,14 +347,14 @@
 
 <div class="eq-block">
     <div class="eq-label">Advantage:</div>
-    $$A_t = Q(s_t, a_t) - V(s_t)$$
+    $$A^\pi_t = Q^\pi(s_t, a_t) - V^\pi(s_t)$$
 </div>
 
 <p>Where:</p>
 <ul>
-    <li>$Q(s_t, a_t)$: the expected total reward if we take action $a_t$ in state $s_t$ and then
-        act optimally afterward. ("How good is this specific action here?")</li>
-    <li>$V(s_t)$: the expected total reward from state $s_t$ under the current policy.
+    <li>$Q^\pi(s_t, a_t)$: the expected total reward if we take action $a_t$ in state $s_t$ and then
+        continue following the current policy $\pi$. ("How good is this specific action here, given how we currently behave?")</li>
+    <li>$V^\pi(s_t)$: the expected total reward from state $s_t$ under the current policy.
         ("How good is this state on average?")</li>
     <li>$A_t$: the advantage — "was this action better or worse than what we'd typically do here?"</li>
 </ul>
@@ -427,14 +433,23 @@ $$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
     If $c_t = 1.5$, the new policy is 50% more likely to generate this token than before.
 </p>
 
-<p>The PPO clipped objective:</p>
+<p>
+    The $\text{clip}$ function clamps a value to a range:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Clip function:</div>
+    $$\text{clip}(x, a, b) = \max(a, \min(x, b))$$
+</div>
+
+<p>The PPO clipped objective uses this to bound the probability ratio:</p>
 
 <div class="eq-block">
     <div class="eq-label">PPO clipped surrogate objective:</div>
     $$L^{\text{clip}}(\theta) = \mathbb{E}_t \Big[\min\big(c_t \cdot A_t, \;\; \text{clip}(c_t, \, 1-\epsilon, \, 1+\epsilon) \cdot A_t\big)\Big]$$
 </div>
 
-<p>Where $\epsilon$ is typically 0.2. Here's what this does:</p>
+<p>Where $\epsilon$ is typically 0.2. The clipped ratio $\text{clip}(c_t, 1-\epsilon, 1+\epsilon)$ forces $c_t$ to stay in $[1-\epsilon, 1+\epsilon]$. Here's what the $\min$ with this clipped version does:</p>
 
 <ul>
     <li><strong>If $A_t > 0$</strong> (good action): the objective wants to increase $c_t$
@@ -451,9 +466,14 @@ $$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
     controlled step in the right direction.
 </div>
 
-<h3>The full PPO objective</h3>
+<h3>The full PPO objective for RLHF</h3>
 
-<p>The complete loss function combines several terms:</p>
+<p>
+    The original PPO paper (Schulman et al., 2017) only has $L^{\text{clip}}$ plus optional
+    entropy and value-function terms -- no KL penalty. In the RLHF setting for LLMs, we add
+    a KL divergence term against the frozen SFT reference policy to prevent reward hacking.
+    This "RLHF-flavored PPO" combines several terms:
+</p>
 
 <div class="eq-block">
     <div class="eq-label">Full PPO objective:</div>
@@ -718,6 +738,14 @@ $$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
     from above, applied uniformly to all tokens in response $i$.
 </p>
 
+<div class="note">
+    <strong>Note on notation:</strong> The DeepSeek papers write the GRPO objective at the
+    sequence level using $\pi_\theta(o_i | q)$ for the probability of generating full output $o_i$
+    given query $q$. In practice, implementations compute this via the sum of per-token
+    log-probabilities: $\log \pi_\theta(o_i | q) = \sum_t \log \pi_\theta(a_t | s_t)$. The
+    token-level formulation above is what you actually implement.
+</div>
+
 <h3>Memory comparison</h3>
 
 <table>
@@ -809,7 +837,9 @@ $$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
     <li><strong>Critic lag.</strong> In PPO, if the critic is poorly trained, the advantages are
         garbage and training diverges. Warm-starting the critic from the reward model helps.</li>
     <li><strong>KL coefficient tuning.</strong> Too low -> reward hacking. Too high -> the model
-        barely moves from the SFT checkpoint. Start around 0.01-0.1 and adjust.</li>
+        barely moves from the SFT checkpoint. InstructGPT used $\beta = 0.02$; typical
+        range is 0.01-0.1. Some implementations use adaptive KL where the coefficient
+        adjusts to hit a target KL budget per update.</li>
     <li><strong>Group size in GRPO.</strong> Too small -> noisy advantage estimates. Too large ->
         expensive. 8-64 responses per prompt is typical.</li>
 </ul>
@@ -826,6 +856,7 @@ $$\delta_t = \gamma \, V_\phi(s_{t+1}) - V_\phi(s_t)$$
 <p style="color: var(--muted); font-size: 0.9em;">
     <strong>References:</strong>
     Schulman et al., "Proximal Policy Optimization Algorithms" (2017) &middot;
+    Ouyang et al., "Training language models to follow instructions with human feedback" (InstructGPT, 2022) &middot;
     Shao et al., "DeepSeekMath: Pushing the Limits of Mathematical Reasoning" (2024) &middot;
     DeepSeek-AI, "DeepSeek-R1" (2025) &middot;
     Yuge Shi, <a href="https://yugeten.github.io/posts/2025/01/ppogrpo/">"A Vision Researcher's Guide to PPO & GRPO"</a> (2025)
