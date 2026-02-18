@@ -54,7 +54,7 @@
         <li><a href="#policy-gradients">Policy Gradients: The Core Idea</a></li>
         <li><a href="#ppo">PPO: Step by Step</a></li>
         <li><a href="#critic">The Critic Model</a></li>
-        <li><a href="#grpo">GRPO — Dropping the Critic</a></li>
+        <li><a href="#grpo">GRPO: Dropping the Critic</a></li>
         <li><a href="#comparison">PPO vs GRPO: When to Use What</a></li>
         <li><a href="#practical">Practical Notes</a></li>
     </ol>
@@ -314,7 +314,7 @@
 <p>Concretely:</p>
 <ol>
     <li>Sample a response from your current policy.</li>
-    <li>Score it with the reward model -> get $R$.</li>
+    <li>Score it with the reward model to get $R$.</li>
     <li>If $R$ is high: <strong>increase</strong> the probability of those tokens (positive gradient).</li>
     <li>If $R$ is low: <strong>decrease</strong> the probability of those tokens (negative gradient).</li>
 </ol>
@@ -543,8 +543,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 <h2 id="critic">6. The Critic Model : Architecture & Training</h2>
 
 <p>
-    The critic (also called the value model or value function) is the most often glossed-over part
-    of PPO for LLMs.
+    The critic (also called the value model) estimates per-token values during PPO training.
 </p>
 
 <h3>What problem it solves</h3>
@@ -668,7 +667,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 <p>
     That's roughly <strong>4x the memory</strong> of a single LLM. If your policy is 7B parameters,
     you need memory for ~28B parameters (plus optimizer states for the two that are being trained).
-    This is the single biggest practical obstacle to PPO.
+    This memory cost is the main practical obstacle to PPO.
 </p>
 
 <!-- ============================================================ -->
@@ -770,7 +769,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
     savings often matter more: it can be the difference between fitting on your cluster or not.
 </p>
 
-<!-- ============================================================ -->
+<!-- ============================================================
 <h2 id="comparison">8. PPO vs GRPO: When to Use What</h2>
 
 <table>
@@ -805,7 +804,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
         <td>Harder to tune (critic can destabilize)</td>
         <td>Generally more stable</td>
     </tr>
-</table>
+</table> -->
 
 <div class="note">
     <strong>DeepSeek's approach:</strong> DeepSeek-R1 used GRPO with rule-based rewards (no learned
@@ -816,7 +815,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 <!-- ============================================================ -->
 <h2 id="practical">9. Practical Notes</h2>
 
-<h3>The full picture — what you actually need to train</h3>
+<h3>What you need to train</h3>
 <div class="steps">
     <div class="step">
         <strong>SFT your base model.</strong> This is your starting policy $\pi_\text{ref}$. You'll
@@ -843,13 +842,13 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
         during training, not just reward scores.</li>
     <li><strong>Critic lag.</strong> In PPO, if the critic is poorly trained, the advantages are
         garbage and training diverges. Warm-starting the critic from the reward model helps.</li>
-    <li><strong>KL coefficient tuning.</strong> Too low -> reward hacking. Too high -> the model
+    <li><strong>KL coefficient tuning.</strong> Too low leads to reward hacking. Too high and the model
         barely moves from the SFT checkpoint. InstructGPT used $\beta = 0.02$ (order of $10^{-2}$).
         Values above 0.05 are less common in practice but implementation-dependent. Some setups
         use adaptive KL where the coefficient adjusts automatically to hit a target KL budget
         per update.</li>
-    <li><strong>Group size in GRPO.</strong> Too small -> noisy advantage estimates. Too large ->
-        expensive. 8-64 responses per prompt is typical.</li>
+    <li><strong>Group size in GRPO.</strong> Too small and the advantage estimates are noisy. Too large
+        and it gets expensive. 8-64 responses per prompt is typical.</li>
 </ul>
 
 <h3>Rule-based rewards vs learned reward models</h3>
