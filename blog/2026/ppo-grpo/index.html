@@ -48,44 +48,118 @@
 <nav class="toc">
     <h3>Contents</h3>
     <ol>
-        <li><a href="#why-rl">Why RL for LLMs?</a></li>
+        <li><a href="#background">Background: From Pre-training to SFT</a></li>
+        <li><a href="#why-rl">Why RL on Top of SFT?</a></li>
         <li><a href="#big-picture">The Big Picture: RLHF Pipeline</a></li>
         <li><a href="#reward-model">The Reward Model</a></li>
         <li><a href="#policy-gradients">Policy Gradients: The Core Idea</a></li>
         <li><a href="#ppo">PPO: Step by Step</a></li>
         <li><a href="#critic">The Critic Model</a></li>
         <li><a href="#grpo">GRPO: Dropping the Critic</a></li>
-        <li><a href="#comparison">PPO vs GRPO: When to Use What</a></li>
         <li><a href="#practical">Practical Notes</a></li>
     </ol>
 </nav>
 
 <!-- ============================================================ -->
-<h2 id="why-rl">1. Why RL for LLMs?</h2>
+<h2 id="background">1. Background: From Pre-training to SFT</h2>
 
 <p>
-    After pre-training (next-token prediction on web text) and supervised fine-tuning (SFT on
-    curated demonstrations), your LLM can generate fluent text. But it still has problems:
-    it might be confidently wrong, toxic, or unhelpful. SFT alone can't fix this well because:
+    Modern LLMs are built in stages. The first stage, <strong>pre-training</strong>, trains
+    a transformer on a massive text corpus (web pages, books, code) using next-token prediction.
+    The model learns to predict the most likely next word given everything before it. After
+    pre-training, the model can complete text fluently, but it has no concept of "being helpful"
+    or "following instructions." Ask it a question and it might continue with another question,
+    or produce a Wikipedia-style paragraph that doesn't address what you asked.
+</p>
+
+<p>
+    <strong>Supervised fine-tuning (SFT)</strong> fixes this. You collect a dataset of
+    (instruction, desired_response) pairs written by humans, then fine-tune the pre-trained
+    model on these examples using the same next-token prediction loss. For example:
+</p>
+
+<table>
+    <tr><th>Instruction</th><th>Desired response</th></tr>
+    <tr>
+        <td>Explain gradient descent in one paragraph.</td>
+        <td>Gradient descent is an optimization algorithm that iteratively adjusts parameters
+            by moving in the direction of steepest decrease of the loss function...</td>
+    </tr>
+    <tr>
+        <td>Write a Python function to reverse a string.</td>
+        <td><code>def reverse(s): return s[::-1]</code></td>
+    </tr>
+    <tr>
+        <td>Is 127 a prime number?</td>
+        <td>Yes. 127 is not divisible by 2, 3, 5, 7, or 11, and $\sqrt{127} &lt; 12$, so it is prime.</td>
+    </tr>
+</table>
+
+<p>
+    After SFT, the model learns the format: given an instruction, produce a helpful response.
+    SFT datasets typically contain 10k-100k examples. The resulting model is often called the
+    <strong>SFT model</strong> or <strong>SFT checkpoint</strong>, and it serves as the starting
+    point for the RL stage.
+</p>
+
+<h3>What SFT gets right</h3>
+<ul>
+    <li>The model follows instructions and produces structured responses.</li>
+    <li>It learns the right tone and format from the demonstration data.</li>
+    <li>It works well for tasks that are well-represented in the SFT dataset.</li>
+</ul>
+
+<h3>Where SFT falls short</h3>
+<p>
+    SFT trains on a fixed set of "gold" responses. The model learns to imitate those specific
+    outputs, but it never sees what a <em>bad</em> response looks like or learns to distinguish
+    good from bad. This creates several problems:
 </p>
 
 <ul>
-    <li><strong>Ranking is easier than generating.</strong> Humans can easily say "response A is better
-        than response B" but struggle to write the perfect response from scratch. RL lets us
-        exploit this ranking signal.</li>
-    <li><strong>SFT optimizes per-token likelihood.</strong> It doesn't directly optimize for
-        "was the whole response good?", which is what we actually care about.</li>
-    <li><strong>Exploration.</strong> RL lets the model try different responses and learn from
-        what works, rather than only imitating fixed demonstrations.</li>
+    <li><strong>No negative signal.</strong> If the model generates a subtly wrong answer during
+        inference, SFT gave it no mechanism to recognize or avoid that mistake. It only learned
+        "produce text like these examples."</li>
+    <li><strong>Exposure bias.</strong> During SFT, the model always sees ground-truth tokens as
+        context. During inference, it conditions on its own (potentially wrong) earlier tokens.
+        Errors compound.</li>
+    <li><strong>Ceiling on quality.</strong> The model can't exceed the quality of the demonstration
+        data. If annotators wrote decent but not optimal responses, that's the best the model
+        can do.</li>
 </ul>
 
 <p>
-    The core idea: train a <strong>reward model</strong> to mimic human judgment, then use RL
-    to steer the LLM toward higher-reward responses.
+    This is where reinforcement learning enters the picture.
 </p>
 
 <!-- ============================================================ -->
-<h2 id="big-picture">2. The Big Picture: RLHF Pipeline</h2>
+<h2 id="why-rl">2. Why RL on Top of SFT?</h2>
+
+<p>
+    RL addresses the gaps that SFT leaves. Instead of imitating fixed examples, the model generates
+    its own responses and receives a reward signal indicating how good they were. Three properties
+    make this effective:
+</p>
+
+<ul>
+    <li><strong>Ranking is easier than generating.</strong> Humans can say "response A is better
+        than response B" much more easily than they can write the perfect response from scratch.
+        RL lets us exploit this comparison signal.</li>
+    <li><strong>Whole-response optimization.</strong> SFT optimizes per-token likelihood. It doesn't
+        directly optimize for "was the entire response good?", which is what we actually care about.
+        RL optimizes a scalar reward over the full output.</li>
+    <li><strong>Exploration.</strong> The model tries different responses and learns from what works,
+        rather than only imitating fixed demonstrations. It can discover strategies not present in
+        the SFT data.</li>
+</ul>
+
+<p>
+    The approach: train a <strong>reward model</strong> to approximate human judgment, then use RL
+    to steer the SFT model toward higher-reward responses.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">3. The Big Picture: RLHF Pipeline</h2>
 
 <div class="diagram">
 <svg width="520" height="380" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
@@ -122,7 +196,7 @@
 </p>
 
 <!-- ============================================================ -->
-<h2 id="reward-model">3. The Reward Model</h2>
+<h2 id="reward-model">4. The Reward Model</h2>
 
 <h3>What it is</h3>
 <p>
@@ -264,7 +338,7 @@
 </ul>
 
 <div class="warning">
-    <strong>Key limitation:</strong> The reward model is <em>trained</em> on complete responses -- human
+    <strong>Key limitation:</strong> The reward model is <em>trained</em> on complete responses: human
     comparisons are between full outputs, not partial prefixes. Architecturally it could produce a
     scalar for any prefix, but those scores are unreliable since the model never saw partial completions
     during training. So we treat the RM reward as terminal: one score at the end of the response.
@@ -272,7 +346,7 @@
 </div>
 
 <!-- ============================================================ -->
-<h2 id="policy-gradients">4. Policy Gradients: The Core Idea</h2>
+<h2 id="policy-gradients">5. Policy Gradients: The Core Idea</h2>
 
 <p>
     Before PPO, let's build the intuition for <em>why</em> it works.
@@ -340,7 +414,7 @@
 </p>
 
 <!-- ============================================================ -->
-<h2 id="ppo">5. PPO: Step by Step</h2>
+<h2 id="ppo">6. PPO: Step by Step</h2>
 
 <h3>The advantage function</h3>
 <p>
@@ -393,7 +467,7 @@
 </div>
 
 <p>
-    The RM reward is terminal -- it scores the full response at the end. However, many RLHF
+    The RM reward is terminal: it scores the full response at the end. However, many RLHF
     implementations (including InstructGPT) add a <strong>per-token KL penalty</strong> as reward
     shaping: $r_t = -\beta \, \text{KL}_t$ at each non-terminal step, where
     $\text{KL}_t = \log \pi_\theta(a_t|s_t) - \log \pi_\text{ref}(a_t|s_t)$. The final token
@@ -540,7 +614,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 </div>
 
 <!-- ============================================================ -->
-<h2 id="critic">6. The Critic Model : Architecture & Training</h2>
+<h2 id="critic">7. The Critic Model</h2>
 
 <p>
     The critic (also called the value model) estimates per-token values during PPO training.
@@ -671,7 +745,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 </p>
 
 <!-- ============================================================ -->
-<h2 id="grpo">7. GRPO : Dropping the Critic</h2>
+<h2 id="grpo">8. GRPO: Dropping the Critic</h2>
 
 <p>
     Group Relative Policy Optimization (GRPO), introduced in the DeepSeek-Math paper, asks:
@@ -770,7 +844,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 </p>
 
 <!-- ============================================================
-<h2 id="comparison">8. PPO vs GRPO: When to Use What</h2>
+<h2 id="comparison">9. PPO vs GRPO: When to Use What</h2>
 
 <table>
     <tr><th>Factor</th><th>PPO</th><th>GRPO</th></tr>
@@ -813,7 +887,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 </div>
 
 <!-- ============================================================ -->
-<h2 id="practical">9. Practical Notes</h2>
+<h2 id="practical">10. Practical Notes</h2>
 
 <h3>What you need to train</h3>
 <div class="steps">
