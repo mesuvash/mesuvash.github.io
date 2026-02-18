@@ -519,7 +519,7 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 
 <div class="eq-block">
     <div class="eq-label">Clip function:</div>
-    $$\text{clip}(x, a, b) = \max(a, \min(x, b))$$
+    $$\text{clip}(x, a, b) = \begin{cases} a & \text{if } x < a \\ x & \text{if } a \le x \le b \\ b & \text{if } x > b \end{cases}$$
 </div>
 
 <p>The PPO clipped objective uses this to bound the probability ratio:</p>
