@@ -49,7 +49,7 @@
 
 <header class="post-header">
     <h1>Reinforcement Learning for LLMs</h1>
-    <p class="post-meta">February 15, 2026</p>
+    <p class="post-meta">February 20, 2026</p>
 </header>
 
 <article class="post-content">
@@ -799,67 +799,12 @@
     <li>$\lambda \approx 0.95$: the sweet spot used in practice. Mostly looks ahead, with some smoothing.</li>
 </ul>
 
-<div class="diagram">
-<svg width="520" height="280" viewBox="0 0 520 280" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
-  <defs>
-    <marker id="arr5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#555"/></marker>
-    <filter id="sh5"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
-  </defs>
-  <!-- Token positions -->
-  <g transform="translate(40, 20)">
-    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
-    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_t</text>
-  </g>
-  <g transform="translate(128, 20)">
-    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
-    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_{t+1}</text>
-  </g>
-  <g transform="translate(216, 20)">
-    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
-    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_{t+2}</text>
-  </g>
-  <text x="296" y="40" font-size="12" fill="#999">...</text>
-  <g transform="translate(320, 20)">
-    <rect width="56" height="30" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
-    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#166534">s_T (end)</text>
-  </g>
-  <!-- Arrows between states -->
-  <line x1="96" y1="35" x2="124" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
-  <line x1="184" y1="35" x2="212" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
-  <line x1="272" y1="35" x2="292" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
-  <line x1="304" y1="35" x2="316" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
-
-  <!-- TD errors -->
-  <text x="112" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_t$</text>
-  <text x="200" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_{t+1}$</text>
-  <text x="288" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_{t+2}$</text>
-
-  <!-- GAE formula breakdown -->
-  <rect x="24" y="96" width="472" height="92" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh5)"/>
-  <text x="40" y="118" font-size="11" fill="#555">GAE advantage at position t:</text>
-  <text x="40" y="142" font-size="12" fill="#1a1a1a" font-weight="600">A_t = $\delta_t$ + ($\gamma$$\lambda$)$\delta_{t+1}$ + ($\gamma$$\lambda$)$^2$$\delta_{t+2}$ + ...</text>
-  <text x="40" y="172" font-size="11" fill="#555">Recent TD errors matter most. Distant ones are exponentially down-weighted by ($\gamma$$\lambda$).</text>
-
-  <!-- Lambda spectrum -->
-  <rect x="24" y="204" width="472" height="60" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
-  <text x="56" y="228" text-anchor="middle" font-size="11" fill="#92400e" font-weight="600">$\lambda$=0</text>
-  <text x="56" y="248" text-anchor="middle" font-size="10" fill="#555">TD only</text>
-  <line x1="96" y1="224" x2="400" y2="224" stroke="#d97706" stroke-width="1.5"/>
-  <circle cx="96" cy="224" r="4" fill="#d97706"/>
-  <circle cx="360" cy="224" r="4" fill="#d97706"/>
-  <circle cx="400" cy="224" r="4" fill="#d97706"/>
-  <circle cx="360" cy="224" r="5" fill="none" stroke="#1e40af" stroke-width="2"/>
-  <text x="360" y="248" text-anchor="middle" font-size="10" fill="#1e40af" font-weight="600">0.95 typical</text>
-  <text x="434" y="228" text-anchor="middle" font-size="11" fill="#92400e" font-weight="600">$\lambda$=1</text>
-  <text x="434" y="248" text-anchor="middle" font-size="10" fill="#555">MC</text>
-</svg>
-</div>
 
 <h3>Why the critic is essential (and expensive)</h3>
 
 <p>
     The critic provides $V(s_t)$ at every token position, which is needed to compute TD errors
-    and therefore GAE advantages. Without a critic, you'd fall back to REINFORCE with raw rewards —
+    and therefore GAE advantages. Without a critic, you'd fall back to REINFORCE with raw rewards 
     which is too noisy for long text outputs.
 </p>
 
