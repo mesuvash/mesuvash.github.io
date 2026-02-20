@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Reinforcement Learning for LLMs</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Reinforcement Learning for LLMs" />
+    <meta property="og:description" content="An intuition-first guide to the RL concepts behind RLHF, PPO, and GRPO — the background you need before diving into alignment algorithms." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/rl_for_llm/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Reinforcement Learning for LLMs" />
+    <meta name="twitter:description" content="An intuition-first guide to the RL concepts behind RLHF, PPO, and GRPO — the background you need before diving into alignment algorithms." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Reinforcement Learning for LLMs</h1>
+    <p class="post-meta">February 15, 2026</p>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    An intuition-first guide to the RL concepts behind RLHF, PPO, and GRPO.<br>
+    The background you need before diving into alignment algorithms.
+</p>
+
+<details>
+<summary><h3 style="display:inline; cursor:pointer;">Why this post exists</h3> <span style="font-size: 0.85em; color: var(--muted); font-style: italic;">&nbsp; first, a rant about RL/ML literature's readability problem</span></summary>
+
+<p>
+    ML/RL literature has a readability problem. Papers and textbooks are dense with notation,
+    and too often the math arrives before the intuition. If you've ever stared at a policy
+    gradient derivation and thought "but <em>why</em> are we doing this?", you're not alone.
+    The barrier is rarely the ideas themselves; it's how they're presented.
+</p>
+
+<p>
+    The underlying principles of RL, even the parts that power RLHF and GRPO, are
+    surprisingly simple. At every stage, the core question is intuitive: "which tokens made
+    this response good or bad, and how do we produce more of the good ones?" Everything else
+    is machinery to answer that question efficiently.
+</p>
+
+<p>
+    There's an old idea, often attributed to Feynman: if you can't explain something simply,
+    you don't understand it well enough. This post is my attempt to explain simply. Every
+    equation earns its place only after the intuition is clear, and every concept is introduced
+    exactly when it's needed to solve a concrete problem with the previous approach.
+</p>
+</details>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#big-picture">RL for LLMs in One Picture</a></li>
+        <li><a href="#vocabulary">RL Vocabulary Mapped to Text Generation</a></li>
+        <li><a href="#policy-gradients">Policy Gradients: The Naive Approach</a></li>
+        <li><a href="#advantage">The Advantage Function: Fixing REINFORCE</a></li>
+        <li><a href="#values">Value Functions & The Bellman Equation</a></li>
+        <li><a href="#mc-td">Monte Carlo vs Temporal Difference</a></li>
+        <li><a href="#actor-critic">Actor-Critic: Putting It All Together</a></li>
+        <li><a href="#bridge">From Here to PPO and GRPO</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">1. RL for LLMs in One Picture</h2>
+
+<p>
+    After pre-training and supervised fine-tuning (SFT), your LLM can generate fluent text.
+    But "fluent" is not the same as "good." The model may be confidently wrong, unhelpfully
+    verbose, or subtly toxic. RL lets you optimize for <strong>overall response quality</strong>
+    rather than just per-token likelihood.
+</p>
+
+<p>Here is the setup, reduced to its essentials:</p>
+
+<ul>
+    <li>The <strong>LLM is a policy</strong> that samples tokens one at a time to produce a response.</li>
+    <li>A <strong>trajectory</strong> is: prompt → sequence of tokens → complete response.</li>
+    <li>The reward is usually <strong>sparse and delayed</strong>: a single score at the very end.</li>
+    <li>The central problem is <strong>credit assignment</strong>: which tokens in a 200-token response were responsible for the reward?</li>
+</ul>
+
+<div class="diagram">
+<svg width="520" height="250" viewBox="0 0 520 250" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <marker id="arr1g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#16a34a"/></marker>
+    <marker id="arr1a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#d97706"/></marker>
+    <filter id="sh1"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+
+  <!-- Row 1: Prompt → LLM → Tokens → EOS → Reward -->
+  <!-- Prompt -->
+  <rect x="16" y="24" width="72" height="36" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh1)"/>
+  <text x="52" y="47" text-anchor="middle" font-size="12" fill="#333">Prompt</text>
+  <line x1="92" y1="42" x2="112" y2="42" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <!-- LLM box -->
+  <rect x="116" y="16" width="72" height="52" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh1)"/>
+  <text x="152" y="39" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">LLM</text>
+  <text x="152" y="55" text-anchor="middle" font-size="10" fill="#555">policy</text>
+  <line x1="192" y1="42" x2="212" y2="42" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <!-- Tokens -->
+  <rect x="216" y="28" width="36" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="234" y="46" text-anchor="middle" font-size="10" fill="#333">tok₁</text>
+  <rect x="258" y="28" width="36" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="276" y="46" text-anchor="middle" font-size="10" fill="#333">tok₂</text>
+  <text x="308" y="46" font-size="12" fill="#999">...</text>
+  <rect x="322" y="28" width="36" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="340" y="46" text-anchor="middle" font-size="10" fill="#333">tok_T</text>
+  <!-- EOS -->
+  <rect x="364" y="28" width="36" height="28" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="382" y="46" text-anchor="middle" font-size="10" font-weight="600" fill="#166534">EOS</text>
+  <!-- Arrow to reward -->
+  <line x1="404" y1="42" x2="424" y2="42" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr1g)"/>
+  <!-- Reward -->
+  <rect x="428" y="24" width="76" height="36" rx="18" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#sh1)"/>
+  <text x="466" y="47" text-anchor="middle" font-weight="600" font-size="12" fill="#166534">R = 0.82</text>
+
+  <!-- Question marks under each token -->
+  <text x="234" y="80" text-anchor="middle" font-size="14" fill="#d97706" font-weight="600">?</text>
+  <text x="276" y="80" text-anchor="middle" font-size="14" fill="#d97706" font-weight="600">?</text>
+  <text x="340" y="80" text-anchor="middle" font-size="14" fill="#d97706" font-weight="600">?</text>
+  <text x="382" y="80" text-anchor="middle" font-size="14" fill="#d97706" font-weight="600">?</text>
+
+  <!-- Dashed curve from reward back under the tokens -->
+  <path d="M466,64 C466,110 234,110 234,82" stroke="#d97706" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+
+  <!-- Label below the curve, centered -->
+  <text x="350" y="122" text-anchor="middle" font-size="11" fill="#d97706" font-style="italic">credit assignment: which tokens caused the reward?</text>
+
+  <!-- Summary box -->
+  <rect x="16" y="142" width="488" height="84" rx="8" fill="#f3f0ff" stroke="#7c5cbf" stroke-width="1" filter="url(#sh1)"/>
+  <text x="32" y="168" font-size="12" font-weight="600" fill="#4c3a8a">The whole game:</text>
+  <text x="32" y="190" font-size="12" fill="#333">Generate tokens → get a reward at the end → figure out which</text>
+  <text x="32" y="210" font-size="12" fill="#333">tokens were responsible → adjust the policy to produce better outputs.</text>
+</svg>
+</div>
+
+<p>
+    The rest of this tutorial builds up the tools to solve this problem, one piece at a time.
+    We'll start with the simplest approach (REINFORCE), see why it breaks, and then introduce
+    each new concept exactly when it's needed to fix the previous one.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="vocabulary">2. RL Vocabulary Mapped to Text Generation</h2>
+
+<p>
+    RL has its own jargon, but every term maps cleanly onto text generation.
+    This table is worth internalizing because the rest of the tutorial (and all RLHF literature)
+    uses these terms interchangeably.
+</p>
+
+<table>
+    <tr><th>RL concept</th><th>In text generation</th><th>Example</th></tr>
+    <tr>
+        <td><strong>State</strong> $s_t$</td>
+        <td>Prompt + tokens generated so far</td>
+        <td><code>"Explain gravity" + "Gravity is"</code></td>
+    </tr>
+    <tr>
+        <td><strong>Action</strong> $a_t$</td>
+        <td>Next token chosen</td>
+        <td><code>"a"</code> (the next token)</td>
+    </tr>
+    <tr>
+        <td><strong>Policy</strong> $\pi_\theta$</td>
+        <td>The LLM's token distribution</td>
+        <td>$P(\text{"a"}) = 0.3, P(\text{"the"}) = 0.2, \ldots$</td>
+    </tr>
+    <tr>
+        <td><strong>Trajectory</strong> $\tau$</td>
+        <td>Complete prompt + response</td>
+        <td>The full generated text</td>
+    </tr>
+    <tr>
+        <td><strong>Reward</strong> $r$</td>
+        <td>Score for the response</td>
+        <td>Reward model output: 0.82</td>
+    </tr>
+    <tr>
+        <td><strong>Return</strong> $G$</td>
+        <td>Total reward (often = terminal reward)</td>
+        <td>Same as reward when only scored at end</td>
+    </tr>
+    <tr>
+        <td><strong>Discount</strong> $\gamma$</td>
+        <td>Weight on future reward</td>
+        <td>Typically $1.0$ exactly (see note below)</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Note on $\gamma$:</strong> In robotics and game-playing RL, the agent may act forever
+    (infinite horizon), so $\gamma < 1$ is required to keep the sum of rewards finite. LLM RL
+    is different: every episode terminates at the EOS token, so the return is a finite sum
+    regardless of $\gamma$. This makes $\gamma = 1.0$ mathematically safe, and most
+    implementations use it exactly. You'll sometimes see $\gamma = 1.0$ left implicit in
+    RLHF papers for this reason.
+</div>
+
+<div class="note">
+    <strong>Intuition:</strong> RL for LLMs is not "teaching the model to reason." It's
+    <strong>shaping which outputs the model prefers</strong> under a reward signal. The model
+    already has the capability from pre-training. RL steers it toward the outputs humans
+    (or a reward model) rate highly.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="policy-gradients">3. Policy Gradients: The Naive Approach</h2>
+
+<p>
+    With the vocabulary in place, let's tackle the core question: how do we update the LLM's
+    weights to produce higher-reward responses?
+</p>
+
+<h3>What we want to do</h3>
+
+<p>
+    Our objective is simple to state: maximize the expected reward over responses sampled
+    from the policy.
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Objective:</div>
+    $$J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[R(\tau)]$$
+</div>
+
+<p>
+    Where $\tau$ is a complete response (sequence of tokens) sampled from the LLM, and
+    $R(\tau)$ is the reward model's score for that response. We want to find $\theta$ that
+    makes $J(\theta)$ as large as possible, so we want $\nabla_\theta J(\theta)$ to
+    can do gradient ascent.
+</p>
+
+<h3>Why we can't just differentiate through sampling</h3>
+
+<p>
+    In supervised learning, the loss is a smooth function of the model's outputs, so
+    backpropagation works directly. Here, the pipeline is:
+</p>
+
+<p style="text-align: center; color: var(--muted);">
+    $\theta$ → token probabilities → <strong>sample discrete tokens</strong> → response → $R$
+</p>
+
+<p>
+    The sampling step is the problem. "Pick the token with ID 3847" is a discrete,
+    non-differentiable operation. The gradient of the reward with respect to $\theta$
+    doesn't flow back through it. We need a different route.
+</p>
+
+<h3>The log-derivative trick (REINFORCE)</h3>
+
+<p>
+    The key insight (Williams, 1992): we don't need to differentiate <em>through</em>
+    the sampling. We can rewrite the gradient of the expectation in a form that only
+    requires differentiating the log-probabilities, which <em>are</em> smooth functions
+    of $\theta$.
+</p>
+
+<p>Start by expanding the expected reward:</p>
+
+<div class="eq-block">
+    <div class="eq-label">Expected reward (expanded):</div>
+    $$J(\theta) = \sum_{\tau} \pi_\theta(\tau) \, R(\tau)$$
+</div>
+
+<p>
+    This sums over all possible responses $\tau$, weighted by the probability the policy
+    assigns to each one. (In practice, responses are sampled, not enumerated, but
+    writing it as a sum makes the algebra clear.) Take the gradient:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Gradient of expected reward:</div>
+    $$\nabla_\theta J(\theta) = \sum_{\tau} \nabla_\theta \pi_\theta(\tau) \, R(\tau)$$
+</div>
+
+<p>
+    The reward $R(\tau)$ doesn't depend on $\theta$ (it's just a number for a given
+    response), so only $\pi_\theta(\tau)$ gets differentiated. Now the trick: multiply
+    and divide by $\pi_\theta(\tau)$:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">The log-derivative trick:</div>
+    $$\nabla_\theta J(\theta) = \sum_{\tau} \pi_\theta(\tau) \, \frac{\nabla_\theta \pi_\theta(\tau)}{\pi_\theta(\tau)} \, R(\tau) = \sum_{\tau} \pi_\theta(\tau) \, \nabla_\theta \log \pi_\theta(\tau) \, R(\tau)$$
+</div>
+
+<p>
+    The identity $\frac{\nabla f}{f} = \nabla \log f$ is the entire trick. What we've
+    done is convert $\sum_\tau \pi_\theta(\tau) \cdot [\ldots]$ back into an expectation
+    under the policy:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Policy gradient (REINFORCE):</div>
+    $$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\Big[\nabla_\theta \log \pi_\theta(\tau) \cdot R(\tau)\Big]$$
+</div>
+
+<p>
+    Since $\pi_\theta(\tau) = \prod_t \pi_\theta(a_t | s_t)$, we have
+    $\log \pi_\theta(\tau) = \sum_t \log \pi_\theta(a_t | s_t)$. This gives the
+    per-token form:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Per-token form:</div>
+    $$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\Big[\sum_{t} \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot R\Big]$$
+</div>
+
+<p>Each variable:</p>
+<ul>
+    <li>$\nabla_\theta$: gradient with respect to model weights.</li>
+    <li>$\log \pi_\theta(a_t | s_t)$: log-probability of the token that was actually chosen
+        at step $t$. This <em>is</em> differentiable with respect to $\theta$ (it's just the
+        softmax output of the LLM).</li>
+    <li>$R$: the reward for the complete response, used as a scalar weight.
+        (In general RL, each token $t$ would use $G_t$, the return from step $t$ onward.
+        In the terminal-reward LLM setting, $G_t = R$ for all $t$, so we simplify.)</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> We've sidestepped the non-differentiable sampling entirely.
+    Instead of differentiating through "which token was picked," we differentiate through
+    "how likely was the token that <em>was</em> picked." The reward $R$ just acts as a
+    scalar weight: high reward → push those token probabilities up. Low reward → push them
+    down. No need to differentiate through discrete choices.
+</div>
+
+<h3>Connection to SFT</h3>
+
+<p>
+    Compare the REINFORCE gradient to the SFT (supervised fine-tuning) gradient:
+</p>
+
+<table>
+    <tr><th></th><th>SFT</th><th>REINFORCE</th></tr>
+    <tr>
+        <td>Gradient</td>
+        <td>$\sum_t \nabla_\theta \log \pi_\theta(a_t | s_t)$</td>
+        <td>$\sum_t \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot R$</td>
+    </tr>
+    <tr>
+        <td>Weight</td>
+        <td>1 (always push up)</td>
+        <td>$R$ (push up if good, down if bad)</td>
+    </tr>
+    <tr>
+        <td>Tokens</td>
+        <td>From a fixed dataset</td>
+        <td>Sampled from the policy itself</td>
+    </tr>
+</table>
+
+<p>
+    SFT always increases the probability of the target tokens. REINFORCE does the same
+    thing, but weighted by how good the result was. It's "SFT with a dial."
+</p>
+
+<h3>Estimating the expectation</h3>
+
+<p>In practice, we can't sum over all possible responses. We approximate the expectation
+    by sampling:</p>
+
+<div class="steps">
+    <div class="step">
+        <strong>Sample</strong> a batch of responses from the current policy.
+    </div>
+    <div class="step">
+        <strong>Score</strong> each with the reward model → get $R$ for each.
+    </div>
+    <div class="step">
+        <strong>Compute</strong> $\sum_t \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot R$
+        for each response, and average over the batch.
+    </div>
+    <div class="step">
+        <strong>Update</strong> $\theta$ in the direction of this gradient (gradient ascent).
+    </div>
+</div>
+
+<h3>Why REINFORCE isn't enough</h3>
+
+<p>
+    REINFORCE is mathematically correct. But in practice it's too noisy to use for LLMs.
+    Two concrete problems:
+</p>
+
+<ul>
+    <li><strong>All-positive rewards.</strong> If rewards range from 0.3 to 0.9, every token
+        in every response gets reinforced, just by different amounts. We want to push up
+        tokens that are <em>better than expected</em> and push down tokens that are <em>worse
+        than expected</em>.</li>
+    <li><strong>Per-response, not per-token.</strong> A 200-token response gets one reward $R$.
+        Every token in the response gets the same gradient weight. Were the early tokens good?
+        The late ones? REINFORCE can't tell. It's the credit assignment problem from Section 1,
+        completely unsolved.</li>
+</ul>
+
+<p>
+    Both problems point to the same need: instead of weighting every token by the raw reward $R$,
+    we need a <strong>per-token signal</strong> that says "was this specific token better or worse
+    than expected?" This is the <strong>advantage function</strong>.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="advantage">4. The Advantage Function: Fixing REINFORCE</h2>
+
+<p>
+    The advantage function replaces the raw reward $R$ in the policy gradient with a more
+    informative, per-token signal.
+</p>
+
+<h3>The idea</h3>
+
+<div class="eq-block">
+    <div class="eq-label">Advantage:</div>
+    $$A_t = Q(s_t, a_t) - V(s_t)$$
+</div>
+
+<p>Where:</p>
+<ul>
+    <li>$Q(s_t, a_t)$: expected total reward if we take token $a_t$ here, then follow the policy.
+        ("How good is <em>this specific action</em> in this state?")</li>
+    <li>$V(s_t)$: expected total reward from state $s_t$ under the current policy, averaged over
+        all possible next tokens. ("How good is this state <em>on average</em>?")</li>
+    <li>$A_t$: the advantage — "was this token better or worse than what we'd typically produce here?"</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> Suppose at token position 50, responses that pass through this
+    state typically end up with reward ~0.7. If a particular token choice leads to a final reward
+    of 0.9, the advantage is +0.2, so reinforce it. If it leads to 0.5, the advantage is
+    &minus;0.2, so suppress it. The advantage converts "was this response good?" into "was this
+    <em>token</em> good, relative to what we'd normally do here?"
+</div>
+
+<h3>The improved policy gradient</h3>
+
+<p>
+    Replacing $R$ with $A_t$ in the REINFORCE formula:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Policy gradient with advantage:</div>
+    $$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\Big[\sum_t \nabla_\theta \log \pi_\theta(a_t | s_t) \cdot A_t\Big]$$
+</div>
+
+<p>
+    Now each token gets its own training signal. Tokens with positive advantage (better than
+    expected) get reinforced. Tokens with negative advantage (worse than expected) get suppressed.
+    This solves both problems: the signal is centered (positive and negative), and it's per-token.
+</p>
+
+<h3>The catch</h3>
+
+<p>
+    Computing $A_t = Q(s_t, a_t) - V(s_t)$ requires knowing $V(s_t)$, the expected reward
+    from each partial response. But that's exactly the kind of thing we don't have. The reward
+    model only scores <em>complete</em> responses.
+</p>
+
+<p>
+    We need a way to estimate $V(s_t)$ at every token position. This is the job of a
+    <strong>value function</strong>, and the next two sections are about how to learn one.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="values">5. Value Functions & The Bellman Equation</h2>
+
+<p>
+    We just saw that the advantage function needs $V(s_t)$, the expected final reward given
+    a partial response up to token $t$. This section covers what $V(s)$ is, and the key
+    equation that makes it learnable.
+</p>
+
+<h3>What V(s) represents</h3>
+
+<p>
+    <strong>$V(s)$ — state value:</strong> the expected total reward starting from state $s$
+    and following the current policy. In LLM terms: "given this prompt and the tokens generated
+    so far, what reward does the final response typically get?"
+</p>
+
+<div class="diagram">
+<svg width="520" height="240" viewBox="0 0 520 240" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="sh2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Token boxes -->
+  <rect x="16" y="28" width="72" height="32" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="52" y="48" text-anchor="middle" font-size="10" fill="#333">prompt</text>
+
+  <rect x="96" y="28" width="44" height="32" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="118" y="48" text-anchor="middle" font-size="10" fill="#1e40af">tok₁</text>
+
+  <rect x="148" y="28" width="44" height="32" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="170" y="48" text-anchor="middle" font-size="10" fill="#1e40af">tok₂</text>
+
+  <rect x="200" y="28" width="44" height="32" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="222" y="48" text-anchor="middle" font-size="10" fill="#1e40af">tok₃</text>
+
+  <text x="260" y="48" font-size="12" fill="#999">...</text>
+
+  <rect x="280" y="28" width="44" height="32" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="302" y="48" text-anchor="middle" font-size="10" fill="#1e40af">tok_T</text>
+
+  <!-- V(s) labels below each token -->
+  <text x="118" y="84" text-anchor="middle" font-size="11" fill="#555">V(s₁)</text>
+  <text x="118" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">0.61</text>
+
+  <text x="170" y="84" text-anchor="middle" font-size="11" fill="#555">V(s₂)</text>
+  <text x="170" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">0.68</text>
+
+  <text x="222" y="84" text-anchor="middle" font-size="11" fill="#555">V(s₃)</text>
+  <text x="222" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">0.73</text>
+
+  <text x="302" y="84" text-anchor="middle" font-size="11" fill="#555">V(s_T)</text>
+  <text x="302" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="#2563eb">0.81</text>
+
+  <!-- Actual reward -->
+  <rect x="350" y="76" width="100" height="32" rx="16" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="400" y="97" text-anchor="middle" font-size="11" font-weight="600" fill="#166534">R = 0.82</text>
+  <text x="400" y="124" text-anchor="middle" font-size="10" fill="#555" font-style="italic">actual reward</text>
+
+  <!-- Arrow showing convergence -->
+  <path d="M118,102 Q210,150 350,92" stroke="#2563eb" stroke-width="1" stroke-dasharray="4,3" fill="none"/>
+  <text x="220" y="148" text-anchor="middle" font-size="10" fill="#555" font-style="italic">V(s) estimates converge toward the actual reward</text>
+
+  <!-- Annotation box -->
+  <rect x="16" y="170" width="488" height="56" rx="8" fill="#f3f0ff" stroke="#7c5cbf" stroke-width="1"/>
+  <text x="32" y="192" font-size="12" font-weight="600" fill="#4c3a8a">Why this matters:</text>
+  <text x="32" y="212" font-size="12" fill="#333">V(s) turns one end-of-response reward into a signal at every token position.</text>
+</svg>
+</div>
+
+<p>
+    There's also <strong>$Q(s, a)$ — action value:</strong> the expected total reward if we
+    choose token $a$ next, then follow the policy. The advantage is their difference:
+    $A_t = Q(s_t, a_t) - V(s_t)$.
+</p>
+
+<h3>The Bellman equation: how to learn V(s)</h3>
+
+<p>
+    We can't compute $V(s)$ by enumerating all possible continuations. The Bellman equation
+    provides a recursive shortcut: express $V(s_t)$ in terms of $V(s_{t+1})$.
+</p>
+
+<p>In plain English: <strong>the value of where you are = what you get now + the value of where
+    you end up next (in expectation).</strong></p>
+
+<div class="eq-block">
+    <div class="eq-label">Bellman expectation equation:</div>
+    $$V_\pi(s_t) = \mathbb{E}_{a_t \sim \pi,\; s_{t+1} \sim P}\big[r_t + \gamma \, V_\pi(s_{t+1})\big]$$
+</div>
+
+<p>Each variable:</p>
+<ul>
+    <li>$V_\pi(s_t)$: value of being at state $s_t$ under policy $\pi$.</li>
+    <li>$r_t$: immediate reward after taking action $a_t$.</li>
+    <li>$\gamma$: discount factor (typically $1.0$ in LLM RL; see Section 2 note).</li>
+    <li>$V_\pi(s_{t+1})$: value of the next state (after generating one more token).</li>
+    <li>The expectation is over both the action (which token the policy picks) and the
+        next state. In text generation, the transition $s_t, a_t \to s_{t+1}$ is deterministic
+        (just append the token), so the expectation over $s_{t+1}$ is trivial. But the
+        expectation over actions still matters.</li>
+</ul>
+
+<div class="diagram">
+<svg width="480" height="200" viewBox="0 0 480 200" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <filter id="sh3"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- State s_t -->
+  <rect x="32" y="40" width="120" height="48" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="92" y="62" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">V(s_t)</text>
+  <text x="92" y="78" text-anchor="middle" font-size="10" fill="#555">current state</text>
+  <!-- Equals sign -->
+  <text x="172" y="68" text-anchor="middle" font-size="18" fill="#555">=</text>
+  <!-- r_t -->
+  <rect x="196" y="40" width="64" height="48" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh3)"/>
+  <text x="228" y="62" text-anchor="middle" font-weight="600" font-size="13" fill="#333">r_t</text>
+  <text x="228" y="78" text-anchor="middle" font-size="10" fill="#555">reward now</text>
+  <!-- Plus -->
+  <text x="278" y="68" text-anchor="middle" font-size="18" fill="#555">+</text>
+  <!-- gamma V(s_{t+1}) -->
+  <rect x="300" y="40" width="148" height="48" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh3)"/>
+  <text x="374" y="62" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">$\gamma$ V(s_{t+1})</text>
+  <text x="374" y="78" text-anchor="middle" font-size="10" fill="#555">discounted future</text>
+
+  <!-- LLM-specific note -->
+  <rect x="32" y="120" width="416" height="60" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+  <text x="48" y="144" font-size="12" font-weight="600" fill="#92400e">In LLM RL (simplified):</text>
+  <text x="48" y="164" font-size="12" fill="#333">r_t = 0 for non-terminal tokens, γ = 1 → V(s_t) = E[V(s_{t+1})]</text>
+</svg>
+</div>
+
+<h3>Why Bellman matters</h3>
+
+<p>
+    The Bellman equation gives us a <strong>training objective</strong> for a value model.
+    We train a neural network (the "critic") to predict $V(s_t)$ at every token position.
+    The critic is trained to minimize the <strong>Bellman residual</strong>, the gap between
+    its prediction $V(s_t)$ and the one-step target $r_t + \gamma V(s_{t+1})$, across
+    sampled transitions.
+</p>
+
+<p>
+    On any single sample, $V(s_{t+1}) > V(s_t)$ is completely normal. It means that token
+    had positive advantage. The critic aims for self-consistency <em>in expectation</em>,
+    not on every individual token.
+</p>
+
+<p>
+    The per-sample mismatch $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ is called the
+    <strong>TD error</strong>. It's the building block for computing advantages, which
+    brings us to how TD errors are used.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="mc-td">6. Monte Carlo vs Temporal Difference</h2>
+
+<p>
+    We need to <em>learn</em> $V(s)$ and use it to compute advantages. There are two
+    fundamental approaches to generating the training signal. Understanding the trade-off
+    between them is essential because it shows up directly in GAE, the advantage estimator used
+    by PPO.
+</p>
+
+<h3>Monte Carlo (MC): learn from complete outcomes</h3>
+
+<p>
+    Wait until the response is fully generated and scored. Then use the actual return
+    $G_t = \sum_{k=t}^{T} r_k$ as the target for $V(s_t)$ at every token position. Under
+    terminal-only reward, $G_t = R$ for all $t$.
+</p>
+
+<ul>
+    <li><strong>Unbiased:</strong> you're using real outcomes, not estimates.</li>
+    <li><strong>High variance:</strong> one response is one data point for every token. A lucky
+        response inflates all value estimates; an unlucky one deflates them.</li>
+    <li><strong>Slow credit assignment:</strong> for a 200-token response, every token gets
+        the same final reward as its target. Position 5 and position 195 get the same signal.</li>
+</ul>
+
+<h3>Temporal Difference (TD): learn from predictions</h3>
+
+<p>
+    Don't wait for the end. After generating each token, update $V(s_t)$ using one step
+    of reality plus the critic's prediction of what comes next.
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">TD error:</div>
+    $$\delta_t = r_t + \gamma \, V(s_{t+1}) - V(s_t)$$
+</div>
+
+<p>Each variable:</p>
+<ul>
+    <li>$\delta_t$: the "surprise," i.e. how much the critic's estimate changed after seeing this token.</li>
+    <li>$r_t$: immediate reward (0 for non-terminal tokens in LLM RL).</li>
+    <li>$V(s_{t+1})$: the critic's estimate of value <em>after</em> generating token $t$.</li>
+    <li>$V(s_t)$: the critic's estimate of value <em>before</em> generating token $t$.</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> Under terminal-only reward with $\gamma = 1$, the TD error
+    simplifies to $\delta_t = V(s_{t+1}) - V(s_t)$ for non-terminal tokens. The critic is
+    saying: "after seeing this token, I now think the response will be worth $V(s_{t+1})$ instead
+    of $V(s_t)$. This token's contribution is the difference." If the critic's estimate goes up,
+    the token was helpful. If it goes down, the token was harmful.
+</div>
+
+<div class="warning">
+    <strong>Practical nuance:</strong> Many RLHF implementations add a <strong>per-token KL
+    penalty</strong> to the reference model. The per-token reward becomes:
+</div>
+
+<div class="eq-block">
+    <div class="eq-label">Reward with KL penalty:</div>
+    $$r_t = \begin{cases} -\beta \log \dfrac{\pi_\theta(a_t|s_t)}{\pi_{\text{ref}}(a_t|s_t)} & \text{for } t < T \\[6pt] R(\tau) - \beta \log \dfrac{\pi_\theta(a_T|s_T)}{\pi_{\text{ref}}(a_T|s_T)} & \text{for } t = T \end{cases}$$
+</div>
+
+<div class="warning">
+    This changes the picture meaningfully: the "sparse terminal reward" becomes a
+    <strong>dense reward at every token</strong>. The TD error $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$
+    now includes a non-zero $r_t$ at every step, not just at the end. The intuition from above
+    still holds (each TD error measures "how much did things change after this token?"), but
+    the KL term adds a per-token cost for deviating from the reference policy. If you're
+    cross-referencing with code (e.g., TRL's PPO implementation), this is why you'll see
+    <code>rewards</code> arrays that are non-zero at every position, not just the last one.
+</div>
+
+<ul>
+    <li><strong>Lower variance:</strong> each update uses local information, not the entire trajectory.</li>
+    <li><strong>Biased:</strong> the estimate $V(s_{t+1})$ could be wrong. Garbage critic → garbage updates.</li>
+    <li><strong>Faster learning:</strong> you get a signal at every token, not just at the end.</li>
+</ul>
+
+<h3>The spectrum: from TD to MC</h3>
+
+<p>
+    MC and TD are not binary choices. They sit on a spectrum. You can blend them by
+    looking $n$ steps ahead before bootstrapping:
+</p>
+
+<table>
+    <tr><th>Method</th><th>Uses $n$ real steps</th><th>Then bootstraps?</th><th>Bias</th><th>Variance</th></tr>
+    <tr><td>TD(0)</td><td>1</td><td>Yes</td><td>High</td><td>Low</td></tr>
+    <tr><td>$n$-step TD</td><td>$n$</td><td>Yes</td><td>Medium</td><td>Medium</td></tr>
+    <tr><td>MC</td><td>All (to end)</td><td>No</td><td>None</td><td>High</td></tr>
+    <tr><td><strong>TD($\lambda$)</strong></td><td>Weighted blend of all</td><td>Smoothly</td><td>Controllable</td><td>Controllable</td></tr>
+</table>
+
+<p>
+    <strong>TD($\lambda$)</strong> is an exponentially-weighted average of all $n$-step returns.
+    The parameter $\lambda \in [0, 1]$ controls the blend: $\lambda = 0$ is pure TD(0),
+    $\lambda = 1$ is pure MC. This matters because GAE, the advantage estimator PPO uses,
+    is exactly TD($\lambda$) applied to advantages.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="actor-critic">7. Actor-Critic: Putting It All Together</h2>
+
+<p>
+    We now have all the pieces. This section shows how they fit together into the
+    <strong>actor-critic</strong> architecture, the backbone of PPO.
+</p>
+
+<ul>
+    <li><strong>Actor</strong> = the policy (LLM). Generates tokens. Gets updated via the
+        advantage-weighted policy gradient from Section 4.</li>
+    <li><strong>Critic</strong> = the value model. Predicts $V(s_t)$ at every token position.
+        Trained via Bellman residual minimization from Section 5. Provides the baseline
+        needed to compute advantages.</li>
+</ul>
+
+<h3>GAE: computing advantages from TD errors</h3>
+
+<p>
+    We need the advantage $A_t$ at every token position. GAE computes it as an
+    exponentially-weighted sum of TD errors, the same TD errors from Section 6:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Generalized Advantage Estimation (GAE):</div>
+    $$A^{\text{GAE}}_t = \sum_{k=0}^{T-t-1} (\gamma\lambda)^k \, \delta_{t+k}$$
+</div>
+
+<p>Where $\delta_{t+k} = r_{t+k} + \gamma V(s_{t+k+1}) - V(s_{t+k})$ is the TD error at step $t+k$.</p>
+
+<p>
+    The two parameters control the bias-variance trade-off:
+</p>
+
+<ul>
+    <li>$\lambda = 0$: advantage is just the TD error at step $t$. Low variance, high bias.</li>
+    <li>$\lambda = 1$: advantage sums all future TD errors. No bias, high variance (equivalent to MC).</li>
+    <li>$\lambda \approx 0.95$: the sweet spot used in practice. Mostly looks ahead, with some smoothing.</li>
+</ul>
+
+<div class="diagram">
+<svg width="520" height="280" viewBox="0 0 520 280" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#555"/></marker>
+    <filter id="sh5"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Token positions -->
+  <g transform="translate(40, 20)">
+    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_t</text>
+  </g>
+  <g transform="translate(128, 20)">
+    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_{t+1}</text>
+  </g>
+  <g transform="translate(216, 20)">
+    <rect width="56" height="30" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#1e40af">s_{t+2}</text>
+  </g>
+  <text x="296" y="40" font-size="12" fill="#999">...</text>
+  <g transform="translate(320, 20)">
+    <rect width="56" height="30" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="28" y="20" text-anchor="middle" font-size="10" fill="#166534">s_T (end)</text>
+  </g>
+  <!-- Arrows between states -->
+  <line x1="96" y1="35" x2="124" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
+  <line x1="184" y1="35" x2="212" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
+  <line x1="272" y1="35" x2="292" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
+  <line x1="304" y1="35" x2="316" y2="35" stroke="#555" stroke-width="1" marker-end="url(#arr5)"/>
+
+  <!-- TD errors -->
+  <text x="112" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_t$</text>
+  <text x="200" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_{t+1}$</text>
+  <text x="288" y="72" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">$\delta_{t+2}$</text>
+
+  <!-- GAE formula breakdown -->
+  <rect x="24" y="96" width="472" height="92" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh5)"/>
+  <text x="40" y="118" font-size="11" fill="#555">GAE advantage at position t:</text>
+  <text x="40" y="142" font-size="12" fill="#1a1a1a" font-weight="600">A_t = $\delta_t$ + ($\gamma$$\lambda$)$\delta_{t+1}$ + ($\gamma$$\lambda$)$^2$$\delta_{t+2}$ + ...</text>
+  <text x="40" y="172" font-size="11" fill="#555">Recent TD errors matter most. Distant ones are exponentially down-weighted by ($\gamma$$\lambda$).</text>
+
+  <!-- Lambda spectrum -->
+  <rect x="24" y="204" width="472" height="60" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+  <text x="56" y="228" text-anchor="middle" font-size="11" fill="#92400e" font-weight="600">$\lambda$=0</text>
+  <text x="56" y="248" text-anchor="middle" font-size="10" fill="#555">TD only</text>
+  <line x1="96" y1="224" x2="400" y2="224" stroke="#d97706" stroke-width="1.5"/>
+  <circle cx="96" cy="224" r="4" fill="#d97706"/>
+  <circle cx="360" cy="224" r="4" fill="#d97706"/>
+  <circle cx="400" cy="224" r="4" fill="#d97706"/>
+  <circle cx="360" cy="224" r="5" fill="none" stroke="#1e40af" stroke-width="2"/>
+  <text x="360" y="248" text-anchor="middle" font-size="10" fill="#1e40af" font-weight="600">0.95 typical</text>
+  <text x="434" y="228" text-anchor="middle" font-size="11" fill="#92400e" font-weight="600">$\lambda$=1</text>
+  <text x="434" y="248" text-anchor="middle" font-size="10" fill="#555">MC</text>
+</svg>
+</div>
+
+<h3>Why the critic is essential (and expensive)</h3>
+
+<p>
+    The critic provides $V(s_t)$ at every token position, which is needed to compute TD errors
+    and therefore GAE advantages. Without a critic, you'd fall back to REINFORCE with raw rewards —
+    which is too noisy for long text outputs.
+</p>
+
+<p>
+    The cost: you need the critic's value estimates alongside the policy, reference model, and
+    reward model. Some implementations use a separate full-sized critic LLM; others share the
+    policy's transformer trunk and add a value head (cheaper but couples the two). Either way,
+    PPO requires juggling more model parameters than critic-free alternatives, typically
+    3-4 model-equivalents depending on the setup.
+</p>
+
+<div class="warning">
+    <strong>This is exactly the cost that GRPO eliminates.</strong> GRPO replaces the critic
+    with group-based normalization: generate multiple responses per prompt, use the group mean
+    as the baseline, and compute advantage as the z-score within the group. Same goal (per-token
+    signal from a per-response reward), different mechanism.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="bridge">8. From Here to PPO and GRPO</h2>
+
+<p>
+    Every concept in this tutorial maps directly to a component in the alignment algorithms.
+    Here is how they connect:
+</p>
+
+<table>
+    <tr><th>RL concept</th><th>Role in PPO</th><th>Role in GRPO</th></tr>
+    <tr>
+        <td>Value function $V(s)$</td>
+        <td>Critic model predicts $V(s_t)$ at every token</td>
+        <td>Not used; replaced by group mean</td>
+    </tr>
+    <tr>
+        <td>Bellman equation</td>
+        <td>Critic trained via Bellman consistency (MSE loss)</td>
+        <td>Not used</td>
+    </tr>
+    <tr>
+        <td>TD error $\delta_t$</td>
+        <td>Building block of GAE advantages</td>
+        <td>Not used</td>
+    </tr>
+    <tr>
+        <td>GAE / TD($\lambda$)</td>
+        <td>Computes per-token advantages from TD errors</td>
+        <td>Not used; response-level z-score instead</td>
+    </tr>
+    <tr>
+        <td>Advantage $A_t$</td>
+        <td>Per-token, from GAE</td>
+        <td>Per-response z-score, applied to all tokens</td>
+    </tr>
+    <tr>
+        <td>Policy gradient</td>
+        <td>Clipped surrogate objective</td>
+        <td>Same clipped surrogate objective</td>
+    </tr>
+    <tr>
+        <td>Baseline / variance reduction</td>
+        <td>Critic provides baseline $V(s_t)$</td>
+        <td>Group mean provides baseline</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Intuition:</strong> PPO uses the full RL toolkit (critic, Bellman, TD, GAE)
+    to get fine-grained per-token credit assignment. GRPO trades that precision for simplicity:
+    instead of learning a value function, it uses the empirical statistics of a group of
+    responses as the baseline. Both aim to solve the same problem (credit assignment from
+    sparse rewards), just with different tools.
+</div>
+
+<p>
+    The shared mechanism between PPO and GRPO is the <strong>clipped policy update</strong>:
+    regardless of how advantages are computed, both algorithms clip the probability ratio to
+    prevent the policy from changing too drastically in a single step. Combined with a KL
+    penalty to the reference model, this is what keeps RL training stable.
+</p>
+
+<p>
+    For the full algorithmic details (clipping mechanics, the KL penalty, reward model
+    architecture, the PPO training loop, and GRPO's group normalization), see the
+    <a href="/blog/2026/ppo-grpo/">PPO & GRPO deep dive</a>.
+</p>
+
+<hr>
+
+<p style="color: var(--muted); font-size: 0.9em;">
+    <strong>References:</strong>
+    Williams, <a href="https://link.springer.com/article/10.1007/BF00992696">"Simple Statistical Gradient-Following Algorithms"</a> (1992) ·
+    Sutton & Barto, <a href="http://incompleteideas.net/book/the-book.html"><em>Reinforcement Learning: An Introduction</em></a> (2018) ·
+    Schulman et al., <a href="https://arxiv.org/abs/1506.02438">"High-Dimensional Continuous Control Using Generalized Advantage Estimation"</a> (2016) ·
+    Schulman et al., <a href="https://arxiv.org/abs/1707.06347">"Proximal Policy Optimization Algorithms"</a> (2017)
+</p>
+
+</article>
+
+  <div id="disqus_thread"></div>
+  <script>
+    var disqus_shortname = 'ssedhain';
+    (function() {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
