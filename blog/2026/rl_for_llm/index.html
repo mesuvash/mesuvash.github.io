@@ -182,6 +182,89 @@
 </svg>
 </div>
 
+<h3>What the reward model looks like</h3>
+
+<p>
+    The reward $R$ in the diagram above comes from a <strong>reward model</strong> (RM), a neural
+    network that scores complete responses. It's worth understanding what this model actually is,
+    since the entire RL loop depends on it.
+</p>
+
+<p>
+    A reward model is typically a transformer initialized from the same SFT checkpoint as the
+    policy. The only architectural change: remove the language model head (the final linear layer
+    that projects to vocabulary size) and replace it with a <strong>scalar value head</strong>
+    — a linear layer that maps the last hidden state to a single number.
+</p>
+
+<div class="diagram">
+<svg width="480" height="300" viewBox="0 0 480 300" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arrRM" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <filter id="shRM"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+
+  <!-- Input -->
+  <rect x="80" y="16" width="320" height="36" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shRM)"/>
+  <text x="240" y="39" text-anchor="middle" font-size="12" fill="#333">prompt + complete response</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="56" x2="240" y2="78" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrRM)"/>
+
+  <!-- Transformer block -->
+  <rect x="120" y="82" width="240" height="56" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shRM)"/>
+  <text x="240" y="106" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">Transformer</text>
+  <text x="240" y="124" text-anchor="middle" font-size="10" fill="#555">same architecture as the SFT model</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="142" x2="240" y2="164" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrRM)"/>
+
+  <!-- Hidden state -->
+  <rect x="130" y="168" width="220" height="32" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="240" y="189" text-anchor="middle" font-size="11" fill="#333">last hidden state h_T ∈ ℝ<tspan font-size="9" baseline-shift="super">d</tspan></text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="204" x2="240" y2="226" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrRM)"/>
+
+  <!-- Value head -->
+  <rect x="160" y="230" width="160" height="36" rx="18" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shRM)"/>
+  <text x="240" y="253" text-anchor="middle" font-weight="600" font-size="12" fill="#166534">R = scalar score</text>
+
+  <!-- Annotation: value head -->
+  <text x="400" y="252" text-anchor="start" font-size="10" fill="#555" font-style="italic">Linear(d → 1)</text>
+  <line x1="324" y1="248" x2="396" y2="248" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Annotation: LM head removed -->
+  <rect x="16" y="100" width="88" height="28" rx="4" fill="#fff" stroke="#d97706" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="60" y="118" text-anchor="middle" font-size="9" fill="#92400e">LM head removed</text>
+</svg>
+</div>
+
+<p>
+    <strong>Training data:</strong> pairs of responses to the same prompt, with a human label
+    indicating which is better (chosen vs. rejected). The RM is trained with a
+    <strong>Bradley-Terry</strong> pairwise ranking loss:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Reward model loss:</div>
+    $$\mathcal{L}_{\text{RM}} = -\log \sigma\big(R(x, y_w) - R(x, y_l)\big)$$
+</div>
+
+<p>
+    Where $y_w$ is the preferred response, $y_l$ is the rejected response, $x$ is the prompt,
+    and $\sigma$ is the sigmoid function. The loss pushes the RM to assign a higher score to the
+    preferred response. Typical training sets: 50k–500k comparison pairs.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> The reward model is not predicting an absolute quality score.
+    It's trained to rank responses: "is response A better than response B?" The absolute numbers
+    (0.82, 0.35) are meaningful only relative to each other. This is why reward hacking is a
+    real concern — the RM can be confidently wrong about out-of-distribution responses the
+    policy learns to produce.
+</div>
+
 <p>
     The rest of this tutorial builds up the tools to solve this problem, one piece at a time.
     We'll start with the simplest approach (REINFORCE), see why it breaks, and then introduce
@@ -585,6 +668,110 @@
     There's also <strong>$Q(s, a)$ — action value:</strong> the expected total reward if we
     choose token $a$ next, then follow the policy. The advantage is their difference:
     $A_t = Q(s_t, a_t) - V(s_t)$.
+</p>
+
+<h3>What the value model looks like</h3>
+
+<p>
+    The value function $V(s_t)$ is computed by a <strong>critic model</strong> — another
+    transformer. Unlike the reward model (which scores a complete response once), the critic
+    must produce a value estimate at <strong>every token position</strong>.
+</p>
+
+<p>
+    Architecturally, the critic is similar to the reward model: a transformer with a scalar
+    value head. The key difference is when and where it produces outputs.
+</p>
+
+<div class="diagram">
+<svg width="500" height="348" viewBox="0 0 500 348" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arrV" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <marker id="arrVg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#16a34a"/></marker>
+    <filter id="shV"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+
+  <!-- Input tokens -->
+  <rect x="16" y="16" width="64" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="48" y="34" text-anchor="middle" font-size="10" fill="#333">prompt</text>
+  <rect x="88" y="16" width="44" height="28" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="110" y="34" text-anchor="middle" font-size="10" fill="#1e40af">tok₁</text>
+  <rect x="140" y="16" width="44" height="28" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="162" y="34" text-anchor="middle" font-size="10" fill="#1e40af">tok₂</text>
+  <rect x="192" y="16" width="44" height="28" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="214" y="34" text-anchor="middle" font-size="10" fill="#1e40af">tok₃</text>
+  <text x="252" y="34" font-size="12" fill="#999">...</text>
+  <rect x="268" y="16" width="44" height="28" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="290" y="34" text-anchor="middle" font-size="10" fill="#1e40af">tok_T</text>
+
+  <!-- Arrow down -->
+  <line x1="180" y1="48" x2="180" y2="68" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrV)"/>
+
+  <!-- Transformer -->
+  <rect x="48" y="72" width="300" height="48" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shV)"/>
+  <text x="198" y="94" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">Transformer (Critic)</text>
+  <text x="198" y="110" text-anchor="middle" font-size="10" fill="#555">produces hidden state at every position</text>
+
+  <!-- Arrow down -->
+  <line x1="180" y1="124" x2="180" y2="144" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrV)"/>
+
+  <!-- Hidden states row -->
+  <rect x="72" y="148" width="52" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="98" y="166" text-anchor="middle" font-size="9" fill="#333">h₁</text>
+  <rect x="132" y="148" width="52" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="158" y="166" text-anchor="middle" font-size="9" fill="#333">h₂</text>
+  <rect x="192" y="148" width="52" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="218" y="166" text-anchor="middle" font-size="9" fill="#333">h₃</text>
+  <text x="260" y="166" font-size="12" fill="#999">...</text>
+  <rect x="276" y="148" width="52" height="28" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="302" y="166" text-anchor="middle" font-size="9" fill="#333">h_T</text>
+
+  <!-- Value head label -->
+  <rect x="370" y="186" width="110" height="24" rx="4" fill="#fff" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="425" y="202" text-anchor="middle" font-size="9" fill="#555">Linear(d → 1)</text>
+
+  <!-- Arrows down to values -->
+  <line x1="98" y1="180" x2="98" y2="210" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrVg)"/>
+  <line x1="158" y1="180" x2="158" y2="210" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrVg)"/>
+  <line x1="218" y1="180" x2="218" y2="210" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrVg)"/>
+  <line x1="302" y1="180" x2="302" y2="210" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrVg)"/>
+
+  <!-- Value outputs -->
+  <rect x="72" y="214" width="52" height="28" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="98" y="233" text-anchor="middle" font-weight="600" font-size="10" fill="#166534">V(s₁)</text>
+  <rect x="132" y="214" width="52" height="28" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="158" y="233" text-anchor="middle" font-weight="600" font-size="10" fill="#166534">V(s₂)</text>
+  <rect x="192" y="214" width="52" height="28" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="218" y="233" text-anchor="middle" font-weight="600" font-size="10" fill="#166534">V(s₃)</text>
+  <text x="260" y="233" font-size="12" fill="#999">...</text>
+  <rect x="276" y="214" width="52" height="28" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="302" y="233" text-anchor="middle" font-weight="600" font-size="10" fill="#166534">V(s_T)</text>
+
+  <!-- Comparison box -->
+  <rect x="16" y="264" width="468" height="68" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+  <text x="32" y="286" font-size="11" font-weight="600" fill="#92400e">Reward model vs. Critic:</text>
+  <text x="32" y="304" font-size="11" fill="#333">RM scores once (complete response → single R).</text>
+  <text x="32" y="320" font-size="11" fill="#333">Critic scores at every token position (partial response → V(s_t)).</text>
+</svg>
+</div>
+
+<p>
+    Two common implementation strategies:
+</p>
+
+<ul>
+    <li><strong>Separate critic:</strong> a full copy of the transformer with its own value head.
+        More parameters (~2x), but the critic's learning doesn't interfere with the policy's
+        representations.</li>
+    <li><strong>Shared trunk + value head:</strong> the policy transformer has a value head bolted
+        on alongside the LM head. Cheaper in memory, but the two objectives (generate good tokens
+        vs. predict future reward) can compete for the same representations.</li>
+</ul>
+
+<p>
+    In either case, the critic is trained to minimize the squared error between its predictions
+    $V_\phi(s_t)$ and the target values derived from the Bellman equation or Monte Carlo returns.
+    The next subsection explains where those targets come from.
 </p>
 
 <h3>The Bellman equation: how to learn V(s)</h3>
