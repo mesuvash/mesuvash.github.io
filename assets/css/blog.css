@@ -790,20 +790,34 @@ hr {
 .share-bottom {
     text-align: center;
     margin: 48px 0 32px;
-    padding: 28px 24px;
+    padding: 32px 24px;
     background: var(--card-bg);
     border-radius: 8px;
 }
 
 .share-bottom p {
-    font-size: 1.05em;
+    font-size: 1.15em;
     font-style: italic;
-    color: var(--muted);
-    margin-bottom: 12px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
 }
 
 .share-bottom .share-buttons {
     justify-content: center;
+}
+
+.share-bottom .share-buttons a {
+    width: 40px;
+    height: 40px;
+}
+
+.share-bottom .share-buttons a svg {
+    width: 20px;
+    height: 20px;
 }
 
 .share-bottom .share-buttons span {
