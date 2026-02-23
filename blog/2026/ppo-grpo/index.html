@@ -508,7 +508,8 @@ $$\delta_t = \gamma \, V_\psi(s_{t+1}) - V_\psi(s_t)$$
 <p>
     $\gamma$ (discount factor, ~0.99) and $\lambda$ (GAE parameter, ~0.95) control how far ahead
     we look. This is an exponentially-weighted sum of TD errors, a smooth blend between
-    "just look one step ahead" ($\lambda=0$) and "use the full remaining return" ($\lambda=1$).
+    "just use the current TD error" ($\lambda=0$, where only the $k=0$ term survives since
+    $0^0 = 1$, giving $A_t = \delta_t$) and "use the full remaining return" ($\lambda=1$).
 </p>
 
 <h3>The clipping mechanism</h3>
