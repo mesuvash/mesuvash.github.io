@@ -786,3 +786,26 @@ hr {
     height: 16px;
     fill: currentColor;
 }
+
+.share-bottom {
+    text-align: center;
+    margin: 48px 0 32px;
+    padding: 28px 24px;
+    background: var(--card-bg);
+    border-radius: 8px;
+}
+
+.share-bottom p {
+    font-size: 1.05em;
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+
+.share-bottom .share-buttons {
+    justify-content: center;
+}
+
+.share-bottom .share-buttons span {
+    display: none;
+}
