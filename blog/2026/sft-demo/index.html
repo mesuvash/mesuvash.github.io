@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Feel the AGI: Supervised Fine-Tuning in Your Browser</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Feel the AGI: Supervised Fine-Tuning in Your Browser" />
+    <meta property="og:description" content="Fine-tune a 14M parameter language model in your browser. Load Pythia-14M, train on instruction-completion pairs, and watch it learn — no GPU server required." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/sft-demo/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Feel the AGI: Supervised Fine-Tuning in Your Browser" />
+    <meta name="twitter:description" content="Fine-tune a 14M parameter language model in your browser. Load Pythia-14M, train on instruction-completion pairs, and watch it learn — no GPU server required." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <style>
+        /* Demo-specific overrides */
+        .demo-section { margin-bottom: 32px; }
+        .demo-section h2 {
+            font-size: 17px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        #status {
+            font: 12px monospace;
+            color: var(--muted);
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .demo-btn {
+            padding: 6px 16px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            font-size: 15px;
+            font-family: inherit;
+        }
+        .demo-btn:hover { background: #1d4ed8; }
+        .demo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .demo-btn.warn { background: #d97706; border-color: #d97706; }
+        .demo-btn.danger { background: #dc2626; border-color: #dc2626; }
+
+        table.demo-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+        table.demo-table th { background: var(--card-bg); text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--border); }
+        table.demo-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        td.prompt { color: var(--muted); max-width: 280px; }
+        td.completion { color: #7c2d12; font-weight: 500; }
+        .metric { display: inline-block; background: var(--card-bg); padding: 3px 8px; border-radius: 4px; font: 14px monospace; margin: 2px 4px; }
+        .gen-text { font: 15px monospace; padding: 8px; background: #f9f9f6; border: 1px solid var(--border); border-radius: 4px; min-height: 40px; }
+        .gen-text .prompt-part { color: #1e40af; background: #e8f0fe; border-radius: 3px; padding: 1px 4px; }
+        .gen-text .gen-part { color: #7c2d12; background: #fff3e0; border-radius: 3px; padding: 1px 4px; }
+        .gen-legend { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+        .gen-legend span { display: inline-block; padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 13px; margin: 0 2px; }
+        .gen-legend .legend-prompt { color: #1e40af; background: #e8f0fe; }
+        .gen-legend .legend-response { color: #7c2d12; background: #fff3e0; }
+
+        .hp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 12px; }
+        .hp-item { display: flex; flex-direction: column; gap: 2px; }
+        .hp-item label { font-size: 14px; color: var(--muted); font-weight: 500; }
+        .hp-item input, .hp-item select {
+            font: 15px monospace;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+        }
+        .hp-item .hp-desc { font-size: 14px; color: #888; }
+        #mode-info { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+        .demo-btn:disabled .spinner { border-color: rgba(255,255,255,0.3); border-top-color: rgba(255,255,255,0.8); }
+
+        /* Widen the content area for the interactive demo */
+        .page-content { max-width: 900px; }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Feel the AGI: Supervised Fine-Tuning in Your Browser</h1>
+    <p class="post-meta">February 27, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F&text=Feel%20The%20AGI%3A%20Maybe%20Feel%20the%20SFT%20First%3F" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F&title=Feel%20The%20AGI%3A%20Maybe%20Feel%20the%20SFT%20First%3F" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p>
+Until you play with a transformer and watch it learn, you will never truly feel the AGI. The folks at OpenAI felt it firsthand, scaling from GPT-2 to GPT-3 to GPT-4, watching language models go from parlor tricks to something that felt like understanding. This page attempts to give you that same feeling: load <a href="https://huggingface.co/EleutherAI/pythia-14m-deduped">Pythia-14M</a>, a real 14M-parameter transformer from EleutherAI, fine-tune it on your own instruction-completion pairs, and watch a model that spits out gibberish start producing structured answers. All through <a href="/blog/2026/rl_for_llm/">SFT</a>, completely in your browser.
+</p>
+
+<div class="note">
+<strong>What is SFT?</strong> Supervised Fine-Tuning takes a pretrained language model (which only knows how to predict the next token) and teaches it to follow instructions by training on (prompt, completion) pairs. It is the first step in the standard alignment pipeline: Pretrain &rarr; SFT &rarr; RLHF.
+</div>
+
+<div class="note warning">
+<strong>Browser requirements:</strong> This demo downloads ~54MB of model weights and runs inference/training in JavaScript. WebGPU is used when available (Chrome 113+); otherwise it falls back to CPU. Training on CPU is slower but functional. Tested on an Apple M1 Max laptop, where it runs smoothly with WebGPU enabled in Chrome.
+</div>
+
+<div id="cpu-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#fffbeb;border-top:3px solid #d97706;padding:10px 20px;font-size:15px;color:#92400e;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,0.1);">
+<strong>CPU mode — training will be slow.</strong> WebGPU not detected. Use Chrome 113+ for the best experience.
+<button onclick="document.getElementById('cpu-banner').style.display='none'" style="background:none;border:none;color:#92400e;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;" title="Dismiss">&times;</button>
+</div>
+
+<!-- Mode notes -->
+<div class="note" id="note-head">
+  <strong>LM Head mode:</strong> Only the output projection layer (50304 x 128 = 6.4M params) is trained.
+  The transformer backbone stays frozen. Fast, uses GPU when available.
+</div>
+<div class="note warning" id="note-full" style="display:none;">
+  <strong>Full Model mode:</strong> All 14M parameters are trained, including embedding, all 6 transformer layers,
+  and the LM head. Gradients flow through the entire network via autograd.
+  Slower per step but can learn deeper representations. Use a smaller learning rate (1e-4).
+</div>
+
+<!-- 1. Load Model -->
+<section class="demo-section">
+  <h2>1. Load Model</h2>
+  <div class="card">
+    <button class="demo-btn" id="load-btn">Load Pythia-14M</button>
+    <div id="status" style="margin-top:8px;"></div>
+  </div>
+  <div id="viz-wrapper" style="display:none; margin-top:16px;">
+    <p style="font-size:15px; color:var(--muted); margin-bottom:8px;">Interactive 3D view of the loaded model. Drag to rotate, scroll to zoom, Shift+drag to pan. Click any block to inspect.</p>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <button class="demo-btn" id="viz-reset-btn" style="font-size:12px; padding:4px 12px;">Reset View</button>
+      <button class="demo-btn" id="viz-collapse-btn" style="font-size:12px; padding:4px 12px;">Collapse All</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div id="viz-container" style="width:100%; height:700px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. SFT Dataset -->
+<section class="demo-section">
+  <h2>2. Training Data (<span id="data-count">15</span> examples)</h2>
+  <p style="font-size:15px;color:var(--muted);margin-bottom:8px;">Feel free to add your own SFT examples.</p>
+  <div class="card">
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
+      <div style="flex:1;">
+        <label style="font-size:14px;color:var(--muted);font-weight:500;">Prompt</label>
+        <input id="add-prompt" type="text" placeholder="e.g. What is 2+2?" style="width:100%;font:13px monospace;padding:5px 8px;border:1px solid #ccc;border-radius:4px;">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:14px;color:var(--muted);font-weight:500;">Completion</label>
+        <input id="add-completion" type="text" placeholder="e.g. 2+2 equals 4." style="width:100%;font:13px monospace;padding:5px 8px;border:1px solid #ccc;border-radius:4px;">
+      </div>
+      <button class="demo-btn" id="add-btn" style="white-space:nowrap;">Add</button>
+    </div>
+    <div style="max-height:250px;overflow-y:auto;">
+      <table class="demo-table">
+        <thead><tr><th style="width:42%">Prompt</th><th>Completion (target)</th><th style="width:30px;"></th></tr></thead>
+        <tbody id="data-table"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Before Training: Baseline -->
+<section class="demo-section">
+  <h2>3. Before Training (baseline)</h2>
+  <p style="font-size:15px;color:var(--muted);margin-bottom:8px;">What the model generates before any fine-tuning:</p>
+  <p class="gen-legend"><span class="legend-prompt">Prompt</span> <span class="legend-response">Model response</span></p>
+  <div class="card" id="baseline-container">
+    <button class="demo-btn" id="baseline-btn" disabled>Run Baseline</button>
+    <div id="baseline-results" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- 4. Training -->
+<section class="demo-section">
+  <h2>4. Fine-Tune</h2>
+  <p style="font-size:15px;color:var(--muted);margin-bottom:8px;">
+    <strong>LM Head only</strong> freezes the transformer backbone and only trains the final output projection layer that maps hidden states to vocabulary logits. Fast and sufficient when the pretrained representations already capture what you need.
+    <strong>Full Model</strong> updates all parameters, including embeddings and every transformer layer. This lets the model learn deeper representations but is slower and more prone to overfitting on small datasets.
+  </p>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:10px;">Hyperparameters</h3>
+    <div class="hp-grid">
+      <div class="hp-item">
+        <label for="hp-mode">Fine-tuning Mode</label>
+        <select id="hp-mode">
+          <option value="head" selected>LM Head only (6.4M params)</option>
+          <option value="full">Full Model (14M params)</option>
+        </select>
+        <span class="hp-desc">What to train</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-epochs">Epochs</label>
+        <input id="hp-epochs" type="number" value="5" min="1" max="100" step="1">
+        <span class="hp-desc">Full passes over the dataset</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-lr">Learning Rate</label>
+        <input id="hp-lr" type="number" value="0.001" min="0.00001" max="1" step="0.0001">
+        <span class="hp-desc">Head: 1e-3, Full: 1e-4 recommended</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-optimizer">Optimizer</label>
+        <select id="hp-optimizer">
+          <option value="adam" selected>Adam</option>
+          <option value="sgd">SGD</option>
+        </select>
+        <span class="hp-desc">Optimization algorithm</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-beta1">Beta1</label>
+        <input id="hp-beta1" type="number" value="0.9" min="0" max="1" step="0.01">
+        <span class="hp-desc">Adam first moment decay</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-beta2">Beta2</label>
+        <input id="hp-beta2" type="number" value="0.999" min="0" max="1" step="0.001">
+        <span class="hp-desc">Adam second moment decay</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-wd">Weight Decay</label>
+        <input id="hp-wd" type="number" value="0" min="0" max="1" step="0.001">
+        <span class="hp-desc">AdamW decoupled weight decay</span>
+      </div>
+      <div class="hp-item">
+        <label for="hp-grad-clip">Gradient Clip (max norm)</label>
+        <input id="hp-grad-clip" type="number" value="0" min="0" max="100" step="0.1">
+        <span class="hp-desc">0 = disabled. Try 1.0 for full model</span>
+      </div>
+    </div>
+    <div id="mode-info"></div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;margin-top:12px;">
+      <button class="demo-btn" id="train-btn" disabled>Train</button>
+      <span id="cpu-warning" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #d97706;border-radius:4px;padding:2px 8px;">CPU mode — training will be slow</span>
+      <button class="demo-btn warn" id="stop-btn" disabled style="display:none;">Stop</button>
+      <button class="demo-btn danger" id="reset-btn" disabled>Reset Weights</button>
+      <span class="metric" id="epoch-info" style="display:none;"></span>
+      <span class="metric" id="loss-info" style="display:none;"></span>
+      <span class="metric" id="step-info" style="display:none;"></span>
+    </div>
+    <div id="loss-chart-container"></div>
+  </div>
+</section>
+
+<!-- 5. After Training -->
+<section class="demo-section">
+  <h2>5. Test Model</h2>
+  <p style="font-size:15px;color:var(--muted);margin-bottom:8px;">Run the same baseline prompts through the current model. Use anytime to check progress.</p>
+  <p class="gen-legend"><span class="legend-prompt">Prompt</span> <span class="legend-response">Model response</span></p>
+  <div class="card" id="after-container">
+    <button class="demo-btn" id="after-btn" disabled>Run on Baseline Prompts</button>
+    <div id="after-results" style="margin-top:12px;"></div>
+  </div>
+  <div class="card">
+    <p style="font-size:15px; color:var(--muted); margin-bottom:8px;">Anything outside your training data will produce nonsense, but hey, at least it'll be <em>better</em> nonsense than the base model.</p>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <div style="flex:1;">
+        <label style="font-size:14px;color:var(--muted);font-weight:500;">Try your own prompt</label>
+        <input id="try-prompt" type="text" placeholder="Type a prompt and press Enter or click Generate" style="width:100%;font:13px monospace;padding:5px 8px;border:1px solid #ccc;border-radius:4px;" disabled>
+      </div>
+      <button class="demo-btn" id="try-btn" disabled>Generate</button>
+    </div>
+    <div id="try-result" style="margin-top:8px;"></div>
+  </div>
+</section>
+
+<section class="demo-section" style="margin-bottom:48px;">
+  <h2>What Just Happened</h2>
+  <p>
+    You took a pretrained language model that only knew how to predict the next token and taught it to follow instructions. That is supervised fine-tuning: you provided (prompt, completion) pairs, computed a cross-entropy loss on the completion tokens only, and updated the weights with gradient descent.
+  </p>
+  <p>
+    This is the same first step used to build ChatGPT, Claude, and every other instruction-following LLM. The difference is scale: they use billions of parameters and millions of examples. The mechanism is identical.
+  </p>
+  <p>
+    SFT alone does not produce a safe or well-aligned model. It teaches format and surface-level instruction following, but not preference or judgment. That requires the next step in the pipeline: reinforcement learning from human feedback (RLHF), using algorithms like <a href="/blog/2026/ppo-grpo/">PPO or GRPO</a>. But SFT is where the magic first becomes visible.
+  </p>
+  <p>
+    I hope you felt the AGI. If not fully, at least a little bit.
+  </p>
+</section>
+
+<div class="share-bottom">
+    <p>Found this useful? Help someone else find it too.</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F&text=Feel%20The%20AGI%3A%20Maybe%20Feel%20the%20SFT%20First%3F" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fsft-demo%2F&title=Feel%20The%20AGI%3A%20Maybe%20Feel%20the%20SFT%20First%3F" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</div>
+
+</article>
+
+<!-- Disqus -->
+<div id="disqus_thread" style="margin-top: 32px;"></div>
+<script type="text/javascript">
+  var disqus_shortname = 'ssedhain';
+  (function() {
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+<script src="/assets/js/tinyllms.umd.js"></script>
+<script src="/assets/js/transformer-viz.umd.js"></script>
+<script>
+(async function() {
+  const {
+    Tensor, PythiaModel, Tokenizer, Adam, SGD, LossCurveViz,
+    softmax, reshape, slice,
+    initWebGPU, isWebGPUAvailable, getBackend,
+    sftStepGPU,
+  } = tinyllms;
+
+  // -- SFT Dataset (mutable) --
+
+  const SFT_DATA = [
+    { prompt: "What is the capital of France?", completion: " The capital of France is Paris." },
+    { prompt: "Translate to Spanish: Hello, how are you?", completion: " Hola, como estas?" },
+    { prompt: "What color is the sky?", completion: " The sky is blue." },
+    { prompt: "Is a tomato a fruit or vegetable?", completion: " A tomato is technically a fruit." },
+    { prompt: "Name three types of animals", completion: " Three types are dogs, cats, and birds." },
+    { prompt: "What is 5 plus 3?", completion: " 5 plus 3 equals 8." },
+    { prompt: "Is ice cream hot or cold?", completion: " Ice cream is cold." },
+    { prompt: "Name a large city in Japan", completion: " Tokyo is a large city in Japan." },
+    { prompt: "What do plants need to grow?", completion: " Plants need sunlight, water, and nutrients." },
+    { prompt: "What is the opposite of hot?", completion: " The opposite of hot is cold." },
+    { prompt: "Complete the sequence: 2, 4, 6, 8,", completion: " 10, 12, 14" },
+    { prompt: "Classify this word: dog", completion: " dog is a noun." },
+    { prompt: "Translate to French: thank you", completion: " merci" },
+    { prompt: "Is an apple red or green?", completion: " Apples can be red, green, or yellow." },
+    { prompt: "What is the largest planet?", completion: " The largest planet is Jupiter." },
+  ];
+
+  function renderDataTable() {
+    const tbody = document.getElementById('data-table');
+    tbody.innerHTML = '';
+    document.getElementById('data-count').textContent = SFT_DATA.length;
+    for (let i = 0; i < SFT_DATA.length; i++) {
+      const ex = SFT_DATA[i];
+      const row = document.createElement('tr');
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '\u00d7';
+      removeBtn.title = 'Remove this example';
+      removeBtn.style.cssText = 'background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;padding:0 4px;';
+      removeBtn.addEventListener('click', () => { SFT_DATA.splice(i, 1); renderDataTable(); });
+      const tdPrompt = document.createElement('td');
+      tdPrompt.className = 'prompt';
+      tdPrompt.textContent = ex.prompt;
+      const tdCompletion = document.createElement('td');
+      tdCompletion.className = 'completion';
+      tdCompletion.textContent = ex.completion.trim();
+      const tdAction = document.createElement('td');
+      tdAction.style.textAlign = 'center';
+      tdAction.appendChild(removeBtn);
+      row.appendChild(tdPrompt);
+      row.appendChild(tdCompletion);
+      row.appendChild(tdAction);
+      tbody.appendChild(row);
+    }
+  }
+  renderDataTable();
+
+  // Add example
+  const addPromptEl = document.getElementById('add-prompt');
+  const addCompletionEl = document.getElementById('add-completion');
+
+  function addExample() {
+    const prompt = addPromptEl.value.trim();
+    const completion = addCompletionEl.value.trim();
+    if (!prompt || !completion) return;
+    const comp = completion.startsWith(' ') ? completion : ' ' + completion;
+    SFT_DATA.push({ prompt, completion: comp });
+    addPromptEl.value = '';
+    addCompletionEl.value = '';
+    renderDataTable();
+    addPromptEl.focus();
+  }
+
+  document.getElementById('add-btn').addEventListener('click', addExample);
+  addPromptEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { addCompletionEl.focus(); } });
+  addCompletionEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { addExample(); } });
+
+  // -- State --
+
+  let model = null;
+  let tokenizer = null;
+  let allWeights = new Map();
+  let originalWeightData = new Map();
+  let totalStepsSoFar = 0;
+  let currentOptimizer = null;
+  let lastHpHash = '';
+  let stopRequested = false;
+  let baselinePrompts = [];
+
+  const statusEl = document.getElementById('status');
+  function log(msg) {
+    statusEl.textContent += msg + '\n';
+    statusEl.scrollTop = statusEl.scrollHeight;
+  }
+
+  // -- Mode toggle UI --
+
+  const modeSelect = document.getElementById('hp-mode');
+  const lrInput = document.getElementById('hp-lr');
+  const noteHead = document.getElementById('note-head');
+  const noteFull = document.getElementById('note-full');
+  const modeInfoEl = document.getElementById('mode-info');
+
+  function updateModeUI() {
+    const mode = modeSelect.value;
+    noteHead.style.display = mode === 'head' ? 'block' : 'none';
+    noteFull.style.display = mode === 'full' ? 'block' : 'none';
+
+    if (allWeights.size > 0) {
+      const paramCount = mode === 'full'
+        ? [...allWeights.values()].reduce((n, t) => n + t.size, 0)
+        : (allWeights.get('lm_head.weight')?.size || 0);
+      modeInfoEl.textContent = `Trainable parameters: ${(paramCount).toLocaleString()} (${(paramCount * 4 / 1024 / 1024).toFixed(1)}MB)`;
+    }
+  }
+  modeSelect.addEventListener('change', () => {
+    updateModeUI();
+    if (modeSelect.value === 'full' && parseFloat(lrInput.value) > 5e-4) {
+      lrInput.value = '0.0001';
+    } else if (modeSelect.value === 'head' && parseFloat(lrInput.value) < 5e-4) {
+      lrInput.value = '0.001';
+    }
+    currentOptimizer = null;
+  });
+
+  // -- Read hyperparameters from UI --
+
+  function getHyperparams() {
+    return {
+      mode: document.getElementById('hp-mode').value,
+      epochs: parseInt(document.getElementById('hp-epochs').value, 10) || 5,
+      lr: parseFloat(document.getElementById('hp-lr').value) || 1e-3,
+      beta1: parseFloat(document.getElementById('hp-beta1').value) || 0.9,
+      beta2: parseFloat(document.getElementById('hp-beta2').value) || 0.999,
+      weightDecay: parseFloat(document.getElementById('hp-wd').value) || 0,
+      gradClip: parseFloat(document.getElementById('hp-grad-clip').value) || 0,
+      optimizerType: document.getElementById('hp-optimizer').value,
+    };
+  }
+
+  // -- Get trainable params based on mode --
+
+  function getTrainableParams(mode) {
+    if (mode === 'head') {
+      return [allWeights.get('lm_head.weight')];
+    }
+    return [...allWeights.values()];
+  }
+
+  function setRequiresGrad(mode) {
+    for (const [name, tensor] of allWeights) {
+      if (mode === 'full') {
+        tensor.requiresGrad = true;
+      } else {
+        tensor.requiresGrad = (name === 'lm_head.weight');
+      }
+    }
+  }
+
+  // -- Gradient clipping --
+
+  function clipGradNorm(params, maxNorm) {
+    if (maxNorm <= 0) return 0;
+    let totalNormSq = 0;
+    for (const p of params) {
+      if (!p.grad) continue;
+      const g = p.grad.contiguousData();
+      for (let i = 0; i < g.length; i++) totalNormSq += g[i] * g[i];
+    }
+    const totalNorm = Math.sqrt(totalNormSq);
+    if (totalNorm > maxNorm) {
+      const scale = maxNorm / totalNorm;
+      for (const p of params) {
+        if (!p.grad) continue;
+        const g = p.grad.data;
+        for (let i = 0; i < g.length; i++) g[i] *= scale;
+      }
+    }
+    return totalNorm;
+  }
+
+  // -- 1. Load Model --
+
+  document.getElementById('load-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('load-btn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+
+    try {
+      log('Fetching model manifest...');
+      const manifestResp = await fetch('/models/pythia-14m/model.json');
+      const manifest = await manifestResp.json();
+
+      log('Fetching weights (54MB)...');
+      const weightsResp = await fetch('/models/pythia-14m/weights-0.bin');
+      const weightsBuf = await weightsResp.arrayBuffer();
+      log(`Loaded ${(weightsBuf.byteLength / 1024 / 1024).toFixed(1)}MB`);
+
+      allWeights = new Map();
+      originalWeightData = new Map();
+      let totalParams = 0;
+
+      for (const w of manifest.weights) {
+        const floats = new Float32Array(weightsBuf, w.offset, w.length / 4);
+        const data = new Float32Array(floats);
+        originalWeightData.set(w.name, new Float32Array(data));
+        const grad = (w.name === 'lm_head.weight');
+        const tensor = new Tensor(data, w.shape, undefined, grad);
+        allWeights.set(w.name, tensor);
+        totalParams += tensor.size;
+      }
+      log(`${allWeights.size} weight tensors, ${totalParams.toLocaleString()} total params`);
+
+      model = new PythiaModel(manifest.config, allWeights);
+
+      log('Initializing WebGPU...');
+      const gpuOk = await initWebGPU();
+      log(gpuOk ? 'WebGPU: ENABLED' : 'WebGPU: not available (CPU mode)');
+      if (!gpuOk) {
+        document.getElementById('cpu-warning').style.display = 'inline-block';
+        document.getElementById('cpu-banner').style.display = 'block';
+      } else {
+        // WebGPU available: default to full model with recommended settings
+        document.getElementById('hp-mode').value = 'full';
+        document.getElementById('hp-lr').value = '0.0001';
+        document.getElementById('hp-wd').value = '0.01';
+        document.getElementById('hp-grad-clip').value = '1';
+      }
+
+      log('Loading tokenizer...');
+      const tokResp = await fetch('/models/pythia-14m/tokenizer.json');
+      tokenizer = Tokenizer.fromJSON(await tokResp.json());
+      log(`Tokenizer loaded (vocab: ${tokenizer.vocabSize})`);
+
+      updateModeUI();
+
+      // -- Initialize 3D model visualization --
+      try {
+        const { TransformerViz, pythiaToModelSpec, buildPythiaWeightMapping } = window.TransformerViz;
+        const vizWrapper = document.getElementById('viz-wrapper');
+        const vizContainer = document.getElementById('viz-container');
+
+        // Show wrapper first so container has measurable dimensions
+        vizWrapper.style.display = 'block';
+        // Force layout reflow before reading width
+        const vizWidth = vizContainer.clientWidth || 800;
+
+        const vizSpec = pythiaToModelSpec(manifest.config);
+        const viz = new TransformerViz({
+          container: vizContainer,
+          spec: vizSpec,
+          width: vizWidth,
+          height: 700,
+          gap: 1.2,
+          cameraPosition: {
+            azimuth: 0.0,
+            elevation: 0.15,
+            distance: 18,
+          },
+        });
+
+        // Load actual weights for color-by-norm visualization
+        const weightMap = buildPythiaWeightMapping(manifest.config);
+        const vizWeights = new Map();
+        for (const [name, tensor] of allWeights.entries()) {
+          vizWeights.set(name, { data: tensor.data, shape: tensor.shape });
+        }
+        viz.loadWeights(vizWeights, weightMap);
+
+        // Start with collapsed, centered view
+        viz.collapseAll();
+        viz.resetCamera();
+
+        document.getElementById('viz-reset-btn').addEventListener('click', () => viz.resetCamera());
+        document.getElementById('viz-collapse-btn').addEventListener('click', () => viz.collapseAll());
+
+        log('Model architecture visualization loaded.');
+      } catch (vizErr) {
+        console.warn('Viz init failed:', vizErr);
+      }
+
+      log('Ready.');
+      document.getElementById('baseline-btn').disabled = false;
+      document.getElementById('train-btn').disabled = false;
+      document.getElementById('reset-btn').disabled = false;
+      document.getElementById('after-btn').disabled = false;
+      document.getElementById('try-prompt').disabled = false;
+      document.getElementById('try-btn').disabled = false;
+      btn.textContent = 'Loaded';
+    } catch (e) {
+      log('ERROR: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'Load Pythia-14M';
+    }
+  });
+
+  // -- Reset weights --
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (allWeights.size === 0) return;
+    for (const [name, tensor] of allWeights) {
+      const orig = originalWeightData.get(name);
+      if (orig) tensor.data.set(orig);
+      tensor.grad = null;
+    }
+    totalStepsSoFar = 0;
+    currentOptimizer = null;
+    lossViz.clear();
+    log('All weights and optimizer state reset to pre-trained values.');
+  });
+
+  // -- Generate helper --
+
+  async function generateGreedy(promptIds, maxNewTokens) {
+    const savedGrad = new Map();
+    for (const [name, t] of allWeights) {
+      savedGrad.set(name, t.requiresGrad);
+      t.requiresGrad = false;
+    }
+    const tokens = [...promptIds];
+    const useGPU = isWebGPUAvailable();
+    for (let i = 0; i < maxNewTokens; i++) {
+      const { logits } = useGPU
+        ? await model.forwardGPU(tokens)
+        : model.forward(tokens);
+      const seqLen = tokens.length;
+      const vocabSize = model.config.vocabSize;
+      const lastLogitsData = logits.contiguousData();
+      const offset = (seqLen - 1) * vocabSize;
+      let maxIdx = 0, maxVal = -Infinity;
+      for (let j = 0; j < vocabSize; j++) {
+        const v = lastLogitsData[offset + j];
+        if (v > maxVal) { maxVal = v; maxIdx = j; }
+      }
+      tokens.push(maxIdx);
+      if (maxIdx === 0) break;
+    }
+    for (const [name, g] of savedGrad) allWeights.get(name).requiresGrad = g;
+    return tokens;
+  }
+
+  async function renderGenerations(containerId, prompts, maxTokens) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for (const prompt of prompts) {
+      const promptIds = tokenizer.encode(prompt);
+      const allTokens = await generateGreedy(promptIds, maxTokens);
+      const displayTokens = allTokens.filter(id => id !== 0);
+      const fullText = tokenizer.decode(displayTokens);
+      const promptText = tokenizer.decode(promptIds);
+      const genText = fullText.slice(promptText.length);
+      const stoppedOnEos = allTokens[allTokens.length - 1] === 0;
+      const div = document.createElement('div');
+      div.className = 'gen-text';
+      div.style.marginBottom = '6px';
+      div.innerHTML = `<span class="prompt-part">${esc(promptText)}</span><span class="gen-part">${esc(genText)}</span>${stoppedOnEos ? '<span style="color:#16a34a;font-size:11px;margin-left:4px;" title="Model produced EOS token">[EOS]</span>' : ''}`;
+      container.appendChild(div);
+    }
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'\\n');
+  }
+
+  // -- 3. Baseline --
+
+  document.getElementById('baseline-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('baseline-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Running...';
+    const indices = Array.from({ length: SFT_DATA.length }, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    baselinePrompts = indices.slice(0, 5).map(i => SFT_DATA[i].prompt);
+    log(`Baseline prompts: ${baselinePrompts.map(p => '"' + p + '"').join(', ')}`);
+    await renderGenerations('baseline-results', baselinePrompts, 15);
+    btn.textContent = 'Re-sample Baseline';
+    btn.disabled = false;
+    log('Baseline generations complete.');
+  });
+
+  // -- 4. Train --
+
+  const lossViz = new LossCurveViz({
+    container: document.getElementById('loss-chart-container'),
+    width: 600,
+    height: 220,
+  });
+
+  const stopBtn = document.getElementById('stop-btn');
+  stopBtn.addEventListener('click', () => { stopRequested = true; });
+
+  document.getElementById('train-btn').addEventListener('click', async () => {
+    if (!model || !tokenizer || allWeights.size === 0) return;
+    const btn = document.getElementById('train-btn');
+    btn.disabled = true;
+    btn.textContent = 'Training...';
+    stopRequested = false;
+    stopBtn.style.display = '';
+    stopBtn.disabled = false;
+
+    const epochEl = document.getElementById('epoch-info');
+    const lossEl = document.getElementById('loss-info');
+    const stepEl = document.getElementById('step-info');
+    epochEl.style.display = 'inline-block';
+    lossEl.style.display = 'inline-block';
+    stepEl.style.display = 'inline-block';
+
+    const hp = getHyperparams();
+    const isFullModel = hp.mode === 'full';
+
+    setRequiresGrad(hp.mode);
+    const params = getTrainableParams(hp.mode);
+    const paramCount = params.reduce((n, t) => n + t.size, 0);
+
+    log(`Mode: ${isFullModel ? 'FULL MODEL' : 'LM HEAD ONLY'} (${paramCount.toLocaleString()} params)`);
+    log(`Hyperparams: opt=${hp.optimizerType}, lr=${hp.lr}, epochs=${hp.epochs}, wd=${hp.weightDecay}, clip=${hp.gradClip || 'off'}`);
+
+    const hpHash = `${hp.mode}|${hp.optimizerType}|${hp.lr}|${hp.beta1}|${hp.beta2}|${hp.weightDecay}`;
+    if (!currentOptimizer || hpHash !== lastHpHash) {
+      if (hp.optimizerType === 'sgd') {
+        currentOptimizer = new SGD(params, hp.lr, hp.weightDecay);
+      } else {
+        currentOptimizer = new Adam(params, hp.lr, hp.beta1, hp.beta2, 1e-8, hp.weightDecay);
+      }
+      lastHpHash = hpHash;
+      log('Created new optimizer.');
+    } else {
+      log('Continuing with existing optimizer state.');
+    }
+    const optimizer = currentOptimizer;
+
+    const eosId = tokenizer.tokenToId('<|endoftext|>');
+    const tokenizedData = SFT_DATA.map(ex => {
+      const promptIds = tokenizer.encode(ex.prompt);
+      const completionIds = [...tokenizer.encode(ex.completion), eosId];
+      return { promptIds, completionIds, fullIds: [...promptIds, ...completionIds] };
+    });
+
+    const useGPUShortcut = !isFullModel && isWebGPUAvailable();
+    if (useGPUShortcut) {
+      log('Using GPU-accelerated SFT path.');
+    } else if (isFullModel) {
+      log('Full model: using CPU autograd (backward through all layers).');
+    }
+
+    const lmHeadWeight = allWeights.get('lm_head.weight');
+
+    let stopped = false;
+
+    for (let epoch = 0; epoch < hp.epochs && !stopped; epoch++) {
+      let epochLoss = 0;
+      let epochSteps = 0;
+      const t0 = performance.now();
+
+      const shuffled = [...tokenizedData];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      for (let si = 0; si < shuffled.length; si++) {
+        if (stopRequested) { stopped = true; break; }
+
+        const { fullIds, promptIds } = shuffled[si];
+        const promptLen = promptIds.length;
+        let lossVal;
+
+        optimizer.zeroGrad();
+
+        if (useGPUShortcut) {
+          const result = await sftStepGPU(model, lmHeadWeight, fullIds, promptLen);
+          lossVal = result.loss;
+        } else {
+          const seqLen = fullIds.length;
+          const vocabSize = model.config.vocabSize;
+          const { logits } = model.forward(fullIds);
+
+          const startPos = promptLen - 1;
+          const endPos = seqLen - 1;
+          const numTargets = endPos - startPos;
+          if (numTargets <= 0) continue;
+
+          const targetLogits = slice(logits, [startPos, 0], [endPos, vocabSize]);
+          const targets = fullIds.slice(startPos + 1, endPos + 1);
+          const loss = tinyllms.crossEntropy(targetLogits, targets);
+          lossVal = loss.item();
+          loss.backward();
+        }
+
+        if (hp.gradClip > 0) {
+          clipGradNorm(params, hp.gradClip);
+        }
+
+        optimizer.step();
+
+        epochLoss += lossVal;
+        epochSteps++;
+        totalStepsSoFar++;
+        lossViz.addPoint('loss', totalStepsSoFar, lossVal);
+
+        if (si % 3 === 0) await new Promise(r => setTimeout(r, 0));
+      }
+
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      const avgLoss = epochSteps > 0 ? epochLoss / epochSteps : 0;
+      epochEl.textContent = `Epoch ${epoch + 1}/${hp.epochs}`;
+      lossEl.textContent = `Avg Loss: ${avgLoss.toFixed(3)}`;
+      stepEl.textContent = `Step ${totalStepsSoFar}`;
+      log(`Epoch ${epoch + 1}: avg_loss=${avgLoss.toFixed(4)} (${elapsed}s)${stopped ? ' [stopped]' : ''}`);
+
+      await new Promise(r => setTimeout(r, 50));
+    }
+
+    stopBtn.style.display = 'none';
+    stopBtn.disabled = true;
+    btn.textContent = 'Train More';
+    btn.disabled = false;
+    log(stopped ? 'Training stopped. Click "Train More" to resume.' : 'Training complete.');
+  });
+
+  // -- 5. After Training --
+
+  document.getElementById('after-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('after-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Running...';
+    const prompts = baselinePrompts.length > 0
+      ? baselinePrompts
+      : SFT_DATA.slice(0, 5).map(d => d.prompt);
+    await renderGenerations('after-results', prompts, 15);
+    btn.textContent = 'Run on Baseline Prompts';
+    btn.disabled = false;
+    log('Test generations complete.');
+  });
+
+  // -- Try your own prompt --
+
+  const tryPromptEl = document.getElementById('try-prompt');
+  const tryBtnEl = document.getElementById('try-btn');
+  const tryResultEl = document.getElementById('try-result');
+
+  async function runTryPrompt() {
+    if (!model || !tokenizer) return;
+    const prompt = tryPromptEl.value.trim();
+    if (!prompt) return;
+
+    tryBtnEl.disabled = true;
+    tryBtnEl.innerHTML = '<span class="spinner"></span>Generating...';
+    tryResultEl.innerHTML = '';
+
+    const promptIds = tokenizer.encode(prompt);
+    const allTokens = await generateGreedy(promptIds, 20);
+    const displayTokens = allTokens.filter(id => id !== 0);
+    const fullText = tokenizer.decode(displayTokens);
+    const promptText = tokenizer.decode(promptIds);
+    const genText = fullText.slice(promptText.length);
+    const stoppedOnEos = allTokens[allTokens.length - 1] === 0;
+
+    const div = document.createElement('div');
+    div.className = 'gen-text';
+    div.innerHTML = `<span class="prompt-part">${esc(promptText)}</span><span class="gen-part">${esc(genText)}</span>${stoppedOnEos ? '<span style="color:#16a34a;font-size:11px;margin-left:4px;" title="Model produced EOS token">[EOS]</span>' : ''}`;
+    tryResultEl.appendChild(div);
+
+    tryBtnEl.disabled = false;
+    tryBtnEl.textContent = 'Generate';
+  }
+
+  tryBtnEl.addEventListener('click', runTryPrompt);
+  tryPromptEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') runTryPrompt(); });
+
+})();
+</script>
+</body>
+</html>
