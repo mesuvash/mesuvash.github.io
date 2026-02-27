@@ -1,0 +1,801 @@
+{
+  "modelType": "pythia",
+  "config": {
+    "vocabSize": 50304,
+    "hiddenDim": 128,
+    "numLayers": 6,
+    "numHeads": 4,
+    "headDim": 32,
+    "intermediateSize": 512,
+    "maxSeqLen": 2048,
+    "rotaryDim": 8
+  },
+  "weights": [
+    {
+      "name": "lm_head.weight",
+      "shape": [
+        50304,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 0,
+      "length": 25755648
+    },
+    {
+      "name": "embed.weight",
+      "shape": [
+        50304,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 25755648,
+      "length": 25755648
+    },
+    {
+      "name": "final_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51511296,
+      "length": 512
+    },
+    {
+      "name": "final_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51511808,
+      "length": 512
+    },
+    {
+      "name": "layers.0.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51512320,
+      "length": 512
+    },
+    {
+      "name": "layers.0.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51512832,
+      "length": 65536
+    },
+    {
+      "name": "layers.0.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51578368,
+      "length": 1536
+    },
+    {
+      "name": "layers.0.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51579904,
+      "length": 196608
+    },
+    {
+      "name": "layers.0.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51776512,
+      "length": 512
+    },
+    {
+      "name": "layers.0.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51777024,
+      "length": 512
+    },
+    {
+      "name": "layers.0.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51777536,
+      "length": 512
+    },
+    {
+      "name": "layers.0.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 51778048,
+      "length": 262144
+    },
+    {
+      "name": "layers.0.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52040192,
+      "length": 2048
+    },
+    {
+      "name": "layers.0.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52042240,
+      "length": 262144
+    },
+    {
+      "name": "layers.0.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52304384,
+      "length": 512
+    },
+    {
+      "name": "layers.0.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52304896,
+      "length": 512
+    },
+    {
+      "name": "layers.1.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52305408,
+      "length": 512
+    },
+    {
+      "name": "layers.1.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52305920,
+      "length": 65536
+    },
+    {
+      "name": "layers.1.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52371456,
+      "length": 1536
+    },
+    {
+      "name": "layers.1.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52372992,
+      "length": 196608
+    },
+    {
+      "name": "layers.1.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52569600,
+      "length": 512
+    },
+    {
+      "name": "layers.1.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52570112,
+      "length": 512
+    },
+    {
+      "name": "layers.1.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52570624,
+      "length": 512
+    },
+    {
+      "name": "layers.1.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52571136,
+      "length": 262144
+    },
+    {
+      "name": "layers.1.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52833280,
+      "length": 2048
+    },
+    {
+      "name": "layers.1.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 52835328,
+      "length": 262144
+    },
+    {
+      "name": "layers.1.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53097472,
+      "length": 512
+    },
+    {
+      "name": "layers.1.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53097984,
+      "length": 512
+    },
+    {
+      "name": "layers.2.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53098496,
+      "length": 512
+    },
+    {
+      "name": "layers.2.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53099008,
+      "length": 65536
+    },
+    {
+      "name": "layers.2.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53164544,
+      "length": 1536
+    },
+    {
+      "name": "layers.2.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53166080,
+      "length": 196608
+    },
+    {
+      "name": "layers.2.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53362688,
+      "length": 512
+    },
+    {
+      "name": "layers.2.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53363200,
+      "length": 512
+    },
+    {
+      "name": "layers.2.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53363712,
+      "length": 512
+    },
+    {
+      "name": "layers.2.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53364224,
+      "length": 262144
+    },
+    {
+      "name": "layers.2.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53626368,
+      "length": 2048
+    },
+    {
+      "name": "layers.2.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53628416,
+      "length": 262144
+    },
+    {
+      "name": "layers.2.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53890560,
+      "length": 512
+    },
+    {
+      "name": "layers.2.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53891072,
+      "length": 512
+    },
+    {
+      "name": "layers.3.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53891584,
+      "length": 512
+    },
+    {
+      "name": "layers.3.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53892096,
+      "length": 65536
+    },
+    {
+      "name": "layers.3.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53957632,
+      "length": 1536
+    },
+    {
+      "name": "layers.3.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 53959168,
+      "length": 196608
+    },
+    {
+      "name": "layers.3.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54155776,
+      "length": 512
+    },
+    {
+      "name": "layers.3.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54156288,
+      "length": 512
+    },
+    {
+      "name": "layers.3.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54156800,
+      "length": 512
+    },
+    {
+      "name": "layers.3.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54157312,
+      "length": 262144
+    },
+    {
+      "name": "layers.3.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54419456,
+      "length": 2048
+    },
+    {
+      "name": "layers.3.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54421504,
+      "length": 262144
+    },
+    {
+      "name": "layers.3.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54683648,
+      "length": 512
+    },
+    {
+      "name": "layers.3.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54684160,
+      "length": 512
+    },
+    {
+      "name": "layers.4.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54684672,
+      "length": 512
+    },
+    {
+      "name": "layers.4.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54685184,
+      "length": 65536
+    },
+    {
+      "name": "layers.4.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54750720,
+      "length": 1536
+    },
+    {
+      "name": "layers.4.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54752256,
+      "length": 196608
+    },
+    {
+      "name": "layers.4.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54948864,
+      "length": 512
+    },
+    {
+      "name": "layers.4.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54949376,
+      "length": 512
+    },
+    {
+      "name": "layers.4.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54949888,
+      "length": 512
+    },
+    {
+      "name": "layers.4.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 54950400,
+      "length": 262144
+    },
+    {
+      "name": "layers.4.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55212544,
+      "length": 2048
+    },
+    {
+      "name": "layers.4.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55214592,
+      "length": 262144
+    },
+    {
+      "name": "layers.4.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55476736,
+      "length": 512
+    },
+    {
+      "name": "layers.4.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55477248,
+      "length": 512
+    },
+    {
+      "name": "layers.5.attention.out.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55477760,
+      "length": 512
+    },
+    {
+      "name": "layers.5.attention.out.weight",
+      "shape": [
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55478272,
+      "length": 65536
+    },
+    {
+      "name": "layers.5.attention.qkv.bias",
+      "shape": [
+        384
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55543808,
+      "length": 1536
+    },
+    {
+      "name": "layers.5.attention.qkv.weight",
+      "shape": [
+        384,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55545344,
+      "length": 196608
+    },
+    {
+      "name": "layers.5.input_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55741952,
+      "length": 512
+    },
+    {
+      "name": "layers.5.input_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55742464,
+      "length": 512
+    },
+    {
+      "name": "layers.5.mlp.dense_4h_to_h.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55742976,
+      "length": 512
+    },
+    {
+      "name": "layers.5.mlp.dense_4h_to_h.weight",
+      "shape": [
+        128,
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 55743488,
+      "length": 262144
+    },
+    {
+      "name": "layers.5.mlp.dense_h_to_4h.bias",
+      "shape": [
+        512
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 56005632,
+      "length": 2048
+    },
+    {
+      "name": "layers.5.mlp.dense_h_to_4h.weight",
+      "shape": [
+        512,
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 56007680,
+      "length": 262144
+    },
+    {
+      "name": "layers.5.post_attn_ln.bias",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 56269824,
+      "length": 512
+    },
+    {
+      "name": "layers.5.post_attn_ln.weight",
+      "shape": [
+        128
+      ],
+      "dtype": "float32",
+      "file": "weights-0.bin",
+      "offset": 56270336,
+      "length": 512
+    }
+  ]
+}
