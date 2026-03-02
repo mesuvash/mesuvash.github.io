@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Positional Encodings for LLMs</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Positional Encodings for LLMs: From Sinusoidal to RoPE" />
+    <meta property="og:description" content="An intuition-first guide to how transformers understand token order. Covers sinusoidal positional encodings and Rotary Position Embeddings (RoPE)." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/positional-encodings/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Positional Encodings for LLMs: From Sinusoidal to RoPE" />
+    <meta name="twitter:description" content="An intuition-first guide to how transformers understand token order. Covers sinusoidal positional encodings and Rotary Position Embeddings (RoPE)." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <style>
+.interactive-demo { margin: 32px 0; padding: 20px 0; border-top: 1px dashed #d0d0d0; }
+.interactive-demo h4 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.9em; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 0; }
+.anim-container { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 0; }
+.anim-container canvas { display: block; width: 100%; }
+.anim-controls { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.anim-btn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.85em; padding: 6px 16px; border: 1.5px solid #2563eb; background: #f0f4ff; color: #1e40af; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.anim-btn:hover { background: #2563eb; color: #fff; }
+.anim-btn.active { background: #2563eb; color: #fff; }
+.anim-slider-group { display: flex; align-items: center; gap: 8px; }
+.anim-slider-group label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.85em; color: #555; font-weight: 600; white-space: nowrap; }
+.anim-slider { -webkit-appearance: none; width: 140px; height: 6px; border-radius: 3px; background: #e0e0e0; outline: none; }
+.anim-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #2563eb; cursor: pointer; }
+.anim-value { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em; color: #2563eb; font-weight: 600; min-width: 36px; }
+.anim-label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.82em; color: #555; margin-top: 6px; }
+</style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Positional Encodings for LLMs</h1>
+    <p class="post-meta">March 1, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F&text=Positional%20Encodings%20for%20LLMs" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F&title=Positional%20Encodings%20for%20LLMs" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    How transformers understand token order, from the original sinusoidal scheme to Rotary Position Embeddings (RoPE).
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#the-problem">The Problem: Transformers Have No Sense of Order</a></li>
+        <li><a href="#sinusoidal">Sinusoidal Positional Encoding</a></li>
+        <li><a href="#why-sinusoids">Why Sinusoids Work</a></li>
+        <li><a href="#limitations">Limitations of Additive Positional Encodings</a></li>
+        <li><a href="#rope">Rotary Position Embeddings (RoPE)</a></li>
+        <li><a href="#rope-properties">Why RoPE Works So Well</a></li>
+        <li><a href="#comparison">Comparison: Sinusoidal vs Learned vs RoPE</a></li>
+        <li><a href="#practical">Practical Notes</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="the-problem">1. The Problem: Transformers Have No Sense of Order</h2>
+
+<p>
+    Consider the sentences "the cat sat on the mat" and "the mat sat on the cat." They contain
+    the exact same tokens. A transformer's self-attention computes pairwise dot products between
+    all token embeddings, and dot products are commutative. Without any positional information,
+    both sentences produce <strong>identical attention patterns</strong>.
+</p>
+
+<p>
+    This is not a minor detail. Word order is meaning. "Dog bites man" and "man bites dog" are
+    very different stories. If we want a transformer to understand language, we need to inject
+    information about <em>where</em> each token sits in the sequence.
+</p>
+
+<div class="diagram">
+<svg width="480" height="210" viewBox="0 0 480 210" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"></feDropShadow></filter>
+  </defs>
+
+  <text x="214" y="7" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Without positional encoding: both look identical to the transformer</text>
+
+  <!-- Sentence A -->
+  <text x="27" y="42" font-size="11" fill="#555">A:</text>
+  <rect x="49" y="26" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="71" y="43" text-anchor="middle" font-size="10" fill="#333">the</text>
+  <rect x="101" y="26" width="44" height="26" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"></rect>
+  <text x="123" y="43" text-anchor="middle" font-size="10" fill="#1e40af">cat</text>
+  <rect x="153" y="26" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="175" y="43" text-anchor="middle" font-size="10" fill="#333">sat</text>
+  <rect x="205" y="26" width="36" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="223" y="43" text-anchor="middle" font-size="10" fill="#333">on</text>
+  <rect x="249" y="26" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="271" y="43" text-anchor="middle" font-size="10" fill="#333">the</text>
+  <rect x="301" y="26" width="44" height="26" rx="4" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5"></rect>
+  <text x="323" y="43" text-anchor="middle" font-size="10" fill="#991b1b">mat</text>
+
+  <!-- Big brace / equals in center right -->
+  <text x="380" y="68" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">same set</text>
+  <text x="381" y="79" text-anchor="middle" font-size="10" fill="#d97706" font-weight="600">of tokens</text>
+  <rect x="353" y="53" width="56" height="33" rx="4" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,2"></rect>
+
+  <!-- Sentence B -->
+  <text x="27" y="102" font-size="11" fill="#555">B:</text>
+  <rect x="49" y="86" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="71" y="103" text-anchor="middle" font-size="10" fill="#333">the</text>
+  <rect x="101" y="86" width="44" height="26" rx="4" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5"></rect>
+  <text x="123" y="103" text-anchor="middle" font-size="10" fill="#991b1b">mat</text>
+  <rect x="153" y="86" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="175" y="103" text-anchor="middle" font-size="10" fill="#333">sat</text>
+  <rect x="205" y="86" width="36" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="223" y="103" text-anchor="middle" font-size="10" fill="#333">on</text>
+  <rect x="249" y="86" width="44" height="26" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"></rect>
+  <text x="271" y="103" text-anchor="middle" font-size="10" fill="#333">the</text>
+  <rect x="301" y="86" width="44" height="26" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"></rect>
+  <text x="323" y="103" text-anchor="middle" font-size="10" fill="#1e40af">cat</text>
+
+  <!-- Arrows showing the swap -->
+  <path d="M112,63C129.33333333333454,74.833251953125 129.33333333333454,82.833251953125 112,96" fill="none" stroke="#d97706" stroke-width="1.2" stroke-dasharray="3,2" transform="translate(9,-11)"></path>
+  
+
+  <!-- Bottom box -->
+  <rect x="41" y="136" width="420" height="47" rx="8" fill="#f3f0ff" stroke="#7c5cbf" stroke-width="1" filter="url(#sh)"></rect>
+  <text x="252" y="158" text-anchor="middle" font-size="12" font-weight="600" fill="#4c3a8a">We need: a way to make position 2 "feel different" from position 6,</text>
+  <text x="251" y="174" text-anchor="middle" font-size="12" fill="#333">so the model knows cat-then-mat ≠ mat-then-cat.</text>
+<path d="M112,63C129.33333333333454,74.833251953125 129.33333333333454,82.833251953125 112,96" fill="none" stroke="#d97706" stroke-width="1.2" stroke-dasharray="3,2" transform="translate(206,-10)"></path></svg>
+</div>
+
+<p>
+    The standard solution: add a <strong>positional encoding</strong> vector to each token
+    embedding before it enters the transformer. The encoding is a function of position only,
+    and it injects enough structure that the model can recover token order from the modified
+    embeddings.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="sinusoidal">2. Sinusoidal Positional Encoding</h2>
+
+<p>
+    The original "Attention Is All You Need" paper (Vaswani et al., 2017) proposed a simple,
+    elegant scheme: encode each position as a vector of sine and cosine values at different
+    frequencies.
+</p>
+
+<p>
+    Given a token at position $\text{pos}$ in the sequence, the positional encoding
+    $\mathbf{PE}$ has the same dimensionality $d$ as the token embedding. Each dimension $i$
+    of the encoding uses a sinusoid at a different frequency:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Sinusoidal positional encoding:</div>
+    $$\text{PE}(\text{pos}, 2i) = \sin\!\left(\frac{\text{pos}}{10000^{2i/d}}\right)$$
+    $$\text{PE}(\text{pos}, 2i+1) = \cos\!\left(\frac{\text{pos}}{10000^{2i/d}}\right)$$
+</div>
+
+<p>
+    Where:
+</p>
+<ul>
+    <li>$\text{pos}$ is the token's position in the sequence (0, 1, 2, ...)</li>
+    <li>$i$ is the dimension index, ranging from $0$ to $d/2 - 1$</li>
+    <li>$d$ is the embedding dimension (e.g., 512 or 768)</li>
+    <li>$10000$ is a base frequency constant (chosen empirically)</li>
+</ul>
+
+<p>
+    The final input to the transformer is the element-wise sum of the token embedding and
+    the positional encoding:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Input to transformer:</div>
+    $$\mathbf{x}_{\text{pos}} = \mathbf{e}_{\text{token}} + \mathbf{PE}(\text{pos})$$
+</div>
+
+<div class="diagram">
+<svg width="480" height="260" viewBox="0 0 480 260" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <filter id="sh2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+
+  <!-- Token embedding -->
+  <rect x="40" y="16" width="180" height="40" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh2)"/>
+  <text x="130" y="41" text-anchor="middle" font-size="12" fill="#333">Token Embedding e<tspan font-size="9" baseline-shift="sub">token</tspan></text>
+
+  <!-- PE vector -->
+  <rect x="260" y="16" width="180" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="350" y="41" text-anchor="middle" font-size="12" fill="#1e40af">Positional Encoding PE(pos)</text>
+
+  <!-- Arrows down to plus -->
+  <line x1="130" y1="60" x2="230" y2="100" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="350" y1="60" x2="250" y2="100" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- Plus circle -->
+  <circle cx="240" cy="112" r="16" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="240" y="117" text-anchor="middle" font-size="18" font-weight="600" fill="#1e40af">+</text>
+
+  <!-- Arrow down -->
+  <line x1="240" y1="130" x2="240" y2="158" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- Result -->
+  <rect x="120" y="162" width="240" height="40" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="240" y="187" text-anchor="middle" font-weight="600" font-size="12" fill="#166534">x<tspan font-size="9" baseline-shift="sub">pos</tspan> = position-aware embedding</text>
+
+  <!-- Arrow to transformer -->
+  <line x1="240" y1="206" x2="240" y2="228" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="240" y="248" text-anchor="middle" font-size="11" fill="#555" font-style="italic">feeds into Transformer layers</text>
+</svg>
+</div>
+
+<h3>What the encoding looks like</h3>
+
+<p>
+    Think of each dimension as a clock hand ticking at a different speed. Dimension 0 (low $i$)
+    oscillates rapidly, changing its value at every position. Dimension $d-1$ (high $i$) oscillates
+    extremely slowly, barely changing across the entire sequence.
+</p>
+
+<p>
+    For a model with $d = 512$:
+</p>
+
+<ul>
+    <li><strong>Dimension 0</strong> ($i=0$): period = $2\pi \approx 6.3$ positions. One full cycle every ~6 tokens.</li>
+    <li><strong>Dimension 256</strong> ($i=128$): period = $2\pi \cdot 10000^{128/256} = 2\pi \cdot 100 \approx 628$ positions.</li>
+    <li><strong>Dimension 510</strong> ($i=255$): period = $2\pi \cdot 10000^{255/256} \approx 60{,}000$ positions.</li>
+</ul>
+
+<p>
+    This creates a spectrum of frequencies spanning several orders of magnitude. The low
+    dimensions encode fine-grained, local position information ("am I at position 5 or 6?").
+    The high dimensions encode coarse, global position information ("am I near the beginning or
+    the end?").
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Sinusoidal positional encodings work like a binary counter, but
+    with smooth waves instead of sharp bits. In a binary number, the least significant bit flips
+    every step, the next bit flips every 2 steps, the next every 4, and so on. The sinusoidal
+    encoding does the same thing with smooth sinusoids at geometrically spaced frequencies. Each
+    position gets a unique "fingerprint" from the combination of all these waves, just like each
+    integer has a unique binary representation.
+</div>
+
+<div class="diagram">
+<svg width="500" height="220" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="sh3"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+
+  <text x="250" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Sinusoidal PE: each dimension is a wave at different frequency</text>
+
+  <!-- Axis labels -->
+  <text x="14" y="60" font-size="10" fill="#555">dim 0</text>
+  <text x="14" y="110" font-size="10" fill="#555">dim 4</text>
+  <text x="14" y="160" font-size="10" fill="#555">dim 8</text>
+  <text x="250" y="210" text-anchor="middle" font-size="10" fill="#555">position in sequence</text>
+
+  <!-- Fast wave (dim 0) -->
+  <line x1="60" y1="55" x2="480" y2="55" stroke="#eee" stroke-width="1"/>
+  <path d="M60,55 Q70,35 80,55 Q90,75 100,55 Q110,35 120,55 Q130,75 140,55 Q150,35 160,55 Q170,75 180,55 Q190,35 200,55 Q210,75 220,55 Q230,35 240,55 Q250,75 260,55 Q270,35 280,55 Q290,75 300,55 Q310,35 320,55 Q330,75 340,55 Q350,35 360,55 Q370,75 380,55 Q390,35 400,55 Q410,75 420,55 Q430,35 440,55 Q450,75 460,55" stroke="#2563eb" stroke-width="2" fill="none"/>
+  <text x="485" y="60" font-size="9" fill="#2563eb" font-style="italic">fast</text>
+
+  <!-- Medium wave (dim 4) -->
+  <line x1="60" y1="105" x2="480" y2="105" stroke="#eee" stroke-width="1"/>
+  <path d="M60,105 Q100,75 140,105 Q180,135 220,105 Q260,75 300,105 Q340,135 380,105 Q420,75 460,105" stroke="#7c5cbf" stroke-width="2" fill="none"/>
+  <text x="485" y="110" font-size="9" fill="#7c5cbf" font-style="italic">medium</text>
+
+  <!-- Slow wave (dim 8) -->
+  <line x1="60" y1="155" x2="480" y2="155" stroke="#eee" stroke-width="1"/>
+  <path d="M60,155 Q160,115 260,155 Q360,195 460,155" stroke="#16a34a" stroke-width="2" fill="none"/>
+  <text x="485" y="160" font-size="9" fill="#16a34a" font-style="italic">slow</text>
+
+  <!-- Position ticks -->
+  <line x1="60" y1="180" x2="60" y2="188" stroke="#bbb" stroke-width="1"/>
+  <text x="60" y="198" text-anchor="middle" font-size="9" fill="#555">0</text>
+  <line x1="160" y1="180" x2="160" y2="188" stroke="#bbb" stroke-width="1"/>
+  <text x="160" y="198" text-anchor="middle" font-size="9" fill="#555">10</text>
+  <line x1="260" y1="180" x2="260" y2="188" stroke="#bbb" stroke-width="1"/>
+  <text x="260" y="198" text-anchor="middle" font-size="9" fill="#555">20</text>
+  <line x1="360" y1="180" x2="360" y2="188" stroke="#bbb" stroke-width="1"/>
+  <text x="360" y="198" text-anchor="middle" font-size="9" fill="#555">30</text>
+  <line x1="460" y1="180" x2="460" y2="188" stroke="#bbb" stroke-width="1"/>
+  <text x="460" y="198" text-anchor="middle" font-size="9" fill="#555">40</text>
+</svg>
+</div>
+
+<div class="interactive-demo">
+<h4>Interactive: Sinusoidal Encoding Heatmap</h4>
+<p style="font-size:0.92em; color:#555; margin-bottom:12px;">Each cell shows the PE value at a given position (x-axis) and dimension (y-axis). Drag the position slider to see the encoding vector for that position highlighted. Notice how low dimensions oscillate fast and high dimensions oscillate slowly.</p>
+<div class="anim-container">
+<canvas id="heatmapCanvas"></canvas>
+<div class="anim-controls">
+<div class="anim-slider-group">
+<label>Highlight position:</label>
+<input type="range" class="anim-slider" id="heatmapPosSlider" min="0" max="49" value="10" style="width:200px">
+<span class="anim-value" id="heatmapPosVal">10</span>
+</div>
+<div class="anim-slider-group">
+<label>Dimensions:</label>
+<input type="range" class="anim-slider" id="heatmapDimSlider" min="8" max="64" value="32" step="4" style="width:120px">
+<span class="anim-value" id="heatmapDimVal">32</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="why-sinusoids">3. Why Sinusoids Work</h2>
+
+<p>
+    The choice of sine and cosine was not arbitrary. These functions have a critical property
+    that makes them ideal for positional encoding: the encoding of any position can be expressed
+    as a <strong>linear transformation</strong> of the encoding at any other position.
+</p>
+
+<h3>The relative position property</h3>
+
+<p>
+    For any fixed offset $k$, there exists a rotation matrix $M_k$ such that:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Relative position as linear transform:</div>
+    $$\begin{bmatrix} \text{PE}(\text{pos}+k, 2i) \\ \text{PE}(\text{pos}+k, 2i+1) \end{bmatrix} = \begin{bmatrix} \cos(k\omega_i) & \sin(k\omega_i) \\ -\sin(k\omega_i) & \cos(k\omega_i) \end{bmatrix} \begin{bmatrix} \text{PE}(\text{pos}, 2i) \\ \text{PE}(\text{pos}, 2i+1) \end{bmatrix}$$
+</div>
+
+<p>
+    Where $\omega_i = 1/10000^{2i/d}$ is the frequency for dimension pair $(2i, 2i+1)$.
+</p>
+
+<p>
+    This is the standard sine/cosine angle addition identity. The matrix $M_k$ depends only on
+    the offset $k$, not on the absolute position. This means the model can learn to attend to
+    "the token 3 positions ago" through a single linear operation, regardless of where in the
+    sequence it currently is.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of each pair of dimensions as a 2D clock face. The positional
+    encoding places a point on this clock. Moving forward by $k$ positions rotates that point by a
+    fixed angle. The angle depends on $k$ and the frequency of that dimension pair, but not on the
+    absolute position. So the "distance" between position 5 and 8 looks the same as between
+    position 100 and 103: a rotation by 3 steps.
+</p>
+</div>
+
+<h3>Other desirable properties</h3>
+
+<ul>
+    <li><strong>Unique encodings:</strong> Every position gets a distinct vector (the combination of waves at different frequencies creates a unique fingerprint up to very long sequences).</li>
+    <li><strong>Bounded values:</strong> All values lie in $[-1, 1]$, so the positional signal does not dominate the token embedding.</li>
+    <li><strong>No learned parameters:</strong> The encoding is deterministic, meaning it adds zero trainable parameters and works out of the box.</li>
+    <li><strong>Smooth interpolation:</strong> Nearby positions have similar encodings (small rotation), so the model gets a natural notion of proximity.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="limitations">4. Limitations of Additive Positional Encodings</h2>
+
+<p>
+    The sinusoidal scheme works, but it has a fundamental design issue: positional information
+    and semantic content are <strong>mixed together</strong> by addition before the transformer
+    ever sees them.
+</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Once you add $\mathbf{PE}(\text{pos})$ to
+    $\mathbf{e}_{\text{token}}$, the model must disentangle "what is this token?" from "where is
+    this token?" using the same set of dimensions. In practice, the model learns to use some
+    dimensions primarily for position and others for semantics, but this is an implicit,
+    imperfect separation. It wastes model capacity.
+</div>
+
+<p>
+    There are three concrete problems:
+</p>
+
+<p>
+    <strong>1. Position information decays through layers.</strong> The positional signal is added
+    once, at the input. As information flows through successive attention and feed-forward layers,
+    the positional signal gets progressively diluted. By the upper layers, the model may struggle
+    to determine relative positions precisely.
+</p>
+
+<p>
+    <strong>2. Fixed sequence length at training time.</strong> The encoding itself can generate
+    vectors for any position, but the model only sees positions 0 through $L_{\text{train}}-1$
+    during training. At inference, if you feed position 5000 to a model trained with
+    $L_{\text{train}} = 2048$, the model has never learned to interpret those encoding values.
+    Generalization beyond the training length is unreliable.
+</p>
+
+<p>
+    <strong>3. Attention does not natively see relative position.</strong> When computing
+    $\mathbf{q}_m^T \mathbf{k}_n$ (the attention score between positions $m$ and $n$), the dot
+    product sees the sum of token and position information at both positions. The relative
+    position $m - n$ is buried inside this computation, not made explicit. The model can recover
+    it (thanks to the linear-transform property), but it must learn to do so.
+</p>
+
+<p>
+    These limitations motivated a new question: instead of adding position to the embedding, can we
+    inject position directly into the attention computation, in a way that naturally encodes
+    <em>relative</em> position?
+</p>
+
+<!-- ============================================================ -->
+<h2 id="rope">5. Rotary Position Embeddings (RoPE)</h2>
+
+<p>
+    RoPE (Su et al., 2021) solves the limitations above with a single elegant idea:
+    <strong>encode position by rotating the query and key vectors</strong> in attention, so that
+    their dot product naturally depends on relative position.
+</p>
+
+<h3>The core idea</h3>
+
+<p>
+    Instead of adding a positional vector to the token embedding, RoPE applies a position-dependent
+    <strong>rotation</strong> to each query and key vector, right before the attention dot product.
+    The rotation angle is proportional to the position.
+</p>
+
+<p>
+    Start with 2D to build intuition. Suppose our query and key vectors are 2-dimensional. RoPE
+    rotates the query at position $m$ by angle $m\theta$ and the key at position $n$ by angle
+    $n\theta$:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">RoPE in 2D:</div>
+    $$\mathbf{q}_m^{\text{rot}} = R(m\theta)\,\mathbf{q}_m, \quad \mathbf{k}_n^{\text{rot}} = R(n\theta)\,\mathbf{k}_n$$
+    $$\text{where } R(\alpha) = \begin{bmatrix} \cos\alpha & -\sin\alpha \\ \sin\alpha & \cos\alpha \end{bmatrix}$$
+</div>
+
+<p>
+    Now compute the attention score:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention score with RoPE:</div>
+    $$(\mathbf{q}_m^{\text{rot}})^T \mathbf{k}_n^{\text{rot}} = \mathbf{q}_m^T R(m\theta)^T R(n\theta) \, \mathbf{k}_n = \mathbf{q}_m^T R\big((n-m)\theta\big) \, \mathbf{k}_n$$
+</div>
+
+<p>
+    Two properties of rotation matrices make this work: (1) the transpose is the inverse,
+    so $R(\alpha)^T = R(-\alpha)$, and (2) successive rotations add their angles,
+    so $R(-\alpha)\,R(\beta) = R(\beta - \alpha)$. Together:
+    $R(m\theta)^T R(n\theta) = R(-m\theta)\,R(n\theta) = R\big((n-m)\theta\big)$.
+    The absolute positions $m$ and $n$ disappear, and the dot product depends
+    only on the <strong>relative position</strong> $n - m$.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Imagine you and a friend are both standing on a rotating
+    merry-go-round, at different positions. You are at angle $m\theta$ from the starting
+    point; your friend is at $n\theta$. From your perspective, your friend's position is
+    $(n - m)\theta$ relative to you. The absolute positions wash out. RoPE uses exactly this
+    trick: rotate each vector by its absolute position, and the dot product sees only the
+    relative offset.
+</div>
+
+<div class="interactive-demo">
+<h4>Interactive: RoPE Rotation in 2D</h4>
+<p style="font-size:0.92em; color:#555; margin-bottom:12px;">Drag the position sliders to move the query (blue) and key (green) vectors. The dot product depends only on the relative distance (m - n), shown in amber. Try keeping the gap constant while moving both positions.</p>
+<div class="anim-container">
+<canvas id="ropeCanvas"></canvas>
+<div class="anim-controls">
+<div class="anim-slider-group">
+<label>Query pos (m):</label>
+<input type="range" class="anim-slider" id="ropeMSlider" min="0" max="20" value="3" style="width:140px">
+<span class="anim-value" id="ropeMVal">3</span>
+</div>
+<div class="anim-slider-group">
+<label>Key pos (n):</label>
+<input type="range" class="anim-slider" id="ropeNSlider" min="0" max="20" value="7" style="width:140px">
+<span class="anim-value" id="ropeNVal">7</span>
+</div>
+</div>
+<p class="anim-label" id="ropeExplain"></p>
+</div>
+</div>
+
+<div class="diagram">
+<svg width="500" height="300" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"></path></marker>
+    <marker id="arr3g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#16a34a"></path></marker>
+    <filter id="sh4"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"></feDropShadow></filter>
+  <marker id="_arrow_30" markerWidth="9.5" markerHeight="5.2250000000000005" markerUnits="userSpaceOnUse" refX="1" refY="2.6125000000000003" orient="auto"><path d="M0,0 L9.5,2.6125000000000003 L0,5.2250000000000005 Z" fill="#2563eb"></path></marker><marker id="_arrow_101" markerWidth="9" markerHeight="4.95" markerUnits="userSpaceOnUse" refX="1" refY="2.475" orient="auto"><path d="M0,0 L9,2.475 L0,4.95 Z" fill="#16a34a"></path></marker></defs>
+
+  <text x="250" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#333">RoPE: Rotate queries and keys, dot product sees relative position</text>
+
+  <!-- Left circle: rotation diagram -->
+  <circle cx="130" cy="160" r="80" fill="none" stroke="#e0e0e0" stroke-width="1"></circle>
+  <circle cx="130" cy="160" r="2" fill="#333"></circle>
+
+  <!-- Original vector (dim 0) -->
+  <line x1="130" y1="160" x2="210" y2="160" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"></line>
+
+  <!-- Query at position m -->
+  <line x1="129" y1="159" x2="183" y2="120" stroke="#2563eb" stroke-width="2" marker-start="url(#arrowhead)" marker-end="url(#_arrow_30)"></line>
+  <text x="196" y="112" font-size="11" fill="#1e40af" font-weight="600">q<tspan font-size="8" baseline-shift="sub">m</tspan></text>
+
+  <!-- Key at position n -->
+  <line x1="130" y1="159" x2="79" y2="110" stroke="#16a34a" stroke-width="2" marker-start="url(#arrowhead)" marker-end="url(#_arrow_101)"></line>
+  <text x="58" y="102" font-size="11" fill="#166534" font-weight="600">k<tspan font-size="8" baseline-shift="sub">n</tspan></text>
+
+  <!-- Angle arcs -->
+  <path d="M157,155A40,40,0,0,0,154,142" fill="none" stroke="#2563eb" stroke-width="1.5" transform="translate(-8,5)"></path>
+  <text x="152" y="155" font-size="10" fill="#1e40af">mθ</text>
+
+  <path d="M143,160Q138.5,144.5,126,155" fill="none" stroke="#16a34a" stroke-width="1.5" transform="translate(0,0)"></path>
+
+  <!-- Relative angle -->
+  <path d="M151,132Q136,109.5 116,132" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="4,2" transform="translate(-2,11)"></path>
+  <text x="115" y="127" font-size="10" fill="#92400e" font-weight="600">(n-m)θ</text>
+
+  <text x="130" y="260" text-anchor="middle" font-size="10" fill="#555" font-style="italic">2D rotation view</text>
+
+  <!-- Right side: the full-dimensional version -->
+  <rect x="270" y="40" width="210" height="240" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh4)"></rect>
+  <text x="375" y="64" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Full d-dimensional RoPE</text>
+
+  <!-- Pair boxes -->
+  <rect x="290" y="80" width="170" height="34" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"></rect>
+  <text x="375" y="100" text-anchor="middle" font-size="10" fill="#1e40af">dims (0, 1): rotate by θ<tspan font-size="8" baseline-shift="sub">0</tspan> per pos</text>
+
+  <rect x="290" y="122" width="170" height="34" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"></rect>
+  <text x="375" y="142" text-anchor="middle" font-size="10" fill="#1e40af">dims (2, 3): rotate by θ<tspan font-size="8" baseline-shift="sub" transform="translate(-1,0)">1</tspan> per pos</text>
+
+  <rect x="290" y="164" width="170" height="34" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"></rect>
+  <text x="375" y="184" text-anchor="middle" font-size="10" fill="#1e40af">dims (4, 5): rotate by θ<tspan font-size="8" baseline-shift="sub">2</tspan> per pos</text>
+
+  <text x="375" y="215" text-anchor="middle" font-size="14" fill="#999">...</text>
+
+  <rect x="290" y="226" width="170" height="34" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"></rect>
+  <text x="375" y="246" text-anchor="middle" font-size="10" fill="#1e40af">dims (d-2, d-1): rotate by θ<tspan font-size="8" baseline-shift="sub">d/2-1</tspan></text>
+<text x="128" y="148" font-size="10" fill="#16a34a">nθ</text></svg>
+</div>
+
+<h3>Scaling to d dimensions</h3>
+
+<p>
+    Real query/key vectors have $d$ dimensions (e.g., 64 or 128 per attention head). RoPE pairs
+    them up: $(d_0, d_1)$, $(d_2, d_3)$, ..., $(d_{d-2}, d_{d-1})$, giving $d/2$ pairs. Each
+    pair gets rotated independently, using a different base frequency:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">RoPE frequencies:</div>
+    $$\theta_i = \frac{1}{10000^{2i/d}}, \quad i = 0, 1, \ldots, d/2 - 1$$
+</div>
+
+<p>
+    These are the same frequencies as the sinusoidal encoding. The rotation for dimension pair
+    $(2i, 2i+1)$ at position $m$ is:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Per-pair rotation:</div>
+    $$\begin{bmatrix} q_{m,2i}^{\text{rot}} \\ q_{m,2i+1}^{\text{rot}} \end{bmatrix} = \begin{bmatrix} \cos(m\theta_i) & -\sin(m\theta_i) \\ \sin(m\theta_i) & \cos(m\theta_i) \end{bmatrix} \begin{bmatrix} q_{m,2i} \\ q_{m,2i+1} \end{bmatrix}$$
+</div>
+
+<p>
+    The full rotation is a <strong>block-diagonal</strong> matrix with $d/2$ independent $2 \times 2$
+    rotation blocks:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Full RoPE rotation matrix:</div>
+    $$R_m = \text{diag}\Big(R_{\theta_0}(m), \; R_{\theta_1}(m), \; \ldots, \; R_{\theta_{d/2-1}}(m)\Big)$$
+</div>
+
+<h3>Efficient implementation</h3>
+
+<p>
+    You never actually construct the rotation matrix. Each $2 \times 2$ rotation decomposes into
+    element-wise multiplications:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Element-wise RoPE (used in practice):</div>
+    $$q_{m,2i}^{\text{rot}} = q_{m,2i} \cos(m\theta_i) - q_{m,2i+1} \sin(m\theta_i)$$
+    $$q_{m,2i+1}^{\text{rot}} = q_{m,2i} \sin(m\theta_i) + q_{m,2i+1} \cos(m\theta_i)$$
+</div>
+
+<p>
+    In code, this is two element-wise multiplies and one addition per dimension pair. The
+    $\cos(m\theta_i)$ and $\sin(m\theta_i)$ values can be precomputed for all positions and cached
+    as a table. The per-token cost is negligible compared to the attention computation itself.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="rope-properties">6. Why RoPE Works So Well</h2>
+
+<p>
+    RoPE has become the default positional encoding for modern LLMs (LLaMA, Mistral, Qwen,
+    Gemma, and many others). Here is why.
+</p>
+
+<h3>Relative position is built in</h3>
+
+<p>
+    As shown above, the dot product $(\mathbf{q}_m^{\text{rot}})^T \mathbf{k}_n^{\text{rot}}$
+    depends only on $n - m$. The model does not need to learn to extract relative position
+    from mixed signals. It gets relative position for free.
+</p>
+
+<h3>Position information is injected at every layer</h3>
+
+<p>
+    RoPE applies the rotation in every attention layer, after the query and key projections.
+    This means positional information is freshly injected at every layer, unlike additive
+    encodings that only inject once at the input.
+</p>
+
+<h3>Semantic and positional information stay separate</h3>
+
+<p>
+    The token embedding is never modified. Position is encoded purely through the rotation of
+    queries and keys. The value vectors $\mathbf{v}$ are not rotated at all, meaning the
+    content that gets aggregated by attention remains purely semantic.
+</p>
+
+<h3>Long-range decay</h3>
+
+<p>
+    An important empirical property: the dot product between rotated queries and keys tends to
+    decrease as $|m - n|$ increases. The high-frequency dimension pairs oscillate rapidly, and
+    their contributions average toward zero for large relative distances. This gives RoPE a
+    natural <strong>inductive bias toward local attention</strong>, without hard-coding a window.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> At close range ($|m - n|$ small), all the rotation angles are
+    small, so most dimension pairs contribute coherently to the dot product. At long range, the
+    fast-rotating pairs spin through many full cycles, and their positive and negative
+    contributions cancel out. Only the slow-rotating pairs (low frequency) still contribute.
+    This is like how you can tell if a nearby sound is "ahead" or "behind" (phase coherent),
+    but a very distant sound loses directional clarity.
+</div>
+
+<div class="interactive-demo">
+<h4>Interactive: Long-Range Decay</h4>
+<p style="font-size:0.92em; color:#555; margin-bottom:12px;">The curve shows how much two tokens "know about each other" (their dot product) as you move them further apart in the sequence. Near zero distance, the signal is strong; as distance grows, it decays. <strong>Dimensions slider:</strong> more dimensions means more rotation pairs averaging together, which makes the peak around distance zero sharper and the decay faster (the model becomes more locally focused). <strong>Base frequency slider:</strong> controls the fastest rotation speed. A higher base spreads the frequencies out more, giving the model a wider range of distance sensitivity.</p>
+<div class="anim-container">
+<canvas id="decayCanvas"></canvas>
+<div class="anim-controls">
+<div class="anim-slider-group">
+<label>Dimensions (d):</label>
+<input type="range" class="anim-slider" id="decayDimSlider" min="4" max="64" value="32" step="4" style="width:140px">
+<span class="anim-value" id="decayDimVal">32</span>
+</div>
+<div class="anim-slider-group">
+<label>Base freq:</label>
+<input type="range" class="anim-slider" id="decayBaseSlider" min="0" max="4" value="2" style="width:120px">
+<span class="anim-value" id="decayBaseVal">10000</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="comparison">7. Comparison: Sinusoidal vs Learned vs RoPE</h2>
+
+<table>
+    <tr>
+        <th>Property</th>
+        <th>Sinusoidal (additive)</th>
+        <th>Learned (additive)</th>
+        <th>RoPE (rotary)</th>
+    </tr>
+    <tr>
+        <td><strong>How it works</strong></td>
+        <td>Add fixed sin/cos vector to embedding</td>
+        <td>Add learned vector per position to embedding</td>
+        <td>Rotate query/key vectors before attention</td>
+    </tr>
+    <tr>
+        <td><strong>Encodes relative position?</strong></td>
+        <td>Implicitly (via linear transform property)</td>
+        <td>No (purely absolute)</td>
+        <td>Yes (built into dot product)</td>
+    </tr>
+    <tr>
+        <td><strong>Extra parameters</strong></td>
+        <td>0</td>
+        <td>$L \times d$ (one vector per position)</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td><strong>Position info in upper layers</strong></td>
+        <td>Diluted (added once at input)</td>
+        <td>Diluted (added once at input)</td>
+        <td>Fresh (applied at every layer)</td>
+    </tr>
+    <tr>
+        <td><strong>Extrapolation beyond $L_{\text{train}}$</strong></td>
+        <td>Poor</td>
+        <td>None (undefined)</td>
+        <td>Moderate (improved with RoPE scaling)</td>
+    </tr>
+    <tr>
+        <td><strong>Mixes with content?</strong></td>
+        <td>Yes (added to embedding)</td>
+        <td>Yes (added to embedding)</td>
+        <td>No (rotates Q/K only; V untouched)</td>
+    </tr>
+    <tr>
+        <td><strong>Used by</strong></td>
+        <td>Original Transformer, BERT</td>
+        <td>GPT-2, BERT (optional)</td>
+        <td>LLaMA, Mistral, Qwen, Gemma, etc.</td>
+    </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="practical">8. Practical Notes</h2>
+
+<h3>Extending context length with RoPE scaling</h3>
+
+<p>
+    RoPE's biggest practical advantage: you can extend the context length beyond what was used
+    during training by modifying the base frequency. Two common approaches:
+</p>
+
+<ul>
+    <li><strong>NTK-aware scaling</strong> (Code Llama, many fine-tunes): increase the base from
+        10,000 to a larger value (e.g., 500,000 or 1,000,000). This stretches all the rotation
+        frequencies, so positions that were at the edge of the training distribution now
+        fall within it. Typically requires a small amount of fine-tuning on longer sequences.</li>
+    <li><strong>YaRN</strong> (Yet another RoPE extensioN): applies different scaling factors to
+        different frequency bands. Low frequencies (already slow) get minimal scaling;
+        high frequencies (which wrap around harmlessly) also get minimal scaling. The
+        mid-range frequencies that would extrapolate worst get the most aggressive scaling.</li>
+</ul>
+
+<div class="warning">
+    <strong>Warning:</strong> Simply feeding longer sequences into a RoPE model without any scaling
+    does not work. The attention scores for token pairs beyond $L_{\text{train}}$ will see rotation
+    angles the model has never encountered, producing garbage attention patterns. You must either
+    scale the frequencies or fine-tune on longer sequences (or both).
+</div>
+
+<h3>Where RoPE is applied in the model</h3>
+
+<p>
+    RoPE is applied <strong>after</strong> the linear projections that produce Q and K, but
+    <strong>before</strong> the dot product. It is <strong>not</strong> applied to the value (V)
+    vectors. In multi-head attention, the rotation is applied independently within each head,
+    using the head dimension $d_h$ (not the full model dimension $d_{\text{model}}$).
+</p>
+
+<h3>Base frequency matters</h3>
+
+<p>
+    The base frequency $b$ (default 10,000) controls the spectrum of rotation speeds. Larger
+    base values make all rotations slower, which gives finer position resolution at the cost
+    of making distant positions harder to distinguish. LLaMA 3 uses $b = 500{,}000$, which
+    enables its 128K context window. The optimal base depends on the target context length.
+</p>
+
+<h3>RoPE and KV cache</h3>
+
+<p>
+    During autoregressive generation, you cache the key and value vectors for past tokens (the
+    KV cache). Since RoPE is applied to keys <em>before</em> caching, the cached key vectors
+    already contain the correct positional rotation. You do not need to re-rotate them when
+    computing attention for new tokens.
+</p>
+
+<hr>
+
+<h2>References</h2>
+
+<ol>
+    <li>Vaswani et al. (2017). <a href="https://arxiv.org/abs/1706.03762">Attention Is All You Need</a>. The original transformer paper introducing sinusoidal positional encodings.</li>
+    <li>Su et al. (2021). <a href="https://arxiv.org/abs/2104.09864">RoFormer: Enhanced Transformer with Rotary Position Embedding</a>. The RoPE paper.</li>
+    <li>Press et al. (2022). <a href="https://arxiv.org/abs/2108.12409">Train Short, Test Long: Attention with Linear Biases Enables Input Length Generalization</a>. ALiBi, an alternative relative position approach.</li>
+    <li>bloc97 (2023). <a href="https://www.reddit.com/r/LocalLLaMA/comments/14lz7j5/ntkaware_scaled_rope_allows_llama_models_to_have/">NTK-Aware Scaled RoPE</a>. The NTK-aware frequency scaling method.</li>
+    <li>Peng et al. (2023). <a href="https://arxiv.org/abs/2309.00071">YaRN: Efficient Context Window Extension of Large Language Models</a>. Frequency-band-aware RoPE scaling.</li>
+</ol>
+
+</article>
+
+<div class="share-bottom">
+    <p>Found this useful? Share it.</p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F&text=Positional%20Encodings%20for%20LLMs" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fpositional-encodings%2F&title=Positional%20Encodings%20for%20LLMs" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+  var disqus_shortname = 'ssedhain';
+  (function() {
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+<footer class="site-footer">
+    <div class="container">
+        &copy; 2026 Suvash Sedhain
+    </div>
+</footer>
+
+<script>
+// ==================== SHARED UTILITIES ====================
+const DPR = window.devicePixelRatio || 1;
+
+function initCanvas(id, aspectH) {
+    const canvas = document.getElementById(id);
+    const W = canvas.parentElement.clientWidth;
+    const H = aspectH;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(DPR, DPR);
+    return { ctx, W, H };
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function rr(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    if (r < 0) r = 0;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+const C = { accent:'#2563eb', pos:'#16a34a', neg:'#dc2626', amber:'#d97706', muted:'#888', border:'#e0e0e0', purple:'#7c5cbf' };
+const F = {
+    sans: '12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    sansBold: '600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    mono: '600 12px "SF Mono","Fira Code",monospace',
+    monoSm: '600 11px "SF Mono","Fira Code",monospace',
+    title: '600 13px Georgia,serif',
+    sm: '11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    smBold: '600 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+};
+
+// ==================== 1. SINUSOIDAL HEATMAP ====================
+(function() {
+    const { ctx, W, H } = initCanvas('heatmapCanvas', 480);
+    const canvas = document.getElementById('heatmapCanvas');
+    const posSlider = document.getElementById('heatmapPosSlider');
+    const posVal = document.getElementById('heatmapPosVal');
+    const dimSlider = document.getElementById('heatmapDimSlider');
+    const dimVal = document.getElementById('heatmapDimVal');
+
+    // hover: 'grid' for heatmap, 'strip' for vector strip, null for none
+    let hoverType = null, hoverPos = -1, hoverDim = -1, hoverStripDim = -1;
+
+    const nPos = 50;
+    const pad = 14, labelL = 58, headerH = 34, rightPad = 24;
+    const gridL = pad + labelL;
+    const gridT = pad + headerH;
+
+    function getGrid() {
+        const d = parseInt(dimSlider.value);
+        const gridW = W - gridL - rightPad;
+        const gridH = H - gridT - 40 - 80;
+        return { d, gridW, gridH, cellW: gridW / nPos, cellH: gridH / d };
+    }
+
+    function getStrip(d, gridW, gridH) {
+        const stripY = gridT + gridH + 44;
+        const stripH = 30;
+        const stripL = gridL;
+        const stripCellW = gridW / d; // fill entire grid width
+        const totalW = gridW;
+        return { stripY, stripH, stripCellW, stripL, totalW };
+    }
+
+    function pe(pos, i, d) {
+        const freq = 1 / Math.pow(10000, (2 * Math.floor(i / 2)) / d);
+        return i % 2 === 0 ? Math.sin(pos * freq) : Math.cos(pos * freq);
+    }
+
+    function valToColor(v) {
+        const t = (v + 1) / 2;
+        if (t < 0.5) {
+            const s = t / 0.5;
+            return `rgb(${Math.round(lerp(37,255,s))},${Math.round(lerp(99,255,s))},${Math.round(lerp(235,255,s))})`;
+        } else {
+            const s = (t - 0.5) / 0.5;
+            return `rgb(255,${Math.round(lerp(255,60,s))},${Math.round(lerp(255,60,s))})`;
+        }
+    }
+
+    canvas.addEventListener('mousemove', function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (W / rect.width);
+        const my = (e.clientY - rect.top) * (H / rect.height);
+        const { d, gridW, gridH, cellW, cellH } = getGrid();
+        const { stripY, stripH, stripCellW, stripL, totalW } = getStrip(d, gridW, gridH);
+
+        // Check heatmap grid
+        if (mx >= gridL && mx < gridL + gridW && my >= gridT && my < gridT + gridH) {
+            hoverType = 'grid';
+            hoverPos = Math.min(nPos - 1, Math.floor((mx - gridL) / cellW));
+            hoverDim = Math.min(d - 1, Math.floor((my - gridT) / cellH));
+            hoverStripDim = -1;
+        }
+        // Check vector strip
+        else if (mx >= stripL && mx < stripL + totalW && my >= stripY && my < stripY + stripH) {
+            hoverType = 'strip';
+            hoverStripDim = Math.min(d - 1, Math.floor((mx - stripL) / stripCellW));
+            hoverPos = -1; hoverDim = -1;
+        } else {
+            hoverType = null; hoverPos = -1; hoverDim = -1; hoverStripDim = -1;
+        }
+        draw();
+    });
+
+    canvas.addEventListener('mouseleave', function() {
+        hoverType = null; hoverPos = -1; hoverDim = -1; hoverStripDim = -1;
+        draw();
+    });
+
+    function drawTooltip(tx, ty, line1, line2, v) {
+        const tipW = 210, tipH = 44;
+        // Clamp to canvas
+        if (tx + tipW > W - 4) tx = tx - tipW - 16;
+        if (tx < 4) tx = 4;
+        if (ty < 4) ty = 4;
+        if (ty + tipH > H - 4) ty = H - tipH - 4;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        rr(ctx, tx + 2, ty + 2, tipW, tipH, 6); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+        rr(ctx, tx, ty, tipW, tipH, 6); ctx.fill(); ctx.stroke();
+
+        ctx.font = F.sansBold; ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(line1, tx + 10, ty + 6);
+
+        const vColor = v >= 0 ? C.neg : C.accent;
+        ctx.font = F.mono; ctx.fillStyle = '#333';
+        ctx.fillText(line2, tx + 10, ty + 24);
+        ctx.fillStyle = vColor;
+        ctx.fillText(v.toFixed(4), tx + 86, ty + 24);
+
+        ctx.fillStyle = valToColor(v);
+        ctx.fillRect(tx + tipW - 28, ty + 22, 16, 14);
+        ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1;
+        ctx.strokeRect(tx + tipW - 28, ty + 22, 16, 14);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        const { d, gridW, gridH, cellW, cellH } = getGrid();
+        const highlightPos = parseInt(posSlider.value);
+
+        dimVal.textContent = d;
+        posVal.textContent = highlightPos;
+
+        // Title
+        ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('PE(pos, dim): blue = negative, white = zero, red = positive', pad, pad + 12);
+
+        // Heatmap cells
+        for (let di = 0; di < d; di++) {
+            for (let p = 0; p < nPos; p++) {
+                const v = pe(p, di, d);
+                ctx.fillStyle = valToColor(v);
+                ctx.fillRect(gridL + p * cellW, gridT + di * cellH, cellW + 0.5, cellH + 0.5);
+            }
+        }
+
+        // Highlight column (slider)
+        ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
+        ctx.strokeRect(gridL + highlightPos * cellW, gridT, cellW, gridH);
+
+        // Hover crosshair on heatmap
+        if (hoverType === 'grid' && hoverPos >= 0 && hoverDim >= 0) {
+            const hx = gridL + hoverPos * cellW;
+            const hy = gridT + hoverDim * cellH;
+            ctx.fillStyle = 'rgba(37,99,235,0.08)';
+            ctx.fillRect(gridL, hy, gridW, cellH);
+            ctx.fillRect(hx, gridT, cellW, gridH);
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+            ctx.strokeRect(hx, hy, cellW, cellH);
+        }
+
+        // Y-axis labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        const yLabelStep = Math.max(1, Math.floor(d / 8));
+        for (let di = 0; di < d; di += yLabelStep) {
+            ctx.fillText(di, gridL - 6, gridT + di * cellH + cellH / 2);
+        }
+
+        // Y-axis title
+        ctx.save();
+        ctx.translate(pad - 2, gridT + gridH / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.font = F.smBold; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('dimension', 0, 0);
+        ctx.restore();
+
+        // X-axis labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        for (let p = 0; p < nPos; p += 10) {
+            ctx.fillText(p, gridL + p * cellW + cellW / 2, gridT + gridH + 4);
+        }
+        ctx.font = F.smBold;
+        ctx.fillText('position', gridL + gridW / 2, gridT + gridH + 18);
+
+        // Encoding vector strip
+        const { stripY, stripH, stripCellW, stripL, totalW } = getStrip(d, gridW, gridH);
+
+        ctx.font = F.smBold; ctx.fillStyle = C.amber; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText('PE(' + highlightPos + ') =', pad, stripY + 6);
+
+        for (let di = 0; di < d; di++) {
+            const v = pe(highlightPos, di, d);
+            ctx.fillStyle = valToColor(v);
+            ctx.fillRect(stripL + di * stripCellW, stripY, stripCellW + 0.5, stripH);
+        }
+        ctx.strokeStyle = C.amber; ctx.lineWidth = 1.5;
+        ctx.strokeRect(stripL, stripY, totalW, stripH);
+
+        // Hover highlight on strip
+        if (hoverType === 'strip' && hoverStripDim >= 0) {
+            const sx = stripL + hoverStripDim * stripCellW;
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+            ctx.strokeRect(sx, stripY, stripCellW, stripH);
+        }
+
+        // Color legend (below the strip)
+        const legW = 120, legH = 10;
+        const legX = stripL + totalW / 2 - legW / 2;
+        const legY = stripY + stripH + 8;
+        for (let px = 0; px < legW; px++) {
+            const v = -1 + 2 * px / legW;
+            ctx.fillStyle = valToColor(v);
+            ctx.fillRect(legX + px, legY, 1.5, legH);
+        }
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText('-1', legX, legY + legH + 2);
+        ctx.fillText('0', legX + legW / 2, legY + legH + 2);
+        ctx.fillText('+1', legX + legW, legY + legH + 2);
+
+        // Tooltip for heatmap hover
+        if (hoverType === 'grid' && hoverPos >= 0 && hoverDim >= 0) {
+            const v = pe(hoverPos, hoverDim, d);
+            const fn = hoverDim % 2 === 0 ? 'sin' : 'cos';
+            const tx = gridL + hoverPos * cellW + cellW + 8;
+            const ty = gridT + hoverDim * cellH - 22 + cellH / 2;
+            drawTooltip(tx, ty,
+                'pos = ' + hoverPos + ',  dim = ' + hoverDim,
+                fn + '(\u2026) = ', v);
+        }
+
+        // Tooltip for strip hover
+        if (hoverType === 'strip' && hoverStripDim >= 0) {
+            const v = pe(highlightPos, hoverStripDim, d);
+            const fn = hoverStripDim % 2 === 0 ? 'sin' : 'cos';
+            const tx = stripL + hoverStripDim * stripCellW + stripCellW + 8;
+            const ty = stripY - 50;
+            drawTooltip(tx, ty,
+                'pos = ' + highlightPos + ',  dim = ' + hoverStripDim,
+                fn + '(\u2026) = ', v);
+        }
+    }
+
+    posSlider.oninput = draw;
+    dimSlider.oninput = draw;
+    draw();
+})();
+
+// ==================== 2. ROPE 2D ROTATION ====================
+(function() {
+    const { ctx, W, H } = initCanvas('ropeCanvas', 380);
+    const mSlider = document.getElementById('ropeMSlider');
+    const nSlider = document.getElementById('ropeNSlider');
+    const mVal = document.getElementById('ropeMVal');
+    const nVal = document.getElementById('ropeNVal');
+    const explain = document.getElementById('ropeExplain');
+
+    const theta = Math.PI / 8; // rotation per position
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        const m = parseInt(mSlider.value);
+        const n = parseInt(nSlider.value);
+        mVal.textContent = m;
+        nVal.textContent = n;
+
+        const relDist = n - m;
+        const relAngle = relDist * theta;
+
+        // Explain text
+        const dotVal = Math.cos(relAngle);
+        explain.innerHTML =
+            'Relative distance: <strong>' + relDist + '</strong> positions. ' +
+            'Relative angle: <strong>' + (relDist * 22.5).toFixed(1) + '\u00B0</strong>. ' +
+            'Dot product factor: <strong style="color:' + (dotVal >= 0 ? C.pos : C.neg) + '">' +
+            dotVal.toFixed(3) + '</strong>';
+
+        const pad = 14;
+
+        // Title
+        ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('RoPE rotates q and k; their dot product sees only (n - m)', pad, 16);
+
+        // ---- Left: rotation circle ----
+        const cx = W * 0.28, cy = 200, radius = 100;
+
+        // Circle
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#333';
+        ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
+
+        // Reference line (angle 0)
+        ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + radius, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Query vector (rotated by m*theta)
+        const qAngle = -m * theta; // negative for clockwise = counterclockwise in math coords
+        const qx = cx + radius * 0.85 * Math.cos(qAngle);
+        const qy = cy + radius * 0.85 * Math.sin(qAngle);
+        ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(qx, qy); ctx.stroke();
+        // Arrowhead
+        const qAng = Math.atan2(qy - cy, qx - cx);
+        ctx.fillStyle = C.accent;
+        ctx.beginPath();
+        ctx.moveTo(qx, qy);
+        ctx.lineTo(qx - 10 * Math.cos(qAng - 0.3), qy - 10 * Math.sin(qAng - 0.3));
+        ctx.lineTo(qx - 10 * Math.cos(qAng + 0.3), qy - 10 * Math.sin(qAng + 0.3));
+        ctx.fill();
+        // Label
+        ctx.font = F.sansBold; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        const qlx = cx + (radius + 12) * Math.cos(qAngle);
+        const qly = cy + (radius + 12) * Math.sin(qAngle);
+        ctx.fillText('q (pos ' + m + ')', qlx, qly);
+
+        // Key vector (rotated by n*theta)
+        const kAngle = -n * theta;
+        const kx = cx + radius * 0.85 * Math.cos(kAngle);
+        const ky = cy + radius * 0.85 * Math.sin(kAngle);
+        ctx.strokeStyle = C.pos; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(kx, ky); ctx.stroke();
+        // Arrowhead
+        const kAng = Math.atan2(ky - cy, kx - cx);
+        ctx.fillStyle = C.pos;
+        ctx.beginPath();
+        ctx.moveTo(kx, ky);
+        ctx.lineTo(kx - 10 * Math.cos(kAng - 0.3), ky - 10 * Math.sin(kAng - 0.3));
+        ctx.lineTo(kx - 10 * Math.cos(kAng + 0.3), ky - 10 * Math.sin(kAng + 0.3));
+        ctx.fill();
+        // Label
+        ctx.font = F.sansBold; ctx.fillStyle = C.pos;
+        const klx = cx + (radius + 12) * Math.cos(kAngle);
+        const kly = cy + (radius + 12) * Math.sin(kAngle);
+        ctx.fillText('k (pos ' + n + ')', klx, kly);
+
+        // Relative angle arc
+        if (Math.abs(relDist) > 0) {
+            const arcR = 40;
+            const startA = Math.min(qAngle, kAngle);
+            const endA = Math.max(qAngle, kAngle);
+            ctx.strokeStyle = C.amber; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]);
+            ctx.beginPath(); ctx.arc(cx, cy, arcR, startA, endA); ctx.stroke();
+            ctx.setLineDash([]);
+            // Label
+            const midA = (qAngle + kAngle) / 2;
+            ctx.font = F.sansBold; ctx.fillStyle = '#92400e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('(' + relDist + ')\u03B8', cx + (arcR + 16) * Math.cos(midA), cy + (arcR + 16) * Math.sin(midA));
+        }
+
+        // ---- Right: dot product bar ----
+        const barX = W * 0.6;
+        const barW = W * 0.34;
+        const barCY = 200;
+        const barMaxH = 100;
+
+        ctx.font = F.smBold; ctx.fillStyle = '#333'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Dot product contribution', barX + barW / 2, 40);
+        ctx.font = F.sm; ctx.fillStyle = C.muted;
+        ctx.fillText('cos((n-m)\u03B8) = cos(' + relDist + ' \u00D7 22.5\u00B0)', barX + barW / 2, 56);
+
+        // Zero line
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(barX, barCY); ctx.lineTo(barX + barW, barCY); ctx.stroke();
+
+        // Labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText('+1', barX - 6, barCY - barMaxH);
+        ctx.fillText('0', barX - 6, barCY);
+        ctx.fillText('-1', barX - 6, barCY + barMaxH);
+
+        // Gridlines
+        ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 0.5;
+        [barCY - barMaxH, barCY + barMaxH].forEach(y => {
+            ctx.beginPath(); ctx.moveTo(barX, y); ctx.lineTo(barX + barW, y); ctx.stroke();
+        });
+
+        // Bar
+        const barH = Math.abs(dotVal) * barMaxH;
+        const isPos = dotVal >= 0;
+        const bY = isPos ? barCY - barH : barCY;
+        ctx.fillStyle = isPos ? 'rgba(22,163,106,0.6)' : 'rgba(220,38,38,0.6)';
+        rr(ctx, barX + barW * 0.2, bY, barW * 0.6, barH, 4); ctx.fill();
+        ctx.strokeStyle = isPos ? C.pos : C.neg; ctx.lineWidth = 2;
+        rr(ctx, barX + barW * 0.2, bY, barW * 0.6, barH, 4); ctx.stroke();
+
+        // Value
+        ctx.font = F.mono; ctx.fillStyle = isPos ? C.pos : C.neg;
+        ctx.textAlign = 'center'; ctx.textBaseline = isPos ? 'bottom' : 'top';
+        ctx.fillText(dotVal.toFixed(3), barX + barW / 2, isPos ? bY - 4 : bY + barH + 4);
+
+        // Bottom note
+        ctx.fillStyle = '#f3f0ff'; ctx.strokeStyle = '#7c5cbf'; ctx.lineWidth = 1;
+        rr(ctx, pad, H - 52, W - pad * 2, 40, 6); ctx.fill(); ctx.stroke();
+        ctx.font = F.sansBold; ctx.fillStyle = '#4c3a8a'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText('Key insight:', pad + 10, H - 46);
+        ctx.font = F.sans; ctx.fillStyle = '#333';
+        ctx.fillText('Move both sliders by the same amount. The bar stays the same: only relative distance matters.', pad + 10, H - 30);
+    }
+
+    mSlider.oninput = draw;
+    nSlider.oninput = draw;
+    draw();
+})();
+
+// ==================== 3. LONG-RANGE DECAY ====================
+(function() {
+    const { ctx, W, H } = initCanvas('decayCanvas', 670);
+    const canvas = document.getElementById('decayCanvas');
+    const dimSlider = document.getElementById('decayDimSlider');
+    const dimVal = document.getElementById('decayDimVal');
+    const baseSlider = document.getElementById('decayBaseSlider');
+    const baseVal = document.getElementById('decayBaseVal');
+
+    const baseMap = [100, 1000, 10000, 100000, 1000000];
+    const baseLabels = ['100', '1000', '10000', '100k', '1M'];
+    const maxDist = 50;
+    const mL = 50, mR = 24, mT = 44;
+    const cW = W - mL - mR;
+    const chartH = 200;
+    const vMin = -0.3, vMax = 1.0;
+
+    let hoverDist = -1;
+
+    function mapY(v) { return mT + (vMax - v) / (vMax - vMin) * chartH; }
+    function distToX(dist) { return mL + (dist / maxDist) * cW; }
+    function xToDist(x) { return Math.round((x - mL) / cW * maxDist); }
+
+    function decayAt(dist, d, base) {
+        var nP = d / 2, dot = 0;
+        for (var i = 0; i < nP; i++) {
+            dot += Math.cos(dist / Math.pow(base, (2 * i) / d));
+        }
+        return dot / nP;
+    }
+
+    function computeDecay(d, base) {
+        var values = [];
+        for (var dist = 0; dist <= maxDist; dist++) {
+            values.push(decayAt(dist, d, base));
+        }
+        return values;
+    }
+
+    function drawArrow(cx, cy, angle, r, color) {
+        var ex = cx + r * Math.cos(angle);
+        var ey = cy - r * Math.sin(angle);
+        ctx.strokeStyle = color; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+        var dx = ex - cx, dy = ey - cy;
+        var len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return;
+        var ux = dx / len, uy = dy / len;
+        var px = -uy, py = ux;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - 3.5 * ux + 2 * px, ey - 3.5 * uy + 2 * py);
+        ctx.lineTo(ex - 3.5 * ux - 2 * px, ey - 3.5 * uy - 2 * py);
+        ctx.fill();
+    }
+
+    canvas.addEventListener('mousemove', function(e) {
+        var rect = canvas.getBoundingClientRect();
+        var mx = (e.clientX - rect.left) * (W / rect.width);
+        var my = (e.clientY - rect.top) * (H / rect.height);
+        if (mx >= mL && mx <= mL + cW && my >= mT && my <= mT + chartH) {
+            hoverDist = clamp(xToDist(mx), 0, maxDist);
+        } else {
+            hoverDist = -1;
+        }
+        draw();
+    });
+
+    canvas.addEventListener('mouseleave', function() {
+        hoverDist = -1; draw();
+    });
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        var d = parseInt(dimSlider.value);
+        var baseIdx = parseInt(baseSlider.value);
+        var base = baseMap[baseIdx];
+        dimVal.textContent = d;
+        baseVal.textContent = baseLabels[baseIdx];
+
+        var values = computeDecay(d, base);
+        var nPairs = d / 2;
+        var pad = 14;
+
+        // Title
+        ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('RoPE dot product vs relative distance (d=' + d + ', base=' + baseLabels[baseIdx] + ')', pad - 2, 10);
+        ctx.font = F.sm; ctx.fillStyle = C.muted;
+        ctx.fillText('Normalized: 1.0 at distance 0, decays toward 0 for large distances', pad - 2, 28);
+
+        // Gridlines
+        [-0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0].forEach(function(v) {
+            var y = mapY(v);
+            ctx.strokeStyle = v === 0 ? '#ccc' : '#f0f0f0';
+            ctx.lineWidth = v === 0 ? 1 : 0.5;
+            ctx.beginPath(); ctx.moveTo(mL, y); ctx.lineTo(mL + cW, y); ctx.stroke();
+            ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(v.toFixed(1), mL - 6, y);
+        });
+
+
+        // Fill under curve (fine-grained)
+        var steps = 200;
+        ctx.fillStyle = 'rgba(37,99,235,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(mL, mapY(0));
+        for (var s = 0; s <= steps; s++) {
+            var fd = maxDist * s / steps;
+            ctx.lineTo(distToX(fd), mapY(Math.max(0, decayAt(fd, d, base))));
+        }
+        ctx.lineTo(mL + cW, mapY(0));
+        ctx.closePath();
+        ctx.fill();
+
+        // Plot line (fine-grained)
+        ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (var s = 0; s <= steps; s++) {
+            var fd = maxDist * s / steps;
+            var x = distToX(fd), y = mapY(decayAt(fd, d, base));
+            s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Dots at key positions
+        [0, 1, 2, 5, 10, 20, 50].forEach(function(dist) {
+            if (dist > maxDist) return;
+            var x = distToX(dist), y = mapY(values[dist]);
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.stroke();
+        });
+
+        // X-axis labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        [0, 10, 20, 30, 40, 50].forEach(function(dist) {
+            ctx.fillText(dist, distToX(dist), mT + chartH + 4);
+        });
+        ctx.font = F.smBold;
+        ctx.fillText('relative distance |m - n|', mL + cW / 2, mT + chartH + 20);
+
+        // Hover: vertical line + dot + tooltip
+        if (hoverDist >= 0 && hoverDist <= maxDist) {
+            var hx = distToX(hoverDist);
+            var hy = mapY(values[hoverDist]);
+
+            ctx.strokeStyle = 'rgba(37,99,235,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+            ctx.beginPath(); ctx.moveTo(hx, mT); ctx.lineTo(hx, mT + chartH); ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5; ctx.stroke();
+            ctx.fillStyle = C.accent;
+            ctx.beginPath(); ctx.arc(hx, hy, 3, 0, Math.PI * 2); ctx.fill();
+
+            var tipW = 170, tipH = 40;
+            var tx = hx + 12;
+            var ty = hy - tipH - 8;
+            if (tx + tipW > W - 4) tx = hx - tipW - 12;
+            if (ty < 4) ty = hy + 12;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            rr(ctx, tx + 2, ty + 2, tipW, tipH, 6); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+            rr(ctx, tx, ty, tipW, tipH, 6); ctx.fill(); ctx.stroke();
+
+            ctx.font = F.sansBold; ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText('distance = ' + hoverDist, tx + 10, ty + 5);
+
+            var val = values[hoverDist];
+            ctx.font = F.mono;
+            ctx.fillStyle = val >= 0 ? C.pos : C.neg;
+            ctx.fillText('dot product = ' + val.toFixed(4), tx + 10, ty + 22);
+        }
+
+        // ============ VECTOR BREAKDOWN SECTION ============
+        var secY = mT + chartH + 42;
+
+        // Separator
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pad, secY); ctx.lineTo(W - pad, secY); ctx.stroke();
+
+        var showDist = hoverDist >= 0 ? hoverDist : 5;
+
+        // Section title
+        ctx.font = F.title; ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Per-pair breakdown at distance ' + showDist, pad - 4, secY + 20);
+        if (hoverDist < 0) {
+            ctx.font = F.sm; ctx.fillStyle = C.muted;
+            ctx.fillText('(hover over the curve to change)', pad + 220, secY + 20);
+        }
+
+        // Layout for arrows
+        var arrowTopY = secY + 40;
+        var maxPairW = 36;
+        var pairW = Math.min(maxPairW, (cW - 60) / nPairs);
+        var arrowR = Math.min(11, pairW * 0.38);
+        var totalPairsW = pairW * nPairs;
+        var startX = mL + (cW - totalPairsW) / 2 + pairW / 2;
+        var rowGap = arrowR * 2 + 18;
+
+        // Row labels
+        var labelX = startX - arrowR - 8;
+        ctx.font = F.smBold; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = C.accent;
+        ctx.fillText('q (pos 0)', labelX, arrowTopY + arrowR);
+        ctx.fillStyle = C.pos;
+        ctx.fillText('k (pos ' + showDist + ')', labelX, arrowTopY + arrowR + rowGap);
+
+        // Draw arrows for each dimension pair
+        for (var i = 0; i < nPairs; i++) {
+            var cx = startX + i * pairW;
+            var freq = 1 / Math.pow(base, (2 * i) / d);
+
+            // q arrow (pos 0, angle = 0, all point right)
+            var qCY = arrowTopY + arrowR;
+            ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(cx, qCY, arrowR, 0, Math.PI * 2); ctx.stroke();
+            drawArrow(cx, qCY, 0, arrowR - 2, C.accent);
+
+            // k arrow (pos = showDist, angle = showDist * freq)
+            var kCY = arrowTopY + arrowR + rowGap;
+            var kAngle = showDist * freq;
+            ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(cx, kCY, arrowR, 0, Math.PI * 2); ctx.stroke();
+            drawArrow(cx, kCY, kAngle, arrowR - 2, C.pos);
+        }
+
+        // Pair index labels below arrows
+        ctx.font = '9px -apple-system,sans-serif'; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        var labelStep = nPairs <= 8 ? 1 : Math.ceil(nPairs / 8);
+        for (var i = 0; i < nPairs; i++) {
+            if (i === 0 || i === nPairs - 1 || i % labelStep === 0) {
+                ctx.fillText(i, startX + i * pairW, arrowTopY + arrowR + rowGap + arrowR + 6);
+            }
+        }
+
+        // Speed labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        var labelRowY = arrowTopY + arrowR + rowGap + arrowR + 20;
+        ctx.fillStyle = '#d97706'; ctx.textAlign = 'left';
+        ctx.fillText('\u2190 fast', startX - arrowR, labelRowY);
+        ctx.textAlign = 'right';
+        ctx.fillText('slow \u2192', startX + (nPairs - 1) * pairW + arrowR, labelRowY);
+        ctx.fillStyle = C.muted; ctx.textAlign = 'center';
+        ctx.fillText('dimension pair', startX + (nPairs - 1) * pairW / 2, labelRowY);
+
+        // Per-pair contribution bars
+        var barTopY = labelRowY + 44;
+        var barMaxH = 36;
+        var barZeroY = barTopY + barMaxH;
+        var barW = Math.min(14, pairW * 0.65);
+
+        // Section label
+        ctx.font = F.smBold; ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Per-pair cos(\u0394\u03B8) contribution:', pad, barTopY - 10);
+
+        // Zero line
+        ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(startX - pairW / 2, barZeroY);
+        ctx.lineTo(startX + (nPairs - 0.5) * pairW, barZeroY);
+        ctx.stroke();
+
+        // +1 / 0 / -1 labels
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText('+1', startX - pairW / 2 - 4, barTopY);
+        ctx.fillText('0', startX - pairW / 2 - 4, barZeroY);
+        ctx.fillText('-1', startX - pairW / 2 - 4, barZeroY + barMaxH);
+
+        // Bars
+        for (var i = 0; i < nPairs; i++) {
+            var freq = 1 / Math.pow(base, (2 * i) / d);
+            var val = Math.cos(showDist * freq);
+            var bh = Math.abs(val) * barMaxH;
+            var bx = startX + i * pairW - barW / 2;
+
+            if (val >= 0) {
+                ctx.fillStyle = 'rgba(22,163,106,0.35)';
+                rr(ctx, bx, barZeroY - bh, barW, bh, 2); ctx.fill();
+                ctx.strokeStyle = C.pos; ctx.lineWidth = 1;
+                rr(ctx, bx, barZeroY - bh, barW, bh, 2); ctx.stroke();
+            } else {
+                ctx.fillStyle = 'rgba(220,38,38,0.35)';
+                rr(ctx, bx, barZeroY, barW, bh, 2); ctx.fill();
+                ctx.strokeStyle = C.neg; ctx.lineWidth = 1;
+                rr(ctx, bx, barZeroY, barW, bh, 2); ctx.stroke();
+            }
+        }
+
+        // Coherence annotation
+        var coherent = 0;
+        for (var i = 0; i < nPairs; i++) {
+            var freq = 1 / Math.pow(base, (2 * i) / d);
+            if (Math.cos(showDist * freq) > 0.5) coherent++;
+        }
+        ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        var summaryY = barZeroY + barMaxH + 14;
+        if (showDist === 0) {
+            ctx.fillText('All ' + nPairs + ' pairs perfectly aligned (distance = 0). Dot product = 1.0', pad, summaryY);
+        } else {
+            var ratio = coherent / nPairs;
+            ctx.fillText(coherent + ' of ' + nPairs + ' pairs still coherent (cos > 0.5). ', pad, summaryY);
+            var msgX = pad + ctx.measureText(coherent + ' of ' + nPairs + ' pairs still coherent (cos > 0.5). ').width;
+            var msg, msgColor;
+            if (ratio > 0.66) { msg = 'Strong signal.'; msgColor = C.pos; }
+            else if (ratio > 0.33) { msg = 'Signal fading.'; msgColor = C.amber; }
+            else { msg = 'Weak signal, mostly noise.'; msgColor = C.neg; }
+            ctx.fillStyle = msgColor;
+            ctx.fillText(msg, msgX, summaryY);
+        }
+    }
+
+    dimSlider.oninput = draw;
+    baseSlider.oninput = draw;
+    draw();
+})();
+</script>
+
+</body>
+</html>
