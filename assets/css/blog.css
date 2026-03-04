@@ -854,3 +854,8 @@ hr {
     color: #5b21b6;
     border-bottom-color: #5b21b6;
 }
+
+/* Hide Disqus "What do you think?" reaction bar */
+#disqus_reaction, .disqus-reaction, .reaction, .reactions {
+  display: none !important;
+}

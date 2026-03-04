@@ -531,3 +531,8 @@ h1, h2, h3, h4, h5, h6 { font-weight: 100; }
 div.equation { margin: 0.5rem 0; }
 
 .center-image { margin: 0 auto; display: block; }
+
+/* Hide Disqus "What do you think?" reaction bar */
+#disqus_reaction, .disqus-reaction, .reaction, .reactions {
+  display: none !important;
+}
