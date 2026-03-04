@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Reward Modeling and DPO: Learning What "Good" Means</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Reward Modeling and DPO: Learning What 'Good' Means" />
+    <meta property="og:description" content="How reward models turn human preferences into training signal, and how DPO skips the reward model entirely. Bradley-Terry, preference data, and offline alignment explained from first principles." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/reward-modeling/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Reward Modeling and DPO: Learning What 'Good' Means" />
+    <meta name="twitter:description" content="How reward models turn human preferences into training signal, and how DPO skips the reward model entirely. Bradley-Terry, preference data, and offline alignment explained from first principles." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Reward Modeling and DPO: Learning What "Good" Means</h1>
+    <p class="post-meta">March 2, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F&text=Reward%20Modeling%20and%20DPO%3A%20Learning%20What%20%22Good%22%20Means" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F&title=Reward%20Modeling%20and%20DPO%3A%20Learning%20What%20%22Good%22%20Means" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    How reward models turn human preferences into training signal, and how DPO skips the reward model entirely.<br>
+    Companion to <a href="/blog/2026/ppo-grpo/">PPO & GRPO for LLM Alignment</a>.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#why">Why Reward Modeling?</a></li>
+        <li><a href="#preference-data">Preference Data: The Raw Material</a></li>
+        <li><a href="#reward-model">The Reward Model</a></li>
+        <li><a href="#rm-practice">Reward Modeling in Practice</a></li>
+        <li><a href="#rm-problems">Reward Model Failure Modes</a></li>
+        <li><a href="#dpo">DPO: Skip the Reward Model</a></li>
+        <li><a href="#dpo-variants">DPO Variants: IPO, KTO, and Others</a></li>
+        <li><a href="#comparison">RLHF vs DPO: When to Use What</a></li>
+        <li><a href="#practical">Practical Notes</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="why">1. Why Reward Modeling?</h2>
+
+<p>
+    The <a href="/blog/2026/ppo-grpo/">PPO & GRPO post</a> covered how RL algorithms optimize a policy
+    given a reward signal. But it glossed over a critical question: where does the reward come from?
+</p>
+
+<p>
+    For math or code, you can check correctness programmatically. But for most alignment goals
+    (helpfulness, safety, tone, factuality in open-ended questions), there is no simple function that
+    returns a score. The quality of "Explain quantum entanglement to a 10-year-old" has no ground truth.
+</p>
+
+<p>
+    The solution is to learn a reward function from human preferences. This is the reward model, and it
+    is the foundation of the entire RLHF pipeline. If the reward model is wrong, the RL algorithm will
+    optimize the wrong thing, often spectacularly.
+</p>
+
+<ul>
+    <li><strong>Humans can compare, even when they can't demonstrate.</strong> Asking an annotator to write the perfect response is hard. Asking "is A better than B?" is much easier and more reliable.</li>
+    <li><strong>Comparison data scales.</strong> Given $k$ responses per prompt, you get $\binom{k}{2}$ pairs. 4 responses yield 6 comparison pairs from one annotation session.</li>
+    <li><strong>The reward model amortizes human effort.</strong> Once trained, it can score millions of responses without further human input.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="preference-data">2. Preference Data: The Raw Material</h2>
+
+<h3>Data format</h3>
+<p>
+    Every preference dataset has the same structure: a prompt, a chosen (preferred) response, and a
+    rejected (dispreferred) response. The chosen/rejected labels come from human annotators who read
+    both responses and pick the better one.
+</p>
+
+<div class="diagram">
+<svg width="500" height="200" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="sh1"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Prompt -->
+  <rect x="16" y="16" width="468" height="40" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#sh1)"/>
+  <text x="32" y="41" font-size="13" fill="#555" font-weight="600">Prompt:</text>
+  <text x="100" y="41" font-size="13" fill="#333">"Explain why the sky is blue in one sentence."</text>
+  <!-- Chosen -->
+  <rect x="16" y="72" width="468" height="48" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#sh1)"/>
+  <text x="32" y="93" font-size="12" fill="#166534" font-weight="600">Chosen:</text>
+  <text x="100" y="93" font-size="12" fill="#333">"Sunlight scatters off air molecules, and blue</text>
+  <text x="100" y="109" font-size="12" fill="#333">wavelengths scatter most, making the sky appear blue."</text>
+  <!-- Rejected -->
+  <rect x="16" y="136" width="468" height="48" rx="6" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5" filter="url(#sh1)"/>
+  <text x="32" y="157" font-size="12" fill="#991b1b" font-weight="600">Rejected:</text>
+  <text x="100" y="157" font-size="12" fill="#333">"The sky is blue because of the way light works</text>
+  <text x="100" y="173" font-size="12" fill="#333">with the atmosphere and stuff like that."</text>
+</svg>
+</div>
+
+<h3>How the data is collected</h3>
+
+<div class="steps">
+<div class="step">
+    <strong>Sample responses from the policy.</strong> Given a set of prompts, generate 2-8 responses per
+    prompt using the SFT model (or a mix of models). Sampling from the actual policy is important: the
+    reward model needs to see the kinds of outputs it will score during RL, not just human-written text.
+</div>
+<div class="step">
+    <strong>Human annotation.</strong> Annotators read a prompt and two responses, then select which
+    response is better. Some pipelines collect rankings over $k > 2$ responses, then decompose into
+    pairwise comparisons. Guidelines define what "better" means: more helpful, more accurate, less
+    harmful, better formatted.
+</div>
+<div class="step">
+    <strong>Quality control.</strong> Typical practices include inter-annotator agreement checks
+    (disagreement rates of 20-35% are normal for subjective comparisons), majority voting across 3+
+    annotators per pair, and filtering out pairs where annotators unanimously disagreed.
+</div>
+</div>
+
+<h3>Dataset sizes</h3>
+<p>
+    Production reward models are trained on 100k-500k comparison pairs. Research-scale experiments
+    sometimes use 10k-50k. OpenAI's InstructGPT used roughly 50k comparisons. Anthropic's early
+    RLHF work used around 170k. Llama 2 used over 1 million.
+</p>
+
+<div class="warning">
+    <strong>Warning:</strong> Preference data has a built-in ceiling. If annotators can't reliably
+    distinguish good from great responses on a particular task, neither can the reward model. This is
+    most problematic for technical topics (coding, math, science) where annotator expertise may be
+    limited. Many teams supplement with AI-generated preferences ("RLAIF") for these domains.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="reward-model">3. The Reward Model</h2>
+
+<h3>Architecture</h3>
+<p>
+    A reward model is a language model with a scalar output head instead of a vocabulary head. You take
+    a pre-trained LLM, remove the final projection to vocabulary size, and replace it with a linear layer
+    that maps the last hidden state to a single number.
+</p>
+
+<div class="diagram">
+<svg width="500" height="390" viewBox="0 0 500 390" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#555"/></marker>
+    <filter id="sh2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- Input tokens -->
+  <rect x="60" y="16" width="120" height="32" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="120" y="37" text-anchor="middle" font-size="11" fill="#333">prompt tokens</text>
+  <rect x="192" y="16" width="130" height="32" rx="4" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="257" y="37" text-anchor="middle" font-size="11" fill="#333">response tokens</text>
+  <rect x="334" y="16" width="52" height="32" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="360" y="37" text-anchor="middle" font-size="11" font-weight="600" fill="#1e40af">EOS</text>
+  <!-- Arrow -->
+  <line x1="230" y1="52" x2="230" y2="84" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Transformer -->
+  <rect x="80" y="88" width="300" height="72" rx="8" fill="#f9fafb" stroke="#555" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="230" y="118" text-anchor="middle" font-weight="600" font-size="14" fill="#333">Transformer Backbone</text>
+  <text x="230" y="140" text-anchor="middle" font-size="12" fill="#555">pre-trained LLM (fine-tuned end-to-end)</text>
+  <!-- Arrow -->
+  <line x1="230" y1="164" x2="230" y2="196" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Hidden state -->
+  <rect x="100" y="200" width="260" height="32" rx="16" fill="#fffbeb" stroke="#d97706" stroke-width="1"/>
+  <text x="230" y="221" text-anchor="middle" font-size="12" fill="#92400e">hidden state at EOS position</text>
+  <text x="384" y="221" font-size="11" fill="#888" font-style="italic">shape: [d]</text>
+  <!-- Arrow -->
+  <line x1="230" y1="236" x2="230" y2="268" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Linear head -->
+  <rect x="120" y="272" width="220" height="44" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="230" y="299" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">Linear(d, 1)</text>
+  <text x="362" y="299" font-size="11" fill="#888" font-style="italic">new head</text>
+  <!-- Arrow -->
+  <line x1="230" y1="320" x2="230" y2="348" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Output -->
+  <rect x="150" y="350" width="160" height="32" rx="16" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="230" y="371" text-anchor="middle" font-weight="600" font-size="13" fill="#1e40af">R(x, y) = scalar</text>
+</svg>
+</div>
+
+<p>
+    Concretely: the input is the concatenation of the prompt $x$ and response $y$. The model processes
+    the entire sequence through the transformer. The hidden state at the final token position (EOS) has
+    attended to all tokens via causal attention, so it summarizes the entire (prompt, response) pair.
+    The linear head maps this $d$-dimensional vector to a single scalar $R(x, y)$.
+</p>
+
+<h3>The Bradley-Terry model</h3>
+
+<p>
+    We want the reward model to assign higher scores to preferred responses. The
+    <strong>Bradley-Terry model</strong> formalizes this. Given a prompt $x$, a chosen response $y_w$,
+    and a rejected response $y_l$, the probability that $y_w$ is preferred is:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Bradley-Terry preference probability:</div>
+    $$P(y_w \succ y_l \mid x) = \sigma\big(R_\phi(x, y_w) - R_\phi(x, y_l)\big)$$
+</div>
+
+<p>
+    Where $\sigma(z) = 1/(1 + e^{-z})$ is the sigmoid function and $R_\phi$ is the reward model
+    parameterized by $\phi$. The key property: preference depends only on the score
+    <em>difference</em>, not the absolute values. The training loss is the negative log-likelihood:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Reward model training loss:</div>
+    $$\mathcal{L}_\text{RM}(\phi) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}}\big[\log \sigma\big(R_\phi(x, y_w) - R_\phi(x, y_l)\big)\big]$$
+</div>
+
+<p>
+    Where $\mathcal{D}$ is the dataset of preference triples. Each variable:
+</p>
+<ul>
+    <li>$x$ is the prompt.</li>
+    <li>$y_w$ is the chosen (winning) response.</li>
+    <li>$y_l$ is the rejected (losing) response.</li>
+    <li>$R_\phi(x, y)$ is the scalar score assigned by the reward model.</li>
+    <li>$\sigma$ is the sigmoid function.</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> This is binary cross-entropy in disguise. You are training a classifier
+    to answer "which response is better?" but instead of predicting a class directly, you parameterize the
+    answer through scalar scores. If $R(x, y_w) \gg R(x, y_l)$, the sigmoid saturates near 1, loss is
+    near 0. If the scores are close or reversed, loss is high. The model learns to push chosen scores up
+    and rejected scores down, but only their relative ordering matters.
+</div>
+
+<h3>Why Bradley-Terry and not something simpler?</h3>
+<p>
+    You might wonder: why not just train a regression model where chosen responses are labeled 1 and
+    rejected are labeled 0? The Bradley-Terry framing is better for two reasons:
+</p>
+<ul>
+    <li><strong>Transitivity.</strong> Scalar scores give you a total ordering. If $R(A) > R(B) > R(C)$,
+        the model automatically predicts $A \succ C$ even if it never saw that pair. A binary classifier
+        over pairs does not guarantee consistency.</li>
+    <li><strong>Calibrated margin.</strong> The sigmoid on score differences means a pair that's "barely
+        better" gets a small gradient, while a pair that's "clearly better but scored wrong" gets a large
+        gradient. This is the right behavior for noisy human labels.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="rm-practice">4. Reward Modeling in Practice</h2>
+
+<h3>Model sizing</h3>
+<p>
+    The reward model is typically the same size as (or slightly smaller than) the policy model. OpenAI's
+    InstructGPT used a 6B reward model for a 175B policy. Llama 2 used a 70B reward model for a 70B
+    policy. Anthropic has experimented with reward models up to 52B.
+</p>
+
+<p>
+    Smaller reward models are cheaper to run during RL (since every generated response needs scoring),
+    but less accurate. The trade-off is simple: if your reward model is significantly less capable than
+    your policy, the policy will quickly find outputs that fool the reward model.
+</p>
+
+<h3>Training recipe</h3>
+<div class="steps">
+<div class="step">
+    <strong>Initialize from the SFT checkpoint</strong> (or the pre-trained base model). Using the SFT
+    checkpoint is common because it already understands instruction-following format, which helps it
+    evaluate response quality.
+</div>
+<div class="step">
+    <strong>Replace the LM head.</strong> Remove the vocabulary projection layer
+    (shape: $d \times V$) and add a randomly initialized linear layer (shape: $d \times 1$).
+</div>
+<div class="step">
+    <strong>Fine-tune on preference pairs.</strong> Standard supervised training. Learning rate around
+    $1 \times 10^{-5}$ to $5 \times 10^{-6}$. Train for 1-2 epochs (overfitting is a serious risk with
+    preference data). Batch sizes of 64-128 pairs.
+</div>
+<div class="step">
+    <strong>Evaluate.</strong> Hold out 10-20% of preference pairs. Report accuracy (does the model
+    assign higher score to the chosen response?). Good reward models achieve 70-75% accuracy on held-out
+    data. Human agreement on these datasets is typically 73-80%, so 75% is near-ceiling.
+</div>
+</div>
+
+<h3>Reward normalization</h3>
+<p>
+    Raw reward model scores drift during training. A score of 2.3 means nothing in absolute terms. Common
+    normalization strategies:
+</p>
+<ul>
+    <li><strong>Per-batch normalization:</strong> subtract the batch mean and divide by standard deviation.
+        Keeps scores centered around 0.</li>
+    <li><strong>Clipping:</strong> clip rewards to $[-5, 5]$ or similar range to prevent outlier rewards
+        from causing large policy updates.</li>
+    <li><strong>Length penalty:</strong> longer responses tend to get higher reward scores simply because
+        they contain more information. Some teams normalize by response length or add an explicit length
+        penalty.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="rm-problems">5. Reward Model Failure Modes</h2>
+
+<h3>Reward hacking</h3>
+<p>
+    The most important failure mode. The policy finds outputs that score high according to the reward
+    model but are clearly bad to a human. This happens because the reward model is an imperfect proxy,
+    and RL is very good at exploiting imperfect proxies.
+</p>
+
+<p>Common reward hacking patterns:</p>
+<ul>
+    <li><strong>Verbosity exploit:</strong> the policy learns that longer responses get higher scores, so
+        it generates unnecessarily verbose outputs. Almost every RLHF system sees this.</li>
+    <li><strong>Sycophancy:</strong> the model learns to agree with the user's stated position regardless
+        of accuracy, because annotators sometimes prefer agreeable responses.</li>
+    <li><strong>Formatting tricks:</strong> excessive use of bullet points, headers, bold text, or emoji
+        that correlate with higher reward but add no substance.</li>
+    <li><strong>Hedging:</strong> "as an AI language model..." prefixes that reduce perceived risk of wrong
+        answers, which annotators may rate as "safer."</li>
+</ul>
+
+
+
+<h3>The KL penalty</h3>
+<p>
+    The standard defense against reward hacking. During RL, the actual reward used is:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">KL-penalized reward:</div>
+    $$R_\text{total}(x, y) = R_\phi(x, y) - \beta \cdot D_\text{KL}\big(\pi_\theta(\cdot|x) \,\|\, \pi_\text{ref}(\cdot|x)\big)$$
+</div>
+
+<p>
+    Where $\pi_\text{ref}$ is the reference policy (typically the SFT model), $\pi_\theta$ is the current
+    policy being trained, and $\beta$ controls the strength of the penalty. The KL divergence measures
+    how far the current policy has moved from the reference. Higher $\beta$ keeps the policy closer to
+    the SFT model (less reward hacking but less improvement). Lower $\beta$ allows more exploration (more
+    improvement but more risk of exploitation).
+</p>
+
+<p>
+    Typical $\beta$ values: 0.01 to 0.2. This is one of the most sensitive hyperparameters in RLHF.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> The KL penalty says: "improve the reward, but don't stray too far from
+    the SFT model." The further you drift, the more likely you are in a region where the reward model's
+    predictions are unreliable (out of distribution). The SFT model acts as a safety anchor.
+</div>
+
+<h3>Other failure modes</h3>
+<ul>
+    <li><strong>Position bias:</strong> annotators tend to prefer the first response shown to them. If
+        your annotation UI always shows responses in the same order, this bias leaks into the reward model.
+        Mitigation: randomize presentation order.</li>
+    <li><strong>Length bias:</strong> annotators tend to prefer longer responses. The reward model inherits
+        this bias. Mitigation: normalize by length, or include length-matched pairs in training data.</li>
+    <li><strong>Annotator disagreement:</strong> on subjective tasks, annotators disagree 20-35% of the
+        time. The reward model is trained on a majority vote or random annotator choice, smoothing over
+        genuine diversity in preferences.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="dpo">6. DPO: Skip the Reward Model</h2>
+
+<p>
+    <strong>Direct Preference Optimization</strong> (Rafailov et al., 2023) is a fundamentally different
+    approach. Instead of training a separate reward model and then doing RL, DPO directly optimizes the
+    policy on preference data. No reward model. No RL loop. Just supervised learning on preference pairs.
+</p>
+
+<h3>The key insight</h3>
+<p>
+    The DPO paper makes a mathematical observation. In the standard RLHF objective, the optimal policy
+    $\pi^*$ under a reward function $R$ with KL constraint has a closed-form solution:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Optimal RLHF policy (closed-form):</div>
+    $$\pi^*(y|x) = \frac{1}{Z(x)} \pi_\text{ref}(y|x) \exp\!\Big(\frac{1}{\beta} R(x, y)\Big)$$
+</div>
+
+<p>
+    Where $Z(x)$ is a normalization constant (partition function) and $\beta$ is the KL penalty
+    coefficient. This can be rearranged to express the reward in terms of the policy:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Reward as a function of the optimal policy:</div>
+    $$R(x, y) = \beta \log \frac{\pi^*(y|x)}{\pi_\text{ref}(y|x)} + \beta \log Z(x)$$
+</div>
+
+<p>
+    The reward is proportional to how much the optimal policy upweights a response relative to the
+    reference policy. Now substitute this into the Bradley-Terry model. The $\log Z(x)$ terms cancel
+    (since they appear in both the chosen and rejected reward), giving:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">DPO loss:</div>
+    $$\mathcal{L}_\text{DPO}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim \mathcal{D}}\left[\log \sigma\left(\beta \log \frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$
+</div>
+
+<p>Each variable:</p>
+<ul>
+    <li>$\pi_\theta$ is the policy being trained (initialized from $\pi_\text{ref}$).</li>
+    <li>$\pi_\text{ref}$ is the reference policy (frozen SFT model).</li>
+    <li>$y_w, y_l$ are the chosen and rejected responses.</li>
+    <li>$\beta$ controls regularization strength (same role as in RLHF).</li>
+    <li>$\log \frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}$ is the <strong>implicit reward</strong>: how much the policy has upweighted this response relative to the reference.</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> DPO says: the policy itself <em>is</em> the reward model. Instead of
+    learning a separate scorer and then optimizing against it, just directly adjust the policy so that
+    it assigns higher probability to chosen responses and lower probability to rejected ones, relative
+    to where it started. The log-ratio $\log(\pi_\theta / \pi_\text{ref})$ acts as an implicit reward
+    score, and the loss pushes this implicit score higher for chosen responses than rejected ones.
+</div>
+
+<h3>The DPO pipeline</h3>
+
+<div class="diagram">
+<svg width="500" height="300" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <marker id="arr4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+    <marker id="arr4g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#bbb"/></marker>
+    <filter id="sh4"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+  </defs>
+  <!-- RLHF pipeline (left, grayed out) -->
+  <text x="120" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#999">RLHF (3 steps)</text>
+  <rect x="30" y="32" width="180" height="36" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="120" y="55" text-anchor="middle" font-size="11" fill="#999">Preference data</text>
+  <line x1="120" y1="68" x2="120" y2="88" stroke="#bbb" stroke-width="1" marker-end="url(#arr4g)"/>
+  <rect x="30" y="92" width="180" height="36" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="120" y="115" text-anchor="middle" font-size="11" fill="#999">Train reward model</text>
+  <line x1="120" y1="128" x2="120" y2="148" stroke="#bbb" stroke-width="1" marker-end="url(#arr4g)"/>
+  <rect x="30" y="152" width="180" height="36" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="120" y="175" text-anchor="middle" font-size="11" fill="#999">RL training (PPO/GRPO)</text>
+  <line x1="120" y1="188" x2="120" y2="208" stroke="#bbb" stroke-width="1" marker-end="url(#arr4g)"/>
+  <rect x="50" y="212" width="140" height="32" rx="16" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="120" y="233" text-anchor="middle" font-size="11" fill="#999">Aligned model</text>
+
+  <!-- DPO pipeline (right, colored) -->
+  <text x="370" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#1e40af">DPO (1 step)</text>
+  <rect x="280" y="32" width="180" height="36" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="370" y="55" text-anchor="middle" font-size="11" fill="#1e40af">Preference data</text>
+  <line x1="370" y1="68" x2="370" y2="148" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <rect x="280" y="152" width="180" height="36" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh4)"/>
+  <text x="370" y="175" text-anchor="middle" font-size="11" fill="#1e40af">Supervised training on pairs</text>
+  <line x1="370" y1="188" x2="370" y2="208" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <rect x="300" y="212" width="140" height="32" rx="16" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="370" y="233" text-anchor="middle" font-weight="600" font-size="11" fill="#1e40af">Aligned model</text>
+
+  <!-- Labels -->
+  <text x="370" y="275" text-anchor="middle" font-size="11" fill="#555" font-style="italic">No reward model, no RL loop</text>
+</svg>
+</div>
+
+<h3>What happens during training</h3>
+<p>
+    For each preference pair $(x, y_w, y_l)$, DPO computes the log-probabilities of both responses under
+    both the current policy $\pi_\theta$ and the frozen reference policy $\pi_\text{ref}$. This requires
+    four forward passes per batch element (two responses, two models). In practice, the reference model
+    log-probabilities are precomputed and cached, reducing to two forward passes.
+</p>
+
+<p>The gradient pushes in two directions simultaneously:</p>
+<ul>
+    <li><strong>Increase</strong> the probability of the chosen response $y_w$ (relative to the reference).</li>
+    <li><strong>Decrease</strong> the probability of the rejected response $y_l$ (relative to the reference).</li>
+</ul>
+
+<p>
+    The gradient magnitude is weighted by how wrong the current model is. If the model already strongly
+    prefers $y_w$, the sigmoid saturates and the gradient is small. If the model prefers $y_l$ (the
+    wrong answer), the gradient is large. This is the same self-correcting property as in the reward
+    model loss.
+</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> DPO is an <strong>offline</strong> algorithm. It trains on a fixed
+    dataset of preference pairs, never generating new responses. This means it cannot explore: the policy
+    only learns from responses that were already in the dataset. If the SFT model produces a new kind of
+    error not represented in the training pairs, DPO cannot correct it. RLHF methods (PPO, GRPO) are
+    online: the policy generates fresh responses each iteration and learns from its own mistakes.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="dpo-variants">7. DPO Variants: IPO, KTO, and Others</h2>
+
+<p>
+    DPO opened the door to a family of offline preference optimization methods, each addressing a
+    specific weakness.
+</p>
+
+<h3>IPO: Identity Preference Optimization</h3>
+<p>
+    <strong>IPO</strong> (Azar et al., 2023) argues that DPO overfits to preference pairs because the
+    sigmoid loss saturates too quickly. Once the model gets a pair "right" (large margin between chosen
+    and rejected), the gradient vanishes and the model stops improving on that example, even if the
+    margin is based on memorization rather than genuine understanding.
+</p>
+
+<p>IPO replaces the sigmoid loss with a squared loss on the margin:</p>
+
+<div class="eq-block">
+    <div class="eq-label">IPO loss:</div>
+    $$\mathcal{L}_\text{IPO}(\theta) = \mathbb{E}\left[\left(\log \frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \log \frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)} - \frac{1}{2\beta}\right)^2\right]$$
+</div>
+
+<p>
+    Let $m = \log \frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \log \frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}$
+    be the implicit reward margin between chosen and rejected. The IPO loss is simply $(m - \frac{1}{2\beta})^2$.
+    This is a parabola centered at $\frac{1}{2\beta}$: the loss is zero when the margin equals the target,
+    and increases quadratically in <em>both</em> directions.
+</p>
+
+<p>
+    If $m &lt; \frac{1}{2\beta}$ (margin too small, model does not prefer the chosen response enough),
+    the gradient pushes the margin up. If $m &gt; \frac{1}{2\beta}$ (margin too large), the gradient
+    pushes it back down. Compare this to DPO's sigmoid loss $-\log \sigma(\beta \cdot m)$: as $m$
+    grows large, the sigmoid saturates near 1, the loss approaches 0, and the gradient vanishes. DPO
+    has no penalty for an excessively large margin, so the model can keep inflating it by memorizing
+    specific preference pairs. IPO's squared loss prevents this by treating "too confident" the same as
+    "not confident enough."
+</p>
+
+<h3>KTO: Kahneman-Tversky Optimization</h3>
+<p>
+    <strong>KTO</strong> (Ethayarajh et al., 2024) addresses a different problem: it does not require
+    paired preferences at all. Instead of needing (chosen, rejected) pairs for the same prompt, KTO
+    works with unpaired data where each response is independently labeled as "good" or "bad."
+</p>
+
+<p>
+    This is significant because paired preference data is expensive to collect. You need two responses
+    to the same prompt, shown to the same annotator, compared side-by-side. KTO only needs thumbs-up
+    / thumbs-down labels, which can come from user feedback logs, upvotes, or simple quality ratings.
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">KTO loss (simplified):</div>
+    $$\mathcal{L}_\text{KTO}(\theta) = \mathbb{E}_{y_w}\left[\sigma\left(-r_\theta(x, y_w)\right)\right] + \mathbb{E}_{y_l}\left[\sigma\left(r_\theta(x, y_l)\right)\right]$$
+    $$\text{where } r_\theta(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)} - \mathbb{E}_{y'}\left[\beta \log \frac{\pi_\theta(y'|x)}{\pi_\text{ref}(y'|x)}\right]$$
+</div>
+
+<p>
+    The first term pushes up the implicit reward of good responses; the second pushes down the implicit
+    reward of bad responses. The subtracted expectation term centers the rewards, similar to a baseline
+    in REINFORCE.
+</p>
+
+<h3>Other variants</h3>
+
+<table>
+    <tr>
+        <th>Method</th>
+        <th>Key Idea</th>
+        <th>Data Requirement</th>
+    </tr>
+    <tr>
+        <td><strong>DPO</strong></td>
+        <td>Sigmoid loss on log-ratio margin</td>
+        <td>Paired preferences</td>
+    </tr>
+    <tr>
+        <td><strong>IPO</strong></td>
+        <td>Squared loss with target margin (anti-overfitting)</td>
+        <td>Paired preferences</td>
+    </tr>
+    <tr>
+        <td><strong>KTO</strong></td>
+        <td>Unpaired; works with thumbs-up/down labels</td>
+        <td>Unpaired good/bad labels</td>
+    </tr>
+    <tr>
+        <td><strong>ORPO</strong></td>
+        <td>Merges SFT and DPO into one loss (no ref model)</td>
+        <td>Paired preferences</td>
+    </tr>
+    <tr>
+        <td><strong>SimPO</strong></td>
+        <td>Length-normalized, no reference model needed</td>
+        <td>Paired preferences</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Note:</strong> All of these methods share the same core idea: use preference data to directly
+    adjust the policy's output probabilities, without an explicit reward model. They differ in the loss
+    function shape, regularization strategy, and what kind of data they require.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="comparison">8. RLHF vs DPO: When to Use What</h2>
+
+<table>
+    <tr>
+        <th>Dimension</th>
+        <th>RLHF (PPO/GRPO)</th>
+        <th>DPO (and variants)</th>
+    </tr>
+    <tr>
+        <td><strong>Training complexity</strong></td>
+        <td>High. Requires reward model, value model (PPO), or group sampling (GRPO), plus the RL loop.</td>
+        <td>Low. Standard supervised training on preference pairs. One model, one loss.</td>
+    </tr>
+    <tr>
+        <td><strong>Compute cost</strong></td>
+        <td>3-5x the cost of SFT. Needs generation + scoring + updates each iteration.</td>
+        <td>1.5-2x the cost of SFT. Two forward passes per example (policy + reference).</td>
+    </tr>
+    <tr>
+        <td><strong>Online exploration</strong></td>
+        <td>Yes. Policy generates new responses and learns from them. Can correct novel errors.</td>
+        <td>No. Fixed dataset. Cannot adapt to distribution shift.</td>
+    </tr>
+    <tr>
+        <td><strong>Reward hacking risk</strong></td>
+        <td>High. The policy can exploit the reward model's blind spots over many RL steps.</td>
+        <td>Low. No explicit reward model to exploit. But can overfit to preference data.</td>
+    </tr>
+    <tr>
+        <td><strong>Stability</strong></td>
+        <td>Requires careful tuning (KL coefficient, learning rate, clipping). Can collapse.</td>
+        <td>Stable. Standard supervised training dynamics.</td>
+    </tr>
+    <tr>
+        <td><strong>Ceiling</strong></td>
+        <td>Higher. Online exploration can discover behaviors not in the training data.</td>
+        <td>Lower. Bounded by the quality and diversity of the preference dataset.</td>
+    </tr>
+    <tr>
+        <td><strong>Iterative improvement</strong></td>
+        <td>Natural. Collect new preferences on the improved model, retrain.</td>
+        <td>Requires regenerating preference data for each iteration.</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Intuition:</strong> DPO is the "fast and stable" option. RLHF is the "higher ceiling but
+    harder to get right" option. In practice, many teams start with DPO to get a quick baseline, then
+    switch to RLHF (typically GRPO) for the final push. DeepSeek-R1, for instance, uses GRPO with
+    rule-based rewards after an initial DPO/SFT stage.
+</div>
+
+<h3>When DPO wins</h3>
+<ul>
+    <li>Small teams with limited compute and engineering bandwidth.</li>
+    <li>Tasks where high-quality preference data already exists (or is easy to generate synthetically).</li>
+    <li>Alignment tasks where the gap between SFT and the target behavior is small.</li>
+    <li>Rapid iteration: you need a usable model today, not a perfectly optimized one in a month.</li>
+</ul>
+
+<h3>When RLHF wins</h3>
+<ul>
+    <li>Tasks with verifiable rewards (math, code, factual QA) where you can use rule-based scoring.</li>
+    <li>Pushing past the ceiling of what preference data alone can teach.</li>
+    <li>Large-scale production systems where the extra engineering cost is justified by quality gains.</li>
+    <li>Iterative improvement loops where the model improves, generates new data, and improves again.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="practical">9. Practical Notes</h2>
+
+<h3>Data quality matters more than quantity</h3>
+<p>
+    A reward model trained on 50k high-quality preference pairs (clear differences between chosen and
+    rejected, expert annotators, diverse prompts) will outperform one trained on 500k noisy pairs.
+    Invest in annotation guidelines and quality control before scaling data collection.
+</p>
+
+<h3>The reference model matters</h3>
+<p>
+    Both RLHF (via KL penalty) and DPO (via log-ratio) depend heavily on the reference policy. If the
+    reference model is weak, the KL penalty in RLHF allows less room for improvement, and the
+    log-ratios in DPO are less meaningful. Use the best SFT checkpoint you have as the reference.
+</p>
+
+<h3>Preference data goes stale</h3>
+<p>
+    As the policy improves, the preference data (collected from an earlier, weaker model) becomes less
+    informative. The distribution of responses the model now produces is different from what annotators
+    compared. For RLHF, this matters less because the model generates fresh data. For DPO, this means
+    you need to periodically regenerate preference data from the current policy ("online DPO" or
+    "iterative DPO").
+</p>
+
+<h3>Process reward models vs outcome reward models</h3>
+<p>
+    Standard reward models are <strong>outcome reward models (ORMs)</strong>: they score the final
+    response. <strong>Process reward models (PRMs)</strong> score each intermediate step in a
+    chain-of-thought. PRMs are harder to train (you need step-level preference labels) but dramatically
+    improve performance on reasoning tasks by providing denser feedback.
+</p>
+
+<p>
+    OpenAI's "Let's Verify Step by Step" paper showed that PRMs outperform ORMs on math, even with the
+    same total annotation budget. The reason: an ORM can only say "this answer is wrong." A PRM can say
+    "step 3 is where you went wrong," giving the policy much more useful gradient signal.
+</p>
+
+<h3>Synthetic preferences and RLAIF</h3>
+<p>
+    Collecting human preferences is expensive ($0.50-$5 per comparison). An alternative:
+    <strong>RLAIF</strong> (Reinforcement Learning from AI Feedback), where a strong LLM (GPT-4, Claude)
+    judges which response is better. Anthropic's Constitutional AI and most open-source alignment efforts
+    use some form of AI-generated preferences.
+</p>
+
+<p>
+    The trade-off: AI judges are cheaper and more consistent than humans, but they have systematic biases
+    (preferring verbose, formal responses; struggling with factual verification; exhibiting position bias
+    in multi-response comparisons). The best practice is to mix human and AI preferences.
+</p>
+
+<hr>
+
+<p style="color: var(--muted); font-size: 0.9em;">
+    <strong>References:</strong>
+    Ouyang et al., <a href="https://arxiv.org/abs/2203.02155">"Training language models to follow instructions with human feedback"</a> (InstructGPT, 2022) &middot;
+    Rafailov et al., <a href="https://arxiv.org/abs/2305.18290">"Direct Preference Optimization"</a> (DPO, 2023) &middot;
+    Azar et al., <a href="https://arxiv.org/abs/2310.12036">"A General Theoretical Paradigm to Understand Learning from Human Feedback"</a> (IPO, 2023) &middot;
+    Ethayarajh et al., <a href="https://arxiv.org/abs/2402.01306">"KTO: Model Alignment as Prospect Theoretic Optimization"</a> (2024) &middot;
+    Touvron et al., <a href="https://arxiv.org/abs/2307.09288">"Llama 2"</a> (2023) &middot;
+    Lightman et al., <a href="https://arxiv.org/abs/2305.20050">"Let's Verify Step by Step"</a> (2023) &middot;
+    Bai et al., <a href="https://arxiv.org/abs/2212.08073">"Constitutional AI"</a> (2022)
+</p>
+
+<div class="share-bottom">
+    <p>Found this useful? Help someone else find it too.</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F&text=Reward%20Modeling%20and%20DPO%3A%20Learning%20What%20%22Good%22%20Means" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Freward-modeling%2F&title=Reward%20Modeling%20and%20DPO%3A%20Learning%20What%20%22Good%22%20Means" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+</div>
+
+</article>
+
+  <div id="disqus_thread"></div>
+  <script>
+    var disqus_shortname = 'ssedhain';
+    var disqus_config = function() { this.page.reactions_enabled = 0; };
+    (function() {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
