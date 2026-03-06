@@ -88,7 +88,7 @@
 <p>DeepSeek has published a series of papers that, taken together, form a coherent efficiency playbook for large language models. Each paper targets a different bottleneck:</p>
 
 <ul>
-    <li><strong>KV cache memory</strong> dominates inference cost at long contexts. MLA compresses it by 93%.</li>
+    <li><strong>KV cache memory</strong> dominates inference cost at long contexts. MLA compresses it by ~98%.</li>
     <li><strong>Dense FFN layers</strong> waste compute on irrelevant experts. DeepSeekMoE activates only the experts each token needs.</li>
     <li><strong>Quadratic attention</strong> makes long contexts prohibitively expensive. DeepSeek Sparse Attention (DSA) reduces it to near-linear.</li>
     <li><strong>Post-training</strong> traditionally requires separate stages for reasoning, safety, and tool use. Their unified RL pipeline handles all three in one pass.</li>
@@ -118,7 +118,7 @@
   <!-- MLA block -->
   <rect x="120" y="90" width="260" height="50" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shBP)"/>
   <text x="250" y="112" text-anchor="middle" font-size="12" fill="#1e40af" font-weight="bold">Multi-head Latent Attention (MLA)</text>
-  <text x="250" y="128" text-anchor="middle" font-size="9" fill="#6b7280">compressed KV cache: 93% smaller</text>
+  <text x="250" y="128" text-anchor="middle" font-size="9" fill="#6b7280">compressed KV cache: ~98% smaller</text>
 
   <!-- DSA annotation on right -->
   <rect x="395" y="90" width="95" height="50" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-dasharray="4,2" filter="url(#shBP)"/>
@@ -187,7 +187,7 @@
 <!-- ============================================================ -->
 <h2 id="mla">2. Multi-head Latent Attention (MLA)</h2>
 
-<p>Standard multi-head attention stores separate key and value vectors for every token at every layer. For a 128K context window with 128 attention heads and head dimension 128 across 60 layers in BF16, this means storing roughly 8-9 GB of KV cache per sequence (the exact number depends on the number of layers and precision; FP8 quantization halves it). MLA compresses this by projecting keys and values into a shared low-dimensional <strong>latent space</strong>.</p>
+<p>Standard multi-head attention stores separate key and value vectors for every token at every layer. With $n_h$ attention heads (e.g., 128) each of dimension $d_h$ (e.g., 128), a 128K context window across 60 layers in BF16 means storing roughly 8-9 GB of KV cache per sequence (the exact number depends on the number of layers and precision; FP8 quantization halves it). MLA compresses this by projecting keys and values into a shared low-dimensional <strong>latent space</strong>.</p>
 
 <h3>How It Works</h3>
 
@@ -208,7 +208,7 @@
 <p>$W^{UK}$ and $W^{UV}$ are up-projection matrices that reconstruct the full key and value vectors from the compressed cache. The critical insight: you only cache $c_t^{KV}$, not the full keys and values.</p>
 
 <div class="note">
-    <p><strong>Intuition:</strong> Think of MLA as JPEG compression for the KV cache. The full keys and values have redundancy across heads. MLA exploits this by storing a compressed version and reconstructing on the fly. With $d_c = 512$ vs. the original $n_h \cdot d_h = 16{,}384$, you get a 93% reduction in cache memory.</p>
+    <p><strong>Intuition:</strong> Think of MLA as JPEG compression for the KV cache. The full keys and values have redundancy across heads. MLA exploits this by storing a compressed version and reconstructing on the fly. With $d_c + d_R = 576$ cached per token vs. the original $2 \times n_h \times d_h = 32{,}768$ for full KV, you get a ~98% reduction in per-token cache size. (The DeepSeek-V2 paper reports 93.3% KV cache reduction relative to its predecessor DeepSeek 67B, which had a different head configuration.)</p>
 </div>
 
 <h3>Decoupled RoPE</h3>
@@ -230,7 +230,7 @@
     </thead>
     <tbody>
         <tr><td>MHA (standard)</td><td>$2 n_h d_h$</td><td>Baseline</td><td>Full cache per head</td></tr>
-        <tr><td>GQA</td><td>$2 n_g d_h$</td><td>Slight degradation</td><td>Share KV across head groups</td></tr>
+        <tr><td>GQA</td><td>$2 n_g d_h$</td><td>Slight degradation</td><td>Share KV across $n_g$ head groups</td></tr>
         <tr><td>MQA</td><td>$2 d_h$</td><td>Notable degradation</td><td>Single KV for all heads</td></tr>
         <tr><td><strong>MLA</strong></td><td>$d_c + d_R$</td><td>Matches or exceeds MHA</td><td>Low-rank compression + decoupled RoPE</td></tr>
     </tbody>
@@ -265,7 +265,7 @@
     $$\text{FFN}(x) = \sum_{i=1}^{N_s} \text{Expert}_i^{(s)}(x) + \sum_{j \in \text{TopK}} g_j \cdot \text{Expert}_j^{(r)}(x)$$
 </div>
 
-<p>where $g_j$ are the gating weights from a softmax over router logits, and TopK selects the $k$ experts with the highest gate values. Each expert is a small FFN (typically SwiGLU) with its own weights.</p>
+<p>where $N_s$ is the number of shared experts, $g_j$ are the gating weights from a softmax over router logits, and TopK selects the $k$ experts with the highest gate values. Each expert is a small FFN (typically SwiGLU) with its own weights.</p>
 
 <h3>Load Balancing Without Auxiliary Loss</h3>
 
@@ -312,7 +312,7 @@
 <!-- ============================================================ -->
 <h2 id="dsa">4. DeepSeek Sparse Attention (DSA)</h2>
 
-<p>Standard attention is $O(n^2)$ in sequence length. At 128K tokens, the attention matrix has $\sim$16 billion entries per layer per head. DeepSeek Sparse Attention reduces this to near-linear by selecting only the most relevant tokens for each query to attend to.</p>
+<p>Standard attention is $O(n^2)$ in sequence length $n$. At 128K tokens, the attention matrix has $\sim$16 billion entries per layer per head. DeepSeek Sparse Attention reduces this to near-linear by selecting only the most relevant tokens for each query to attend to.</p>
 
 <h3>The Core Idea</h3>
 
@@ -332,7 +332,7 @@
         <p>where $q_t^{\text{idx}}$ is a lightweight query projection (a small linear layer applied to the query, separate from the main attention query). This is much cheaper than full attention because it operates in the compressed dimension $d_c$ (e.g., 512) rather than the full head dimension.</p>
     </li>
     <li>
-        <strong>Selective Attention:</strong> Select the top-$B$ tokens by score (where $B$ is a fixed budget per query, typically 4,096) and combine them with the local sliding window (typically 4,096 tokens). Only this subset participates in the full attention computation:
+        <strong>Selective Attention:</strong> Select the top-$B$ tokens by score (where $B$ is a fixed budget per query; the V3.2 paper uses $B = 2{,}048$ during training) and combine them with the local sliding window. Only this subset participates in the full attention computation:
 
         <div class="equation-block">
             <span class="eq-label">Sparse Attention</span>
@@ -344,7 +344,7 @@
 </ol>
 
 <div class="note">
-    <p><strong>Intuition:</strong> Instead of every token attending to every other token (quadratic), DSA first does a cheap scan to find which tokens matter, then computes full attention only on those. At 128K context with $B = 4{,}096$ and window $w = 4{,}096$, each query attends to at most ~8K tokens instead of 128K, a 16x reduction. The scoring pass itself is cheap because it operates in MLA's compressed space ($d_c = 512$) rather than the full attention dimension.</p>
+    <p><strong>Intuition:</strong> Instead of every token attending to every other token (quadratic), DSA first does a cheap scan to find which tokens matter, then computes full attention only on those. At 128K context with $B = 2{,}048$ selected tokens plus a local window, each query attends to a small fraction of the full context. The scoring pass itself is cheap because it operates in MLA's compressed space ($d_c = 512$) rather than the full attention dimension.</p>
 </div>
 
 <h3>Why It Works with MLA</h3>
@@ -359,16 +359,16 @@
 
 <p><em>Step 1: Scoring.</em> The lightning indexer computes $\text{score}(q_t, j)$ for all $j < t$ using the compressed latents. This is 100,000 dot products, but in dimension $d_c = 512$ instead of $d_h = 128 \times 128 = 16{,}384$. Tokens mentioning "treaty", "Westphalia", "1648", and "Peace" score highest.</p>
 
-<p><em>Step 2: Selection.</em> The top $B = 4{,}096$ tokens by score are selected globally. These might be scattered across the document: some from the section discussing the Treaty of Westphalia (positions ~12,000-12,500), some from a timeline section (positions ~45,000-45,200), and some from a cross-reference (position ~89,000). The local window captures positions 95,904 to 100,000.</p>
+<p><em>Step 2: Selection.</em> The top $B = 2{,}048$ tokens by score are selected globally. These might be scattered across the document: some from the section discussing the Treaty of Westphalia (positions ~12,000-12,500), some from a timeline section (positions ~45,000-45,200), and some from a cross-reference (position ~89,000). The local sliding window captures the most recent few thousand positions.</p>
 
-<p><em>Step 3: Full attention.</em> The query computes full multi-head attention over only these ~8K tokens. The attention matrix has 8K entries instead of 100K, a 12.5x reduction, while still attending to the most relevant passages anywhere in the document.</p>
+<p><em>Step 3: Full attention.</em> The query computes full multi-head attention over only the selected + window tokens, a small fraction of the 100K total context, while still attending to the most relevant passages anywhere in the document.</p>
 
 </div>
 </details>
 
-<h3>Hardware Alignment</h3>
+<h3>Hardware Considerations</h3>
 
-<p>DSA is designed to be hardware-friendly. The token selection produces contiguous blocks (tokens are grouped into blocks of 64 for the scoring pass, and entire blocks are selected or rejected). This avoids the scattered memory access patterns that plague naive sparse attention implementations. The block-sparse structure maps efficiently to GPU tensor cores and allows the use of standard FlashAttention kernels on the selected blocks.</p>
+<p>The practical challenge with any sparse attention scheme is turning the token selection into efficient GPU kernels. Naive implementations with scattered memory accesses can negate the theoretical FLOP savings. The DeepSeek-V3.2 paper describes DSA as "hardware-aligned and natively trainable," designed to work with existing optimized attention kernels rather than requiring entirely custom implementations.</p>
 
 <div class="warning">
     <p><strong>Key limitation:</strong> DSA requires the model to be trained with sparse attention from the start (or at least fine-tuned with it for an extended period). You cannot simply drop DSA into a pre-trained dense-attention model and expect it to work. The model needs to learn which tokens are worth selecting, and the lightning indexer's query projection must be trained jointly with the rest of the attention mechanism.</p>
@@ -397,7 +397,7 @@
     $$\mathcal{L}_{\text{GRPO}} = -\mathbb{E}\!\left[\min\!\left(\frac{\pi_\theta}{\pi_{\text{old}}} \hat{A},\; \text{clip}\!\left(\frac{\pi_\theta}{\pi_{\text{old}}}, 1\!\pm\!\epsilon\right) \hat{A}\right) - \beta\, D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})\right]$$
 </div>
 
-<p>where $\pi_\theta / \pi_{\text{old}}$ is the importance sampling ratio, $\epsilon$ is the clipping range, and $\beta$ controls the KL penalty strength.</p>
+<p>where $\pi_\theta$ is the current policy being trained, $\pi_{\text{old}}$ is the policy that generated the samples (before the current update step), $\pi_\theta / \pi_{\text{old}}$ is the importance sampling ratio, $\epsilon$ is the clipping range (typically 0.2), and $\beta$ controls the KL penalty strength against the frozen reference policy $\pi_{\text{ref}}$.</p>
 
 <div class="note">
     <p><strong>Intuition:</strong> GRPO skips the value model entirely. Instead of estimating "how good is this state?" with a learned critic, it just compares each response to its siblings in the same group. If your response scored 0.8 and the group average was 0.5 with std 0.2, your advantage is $(0.8 - 0.5)/0.2 = 1.5$. Simple, stable, and cheap.</p>
@@ -415,22 +415,22 @@
         <tr>
             <td>KL divergence biased upward</td>
             <td>Unbiased KL estimator</td>
-            <td>Use $r - 1 - \log r$ instead of $r \log r$, where $r = \pi_\theta / \pi_{\text{ref}}$</td>
+            <td>Replace standard KL with $\frac{\pi_{\text{ref}}}{\pi_\theta} - \log\frac{\pi_{\text{ref}}}{\pi_\theta} - 1$, which has zero bias when $\pi_\theta = \pi_{\text{ref}}$</td>
         </tr>
         <tr>
-            <td>Stale data from replay buffer</td>
-            <td>Off-policy masking</td>
-            <td>Discard tokens where $|\pi_\theta / \pi_{\text{old}} - 1| > \delta$</td>
+            <td>Stale off-policy data</td>
+            <td>Off-policy sequence masking</td>
+            <td>For negative-advantage sequences, mask the entire sequence if the average log importance ratio $\frac{1}{T}\sum_t \log\frac{\pi_\theta}{\pi_{\text{old}}}$ exceeds a threshold $\delta$</td>
         </tr>
         <tr>
-            <td>Expert collapse during RL</td>
+            <td>Expert routing drift during RL</td>
             <td>Keep routing</td>
-            <td>Freeze router weights, only update expert FFN parameters</td>
+            <td>Record the MoE expert routing decisions made during sampling and replay the same routing during the training forward pass, ensuring consistent expert assignments</td>
         </tr>
         <tr>
-            <td>Reward hacking via length</td>
+            <td>Action-space mismatch between sampling and training</td>
             <td>Keep sampling mask</td>
-            <td>Continue sampling past EOS to compute accurate per-token KL</td>
+            <td>Preserve the top-p/top-k token truncation masks from sampling and apply them during the training forward pass, so both policies operate over the same action subspace</td>
         </tr>
     </tbody>
 </table>
@@ -652,7 +652,7 @@
     $$e_{t,n,k} = E_{n,k}[\phi_{n,k}(g_{t,n})], \quad e_t = \|_{n=2}^{N} \|_{k=1}^{K} e_{t,n,k}$$
 </div>
 
-<p>where $\phi_{n,k}$ is a deterministic hash function for N-gram order $n$ and head $k$, $E_{n,k}$ is the embedding table, and $\|$ denotes concatenation. The hash uses lightweight multiplicative-XOR operations: each token ID in the N-gram is multiplied by a large prime, the results are XOR'd together, and the final value is taken modulo the table size $M$ (itself a prime). For example, for head $k$ with primes $p_k$: $\phi_{2,k}(a, b) = (a \cdot p_k \oplus b \cdot p_k') \bmod M$. Different heads use different primes, so the same N-gram maps to different rows in each head's table.</p>
+<p>where $g_{t,n}$ is the N-gram context of order $n$ ending at position $t$ (e.g., $g_{t,2}$ is the preceding bigram), $\phi_{n,k}$ is a deterministic hash function for N-gram order $n$ and head $k$, $E_{n,k}$ is the embedding table, $N$ is the maximum N-gram order (typically 3, covering bigrams and trigrams), and $\|$ denotes concatenation. The hash uses lightweight multiplicative-XOR operations: each token ID in the N-gram is multiplied by a large prime, the results are XOR'd together, and the final value is taken modulo the table size $M$ (itself a prime). For example, for head $k$ with primes $p_k$: $\phi_{2,k}(a, b) = (a \cdot p_k \oplus b \cdot p_k') \bmod M$. Different heads use different primes, so the same N-gram maps to different rows in each head's table.</p>
 
 <details class="example">
 <summary>Worked example: retrieving the embedding for "Alexander the"</summary>
@@ -662,7 +662,7 @@
 
 <p><em>Step 2: Hash each N-gram, multiple times.</em> Each N-gram is hashed with $K = 8$ independent hash functions. For the bigram (4821, 12), hash head 1 might compute $\phi_{2,1}(4821, 12) = 738{,}201$ and hash head 2 computes $\phi_{2,2}(4821, 12) = 1{,}402{,}557$, and so on for all 8 heads. The trigram is hashed the same way with its own 8 hash functions. That is 16 hash lookups total (8 for bigrams + 8 for trigrams).</p>
 
-<p><em>Step 3: Retrieve embeddings.</em> Each hash index pulls one row from its embedding table. If each row has dimension $d_{\text{mem}} / (N \cdot K)$, say 80 dimensions, then the 16 retrieved vectors are concatenated into a single vector $e_t$ of dimension $16 \times 80 = 1{,}280$. This is the complete retrieved embedding for this position.</p>
+<p><em>Step 3: Retrieve embeddings.</em> Each hash index pulls one row from its embedding table. If the total memory dimension is $d_{\text{mem}} = 1{,}280$ and each row has dimension $d_{\text{mem}} / (N \cdot K)$, say 80 dimensions, then the 16 retrieved vectors are concatenated into a single vector $e_t$ of dimension $16 \times 80 = 1{,}280$. This is the complete retrieved embedding for this position.</p>
 
 <p>The whole process is deterministic: the same N-gram always retrieves the same embeddings. During training, backpropagation updates only the 16 retrieved rows (out of millions), making gradient updates sparse and efficient. The multiple hash heads serve a purpose similar to multiple attention heads: they give the model several independent "views" of each N-gram pattern, reducing the impact of hash collisions.</p>
 
@@ -673,7 +673,7 @@
 
 <p>The retrieved embedding $e_t$ is a <strong>context-independent prior</strong>: it only depends on the preceding N-gram, not on the broader sentence. The phrase "Alexander the" always retrieves the same embedding, whether it appears in "Alexander the Great conquered Persia" or "Alexander the plumber fixed my sink". The fusion phase makes this prior context-dependent.</p>
 
-<p>The current hidden state $h_t$ (which has already been through attention and carries full-sentence context) acts as a query. The retrieved embedding is projected into a key and a value:</p>
+<p>The current hidden state $h_t$ (which has already been through attention and carries full-sentence context) acts as a query. The retrieved embedding is projected by learned matrices $W_k$ (key projection) and $W_v$ (value projection):</p>
 
 <div class="equation-block">
     <span class="eq-label">Gating</span>
@@ -742,7 +742,7 @@
     </span></span>
 </div>
 
-<p>This is a scalar sigmoid gate $\alpha_t \in [0, 1]$. It computes a normalized dot product between the hidden state and the projected memory, then squashes it through a sigmoid. The gated output is $\tilde{v}_t = \alpha_t \cdot W_v e_t$.</p>
+<p>Here $\sigma$ is the sigmoid function. This is a scalar gate $\alpha_t \in [0, 1]$: it computes a normalized dot product between the hidden state and the projected memory key, then squashes it through the sigmoid. The gated output is $\tilde{v}_t = \alpha_t \cdot W_v e_t$, where $W_v$ projects the retrieved embedding into the value used for the residual stream.</p>
 
 <details class="example">
 <summary>Worked example: same N-gram, two different contexts</summary>
