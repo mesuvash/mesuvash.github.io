@@ -11,18 +11,18 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suvash Sedhain | DeepSeek-V3.2: Sparse Attention and Scalable RL</title>
+    <title>Suvash Sedhain | DeepSeek's Technical Playbook: From MLA to Conditional Memory</title>
 
     <!-- Open Graph -->
-    <meta property="og:title" content="DeepSeek-V3.2: Sparse Attention and Scalable RL" />
-    <meta property="og:description" content="How DeepSeek Sparse Attention reduces quadratic attention to near-linear, and how a unified RL framework trains reasoning, agents, and alignment in one stage." />
+    <meta property="og:title" content="DeepSeek's Technical Playbook: From MLA to Conditional Memory" />
+    <meta property="og:description" content="A deep dive into DeepSeek's key innovations: Multi-head Latent Attention, sparse MoE, sparse attention, scalable RL, and the Engram conditional memory architecture." />
     <meta property="og:url" content="https://mesuvash.github.io/blog/2026/deepseek-v3/" />
     <meta property="og:type" content="article" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="DeepSeek-V3.2: Sparse Attention and Scalable RL" />
-    <meta name="twitter:description" content="How DeepSeek Sparse Attention reduces quadratic attention to near-linear, and how a unified RL framework trains reasoning, agents, and alignment in one stage." />
+    <meta name="twitter:title" content="DeepSeek's Technical Playbook: From MLA to Conditional Memory" />
+    <meta name="twitter:description" content="A deep dive into DeepSeek's key innovations: Multi-head Latent Attention, sparse MoE, sparse attention, scalable RL, and the Engram conditional memory architecture." />
 
     <link rel="shortcut icon" href="/assets/img/favicon.ico">
     <link rel="stylesheet" href="/assets/css/blog.css">
@@ -30,6 +30,17 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
         onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+            primaryColor: '#f0f4ff', primaryBorderColor: '#2563eb', primaryTextColor: '#1e40af',
+            secondaryColor: '#faf5ff', secondaryBorderColor: '#7c5cbf', secondaryTextColor: '#4c3a8a',
+            tertiaryColor: '#f0fdf4', tertiaryBorderColor: '#16a34a', tertiaryTextColor: '#166534',
+            lineColor: '#999', fontFamily: 'Georgia, serif', fontSize: '13px',
+            nodeBorder: '#2563eb', mainBkg: '#f0f4ff', clusterBkg: '#fafafa', clusterBorder: '#e0e0e0'
+        }});
+    </script>
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
 </head>
 <body>
 
@@ -48,820 +59,815 @@
 <div class="page-content">
 
 <header class="post-header">
-    <h1>DeepSeek-V3.2: Sparse Attention and Scalable RL</h1>
-    <p class="post-meta">March 4, 2026</p>
+    <h1>DeepSeek's Technical Playbook: From MLA to Conditional Memory</h1>
+    <p class="post-meta">March 5, 2026</p>
     <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
     <div class="share-buttons">
         <span>Share:</span>
-        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fdeepseek-v3%2F&text=DeepSeek-V3.2%3A%20Sparse%20Attention%20and%20Scalable%20RL" target="_blank" rel="noopener" title="Share on X">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fdeepseek-v3%2F&text=DeepSeek%27s%20Technical%20Playbook%3A%20From%20MLA%20to%20Conditional%20Memory" target="_blank" rel="noopener" title="Share on X">
             <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         </a>
         <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fdeepseek-v3%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
             <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
         </a>
-        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fdeepseek-v3%2F&title=DeepSeek-V3.2%3A%20Sparse%20Attention%20and%20Scalable%20RL" target="_blank" rel="noopener" title="Share on Reddit">
-            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
-        </a>
     </div>
 </header>
 
-<article class="post-content">
+<p class="subtitle">How DeepSeek systematically attacks efficiency at every layer of the stack: attention, routing, context, post-training, and now memory.</p>
 
-<p class="subtitle">
-    How DeepSeek Sparse Attention turns quadratic attention into near-linear, and how a unified RL pipeline trains reasoning, agents, and alignment without catastrophic forgetting.
-</p>
+<article class="container">
 
-<nav class="toc">
-    <h3>Contents</h3>
+<!-- Table of Contents -->
+<div class="toc">
+    <strong>Contents</strong>
     <ol>
         <li><a href="#motivation">Why This Matters</a></li>
-        <li><a href="#big-picture">Big Picture</a></li>
         <li><a href="#mla">Multi-head Latent Attention (MLA)</a></li>
+        <li><a href="#moe">DeepSeekMoE</a></li>
         <li><a href="#dsa">DeepSeek Sparse Attention (DSA)</a></li>
-        <li><a href="#scalable-rl">Scalable Reinforcement Learning</a></li>
-        <li><a href="#agentic">Agentic Task Synthesis</a></li>
-        <li><a href="#practical">Practical Notes</a></li>
+        <li><a href="#rl">Scalable Reinforcement Learning</a></li>
+        <li><a href="#engram">Engram: Conditional Memory</a></li>
+        <li><a href="#notes">Practical Notes</a></li>
     </ol>
-</nav>
+</div>
 
-<!-- ───────────────────────── Motivation ───────────────────────── -->
-<h2 id="motivation">Why This Matters</h2>
+<!-- ============================================================ -->
+<h2 id="motivation">1. Why This Matters</h2>
 
-<p>
-DeepSeek-V3.2 tackles two hard problems that constrain frontier LLMs:
-</p>
+<p>DeepSeek has published a series of papers that, taken together, form a coherent efficiency playbook for large language models. Each paper targets a different bottleneck:</p>
 
 <ul>
-    <li><strong>Long-context attention is quadratic.</strong> Standard attention scales as $O(L^2)$ in sequence length $L$. At 128k tokens, this dominates both memory and compute. You need a way to attend sparsely without losing quality.</li>
-    <li><strong>Post-training is fragmented.</strong> Typical pipelines chain separate stages for reasoning, tool-use, and human alignment. Each stage risks undoing gains from the previous one (catastrophic forgetting). You need a unified framework.</li>
-    <li><strong>Agentic data is scarce.</strong> Training models to use tools requires (environment, tools, task, verifier) tuples at scale, and these are expensive to create manually.</li>
+    <li><strong>KV cache memory</strong> dominates inference cost at long contexts. MLA compresses it by 93%.</li>
+    <li><strong>Dense FFN layers</strong> waste compute on irrelevant experts. DeepSeekMoE activates only the experts each token needs.</li>
+    <li><strong>Quadratic attention</strong> makes long contexts prohibitively expensive. DeepSeek Sparse Attention (DSA) reduces it to near-linear.</li>
+    <li><strong>Post-training</strong> traditionally requires separate stages for reasoning, safety, and tool use. Their unified RL pipeline handles all three in one pass.</li>
+    <li><strong>Static knowledge retrieval</strong> forces transformers to waste depth simulating lookup. Engram adds a dedicated O(1) memory primitive.</li>
 </ul>
 
-<p>
-The paper introduces three contributions: DeepSeek Sparse Attention (DSA), a scalable RL framework built on GRPO, and a large-scale agentic task synthesis pipeline. This post focuses on the first two, with a shorter treatment of the agentic pipeline.
-</p>
+<p>The pattern is consistent: identify where compute or memory is wasted, then design a sparse or compressed alternative that preserves quality. Each layer in the transformer uses MLA for attention (compressing the KV cache), optionally injects Engram for static pattern retrieval, then routes through sparse MoE experts for the feed-forward computation. DSA handles long-context scenarios by selecting only the most relevant tokens. After pre-training, a unified RL stage trains reasoning, tool use, and safety simultaneously. This post walks through each innovation.</p>
 
-<!-- ───────────────────────── Big Picture ───────────────────────── -->
-<h2 id="big-picture">Big Picture</h2>
 
-<p>Here is the end-to-end pipeline from pre-trained model to final deployment:</p>
+<!-- ============================================================ -->
+<h2 id="mla">2. Multi-head Latent Attention (MLA)</h2>
 
-<svg viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:2em auto;">
-  <defs>
-    <filter id="shadow1"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
-    <marker id="arrowhead1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2563eb"/>
-    </marker>
-  </defs>
+<p>Standard multi-head attention stores separate key and value vectors for every token at every layer. For a 128K context window with 128 attention heads and head dimension 128, this means storing ~4 GB of KV cache per sequence. MLA compresses this by projecting keys and values into a shared low-dimensional <strong>latent space</strong>.</p>
 
-  <!-- Step 1: Pre-trained Model -->
-  <rect x="140" y="10" width="240" height="44" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="37" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#333">Pre-trained DeepSeek-V3.1</text>
+<h3>How It Works</h3>
 
-  <line x1="260" y1="54" x2="260" y2="80" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead1)"/>
-
-  <!-- Step 2: DSA Training -->
-  <rect x="110" y="82" width="300" height="62" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="105" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#1e40af">DSA Training</text>
-  <text x="260" y="125" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">1. Dense warm-up (indexer only, 1k steps)</text>
-  <text x="260" y="138" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">2. Sparse training (full model, 15k steps)</text>
-
-  <line x1="260" y1="144" x2="260" y2="170" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead1)"/>
-
-  <!-- Step 3: Specialist Models -->
-  <rect x="110" y="172" width="300" height="62" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="195" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#166534">Specialist RL Training</text>
-  <text x="260" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Math, Code, Reasoning, Agentic (separate)</text>
-  <text x="260" y="228" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Each trained with domain-specific RL</text>
-
-  <line x1="260" y1="234" x2="260" y2="260" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead1)"/>
-
-  <!-- Step 4: Distillation -->
-  <rect x="110" y="262" width="300" height="50" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="283" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#333">Specialist Distillation</text>
-  <text x="260" y="300" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Collect data from specialists into one checkpoint</text>
-
-  <line x1="260" y1="312" x2="260" y2="338" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead1)"/>
-
-  <!-- Step 5: Unified RL -->
-  <rect x="110" y="340" width="300" height="62" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="363" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#1e40af">Unified RL Stage</text>
-  <text x="260" y="380" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Reasoning + Agents + Alignment in one stage</text>
-  <text x="260" y="396" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">GRPO with stability fixes, mixed rewards</text>
-
-  <line x1="260" y1="402" x2="260" y2="428" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead1)"/>
-
-  <!-- Step 6: Final Model -->
-  <rect x="140" y="430" width="240" height="44" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
-  <text x="260" y="457" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#1e40af">DeepSeek-V3.2</text>
-
-  <!-- Side annotations -->
-  <text x="28" y="115" font-family="Georgia,serif" font-size="11" fill="#555" font-style="italic">~946B tokens</text>
-  <text x="425" y="295" font-family="Georgia,serif" font-size="11" fill="#555" font-style="italic">SFT data</text>
-  <text x="425" y="375" font-family="Georgia,serif" font-size="11" fill="#555" font-style="italic">>10% of</text>
-  <text x="425" y="390" font-family="Georgia,serif" font-size="11" fill="#555" font-style="italic">pretrain cost</text>
-</svg>
-
-<p>
-The key insight: DSA is trained during continued pre-training (not bolted on after), and RL merges all post-training objectives into a single stage to avoid catastrophic forgetting.
-</p>
-
-<!-- ───────────────────────── MLA ───────────────────────── -->
-<h2 id="mla">Multi-head Latent Attention (MLA)</h2>
-
-<p>
-Before understanding DSA, you need to understand the attention mechanism it builds on. DeepSeek models do not use standard multi-head attention (MHA). They use <strong>Multi-head Latent Attention (MLA)</strong>, introduced in DeepSeek-V2, which compresses the KV cache through low-rank projections while preserving the expressiveness of full MHA.
-</p>
-
-<h3>The KV Cache Problem</h3>
-
-<p>
-During autoregressive generation, the model caches the key and value tensors from all previous tokens so it does not recompute them at each step. In standard MHA with $n_h$ heads and per-head dimension $d_h$, each token requires caching $2 \cdot n_h \cdot d_h$ values per layer. For DeepSeek-V2's 128 heads with dimension 128 across 60 layers, that is over 190 million values per token. At 128k context length, this KV cache alone consumes tens of gigabytes.
-</p>
-
-<p>
-Grouped-Query Attention (GQA) and Multi-Query Attention (MQA) reduce this by sharing key-value heads across query heads. But sharing is a blunt instrument: fewer KV heads means less expressiveness. MLA finds a better trade-off.
-</p>
-
-<h3>How MLA Works</h3>
-
-<p>
-The core idea: instead of caching full-dimensional keys and values, compress them into a single low-rank <strong>latent vector</strong> per token, then reconstruct the full keys and values on-the-fly during attention computation.
-</p>
-
-<svg viewBox="0 0 520 430" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:2em auto;">
-  <defs>
-    <filter id="shadowMLA"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
-    <marker id="arrowMLA" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2563eb"/>
-    </marker>
-    <marker id="arrowMLA2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#16a34a"/>
-    </marker>
-  </defs>
-
-  <!-- Title -->
-  <text x="145" y="20" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#555">Standard MHA</text>
-  <text x="370" y="20" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#555">MLA</text>
-
-  <!-- Divider -->
-  <line x1="260" y1="30" x2="260" y2="420" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>
-
-  <!-- === LEFT: Standard MHA === -->
-  <!-- Hidden state -->
-  <rect x="80" y="35" width="130" height="32" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="145" y="56" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#333">h_t (hidden state)</text>
-
-  <!-- Arrows to K and V -->
-  <line x1="115" y1="67" x2="85" y2="100" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-  <line x1="175" y1="67" x2="205" y2="100" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-
-  <!-- K projection -->
-  <rect x="30" y="102" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="85" y="122" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">W_K (project)</text>
-
-  <!-- V projection -->
-  <rect x="155" y="102" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="210" y="122" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">W_V (project)</text>
-
-  <!-- Arrows down -->
-  <line x1="85" y1="134" x2="85" y2="168" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-  <line x1="210" y1="134" x2="210" y2="168" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-
-  <!-- K and V full -->
-  <rect x="30" y="170" width="110" height="40" rx="8" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="85" y="186" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#991b1b">K: n_h x d_h</text>
-  <text x="85" y="201" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#991b1b">Cache this</text>
-
-  <rect x="155" y="170" width="110" height="40" rx="8" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="210" y="186" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#991b1b">V: n_h x d_h</text>
-  <text x="210" y="201" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#991b1b">Cache this</text>
-
-  <!-- Cache size annotation -->
-  <text x="145" y="235" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#991b1b" font-style="italic">Cache: 2 x n_h x d_h per token</text>
-
-  <!-- === RIGHT: MLA === -->
-  <!-- Hidden state -->
-  <rect x="335" y="35" width="130" height="32" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="400" y="56" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#333">h_t (hidden state)</text>
-
-  <!-- Arrow to down-projection -->
-  <line x1="400" y1="67" x2="400" y2="100" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowMLA2)"/>
-
-  <!-- Down-projection -->
-  <rect x="330" y="102" width="140" height="32" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="400" y="122" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#166534">W_DKV (compress)</text>
-
-  <!-- Arrow to latent -->
-  <line x1="400" y1="134" x2="400" y2="168" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowMLA2)"/>
-
-  <!-- Latent vector (cached) -->
-  <rect x="340" y="170" width="120" height="40" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" filter="url(#shadowMLA)"/>
-  <text x="400" y="186" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#166534">c_t: d_c dims</text>
-  <text x="400" y="201" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#166534">Cache this</text>
-
-  <!-- Cache size annotation -->
-  <text x="400" y="235" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#166534" font-style="italic">Cache: d_c per token</text>
-  <text x="400" y="250" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">(d_c &lt;&lt; 2 x n_h x d_h)</text>
-
-  <!-- Arrows to up-projections -->
-  <line x1="370" y1="210" x2="340" y2="275" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-  <line x1="430" y1="210" x2="460" y2="275" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-
-  <!-- Up-projections -->
-  <rect x="280" y="277" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="335" y="297" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">W_UK (expand)</text>
-
-  <rect x="405" y="277" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="460" y="297" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">W_UV (expand)</text>
-
-  <!-- Arrows to full K, V -->
-  <line x1="335" y1="309" x2="335" y2="340" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-  <line x1="460" y1="309" x2="460" y2="340" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowMLA)"/>
-
-  <!-- Reconstructed K and V -->
-  <rect x="280" y="342" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="335" y="362" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">K: n_h x d_h</text>
-
-  <rect x="405" y="342" width="110" height="32" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadowMLA)"/>
-  <text x="460" y="362" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#1e40af">V: n_h x d_h</text>
-
-  <text x="400" y="400" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555" font-style="italic">Reconstructed on-the-fly</text>
-  <text x="400" y="415" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555" font-style="italic">(not cached)</text>
-</svg>
-
-<p>
-The mechanism has three steps:
-</p>
-
-<p>
-<strong>Step 1: Down-project into latent space.</strong> The hidden state $\mathbf{h}_t$ is projected into a compressed latent vector:
-</p>
+<p>Instead of caching full $K$ and $V$ matrices, MLA caches a single compressed vector $c_t$ per token:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 1: KV Compression</span>
-    $$\mathbf{c}_t^{KV} = W^{DKV} \mathbf{h}_t$$
+    <span class="eq-label">KV Compression</span>
+    $$c_t^{KV} = W^{DKV} h_t$$
 </div>
 
-<p>Where $W^{DKV} \in \mathbb{R}^{d_c \times d}$ is the down-projection matrix and $d_c \ll n_h \cdot d_h$. For DeepSeek-V2, $d_c = 512$ while $n_h \cdot d_h = 128 \times 128 = 16{,}384$. That is a 32x compression. Only $\mathbf{c}_t^{KV}$ is cached per token.</p>
-
-<p>
-<strong>Step 2: Up-project to recover keys and values.</strong> During attention computation, the latent vector is expanded back:
-</p>
+<p>where $W^{DKV} \in \mathbb{R}^{d_c \times d}$ projects the hidden state $h_t$ (dimension $d$) down to a compressed representation $c_t^{KV}$ (dimension $d_c$, typically $d_c \ll n_h \cdot d_h$). At attention time, keys and values are reconstructed:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 2: KV Reconstruction</span>
-    $$\mathbf{k}_t^C = W^{UK} \mathbf{c}_t^{KV}, \quad \mathbf{v}_t^C = W^{UV} \mathbf{c}_t^{KV}$$
+    <span class="eq-label">KV Reconstruction</span>
+    $$k_t = W^{UK} c_t^{KV}, \quad v_t = W^{UV} c_t^{KV}$$
 </div>
 
-<p>Where $W^{UK}$ and $W^{UV}$ are up-projection matrices that recover the full $n_h \times d_h$ dimensional keys and values. These matrices are part of the model weights (not cached per token).</p>
+<p>$W^{UK}$ and $W^{UV}$ are up-projection matrices that reconstruct the full key and value vectors from the compressed cache. The critical insight: you only cache $c_t^{KV}$, not the full keys and values.</p>
 
-<p>
-<strong>Step 3: Compute attention normally.</strong> Once keys and values are reconstructed, standard multi-head attention proceeds as usual.
-</p>
-
-<div class="note-box">
-    <p><strong>Intuition:</strong> MLA is like compressing a high-resolution image into a small thumbnail for storage, then upscaling it when you need to display it. The "thumbnail" ($\mathbf{c}_t^{KV}$) is cheap to cache because it is small. The "upscaling" ($W^{UK}$, $W^{UV}$) happens on-the-fly using fixed model weights. The compression is learned during training, so the model discovers which aspects of keys and values are worth preserving.</p>
+<div class="note">
+    <p><strong>Intuition:</strong> Think of MLA as JPEG compression for the KV cache. The full keys and values have redundancy across heads. MLA exploits this by storing a compressed version and reconstructing on the fly. With $d_c = 512$ vs. the original $n_h \cdot d_h = 16{,}384$, you get a 93% reduction in cache memory.</p>
 </div>
 
-<h3>The RoPE Complication</h3>
+<h3>Decoupled RoPE</h3>
 
-<p>
-MLA's compression enables an important inference trick. Notice that the attention score between a query $\mathbf{q}$ and a reconstructed key is:
-</p>
-
-$$\mathbf{q}^T \left(W^{UK}\, \mathbf{c}_t^{KV}\right) = \left(W^{UK^T}\, \mathbf{q}\right)^T \mathbf{c}_t^{KV}$$
-
-<p>
-You can fold the up-projection $W^{UK}$ into the query side. This means during inference you never actually expand the cached latent vectors back to full dimension. You transform the query once, then dot-product it directly with the small cached $\mathbf{c}_t^{KV}$. This is what makes MLA fast at decode time.
-</p>
-
-<p>
-But Rotary Position Embeddings (RoPE) break this trick. RoPE applies a position-dependent rotation $R_{\text{pos}}$ to keys after projection:
-</p>
-
-$$\mathbf{q}^T R_{\text{pos}}\left(W^{UK}\, \mathbf{c}_t^{KV}\right)$$
-
-<p>
-Now $R_{\text{pos}}$ sits between $W^{UK}$ and $\mathbf{c}_t^{KV}$, and since $R_{\text{pos}}$ is different for every token position, you can no longer fold $W^{UK}$ to the query side. You would have to expand every cached latent vector to full dimension just to apply the rotation, which defeats the purpose of caching the compressed form.
-</p>
-
-<p>
-MLA solves this with <strong>decoupled RoPE</strong>: do not apply RoPE to the compressed keys at all. Instead, create a separate small key vector whose only job is to carry positional information:
-</p>
+<p>There is a subtlety. Rotary Position Embeddings (RoPE) are applied to keys to encode position information, but RoPE is position-dependent, so it cannot be absorbed into the low-rank compression. MLA handles this by <strong>decoupling</strong> the positional component:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 3: Decoupled RoPE</span>
-    $$\mathbf{k}_t^R = \text{RoPE}\left(W^{KR} \mathbf{h}_t\right), \quad \mathbf{k}_t = \left[\mathbf{k}_t^C \;;\; \mathbf{k}_t^R\right]$$
+    <span class="eq-label">Decoupled Position</span>
+    $$k_t = [k_t^C;\; k_t^R], \quad \text{where } k_t^R = \text{RoPE}(W^{KR} h_t)$$
 </div>
 
-<p>Where $\mathbf{k}_t^R \in \mathbb{R}^{d_h^R}$ is a small RoPE-carrying key (dimension $d_h^R = 64$ in DeepSeek-V2), and $[\cdot\;;\;\cdot]$ denotes concatenation. The content part $\mathbf{k}_t^C$ (from the latent) stays RoPE-free, so the absorption trick still works. The position part $\mathbf{k}_t^R$ is small and shared across all heads (like MQA).</p>
+<p>The content key $k_t^C$ comes from the compressed cache. The positional key $k_t^R$ is a small separate vector (dimension $d_R$, typically 64) that carries the RoPE encoding. Only $k_t^R$ needs to be cached alongside $c_t^{KV}$, adding minimal overhead.</p>
 
-<p>
-The total cache per token per layer becomes $d_c + d_h^R = 512 + 64 = 576$ values: the latent for content, plus the small RoPE key for position. This is equivalent to GQA with only ~2.25 groups, but with full MHA expressiveness.
-</p>
-
-<div class="note-box">
-    <p><strong>Intuition:</strong> MLA splits the key into two jobs. The "what is this token about?" part (content) lives in the compressed latent and never touches RoPE, so it can stay small during inference. The "where is this token?" part (position) gets its own tiny vector that carries RoPE. By separating content and position, MLA keeps both the compression trick and positional awareness.</p>
-</div>
-
-<h3>Why This Matters for DSA</h3>
-
-<p>
-MLA's design has a property that DSA exploits directly: because all heads share the same latent vector $\mathbf{c}_t^{KV}$, selecting which tokens to attend to is a per-token decision, not a per-head decision. When DSA's indexer picks the top-$k$ latent vectors, those selections serve all query heads simultaneously. This is far more efficient than sparse attention over standard MHA, where each head might want different tokens.
-</p>
+<h3>Comparison with Alternatives</h3>
 
 <table>
     <thead>
-        <tr>
-            <th>Method</th>
-            <th>KV Cache per Token per Layer</th>
-            <th>Expressiveness</th>
-        </tr>
+        <tr><th>Method</th><th>KV Cache per Token</th><th>Quality vs. MHA</th><th>Mechanism</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>MHA (standard)</td><td>$2 n_h d_h$</td><td>Baseline</td><td>Full cache per head</td></tr>
+        <tr><td>GQA</td><td>$2 n_g d_h$</td><td>Slight degradation</td><td>Share KV across head groups</td></tr>
+        <tr><td>MQA</td><td>$2 d_h$</td><td>Notable degradation</td><td>Single KV for all heads</td></tr>
+        <tr><td><strong>MLA</strong></td><td>$d_c + d_R$</td><td>Matches or exceeds MHA</td><td>Low-rank compression + decoupled RoPE</td></tr>
+    </tbody>
+</table>
+
+<p>MLA achieves better compression than MQA while matching or exceeding the quality of full MHA. The key advantage over GQA/MQA: instead of reducing the <em>number</em> of heads, MLA reduces the <em>dimensionality</em> of the cached representation, preserving expressiveness.</p>
+
+
+<!-- ============================================================ -->
+<h2 id="moe">3. DeepSeekMoE</h2>
+
+<p>A standard transformer's feed-forward network (FFN) activates all parameters for every token. This is wasteful: a token about Python syntax does not need the same parameters as a token about organic chemistry. <strong>Mixture-of-Experts (MoE)</strong> replaces the dense FFN with many small expert networks and a router that selects which ones to activate per token.</p>
+
+<h3>Architecture</h3>
+
+<p>DeepSeekMoE uses two types of experts:</p>
+
+<ul>
+    <li><strong>Shared experts</strong> (typically 2): Always activated for every token. These handle common, cross-domain patterns.</li>
+    <li><strong>Routed experts</strong> (up to 256): A gating network selects the top-$k$ (typically $k = 8$) most relevant experts per token.</li>
+</ul>
+
+<p>The FFN output for a token $x$ is:</p>
+
+<div class="equation-block">
+    <span class="eq-label">MoE Output</span>
+    $$\text{FFN}(x) = \sum_{i=1}^{N_s} \text{Expert}_i^{(s)}(x) + \sum_{j \in \text{TopK}} g_j \cdot \text{Expert}_j^{(r)}(x)$$
+</div>
+
+<p>where $g_j$ are the gating weights from a softmax over router logits, and TopK selects the $k$ experts with the highest gate values. Each expert is a small FFN (typically SwiGLU) with its own weights.</p>
+
+<h3>Load Balancing Without Auxiliary Loss</h3>
+
+<p>A common problem with MoE: some experts get selected far more than others, leading to imbalanced computation. Most MoE systems (GShard, Switch Transformer) add an <strong>auxiliary balance loss</strong> to the training objective that penalizes uneven expert utilization. This works, but it creates a fundamental tension: the auxiliary loss pushes the router toward uniform distribution, while the language modeling loss pushes it toward selecting the best experts. The two gradients fight each other, and model quality suffers.</p>
+
+<p>DeepSeek's solution is a <strong>loss-free load balancing</strong> strategy that separates the routing decision from the gradient signal entirely. Here is how it works:</p>
+
+<p>The standard router computes a score for each expert $i$ given token $x$:</p>
+
+<div class="equation-block">
+    <span class="eq-label">Router Score</span>
+    $$s_i = W_r^{(i)} \cdot h_x$$
+</div>
+
+<p>where $W_r^{(i)}$ is the router weight for expert $i$ and $h_x$ is the token's hidden state. Normally, TopK selection and gating weights both come from these scores. DeepSeek adds a <strong>bias term</strong> $b_i$ to each expert's score, but only for the TopK selection step:</p>
+
+<div class="equation-block">
+    <span class="eq-label">Biased Selection</span>
+    $$\text{TopK selection uses: } s_i + b_i \quad \text{(biased)}$$
+    $$\text{Gating weights use: } g_j = \frac{e^{s_j}}{\sum_{j' \in \text{TopK}} e^{s_{j'}}} \quad \text{(unbiased)}$$
+</div>
+
+<p>The bias $b_i$ is not a learned parameter. It is adjusted by a simple heuristic after each training step:</p>
+
+<ul>
+    <li>If expert $i$ is handling more tokens than average, decrease $b_i$ by a small step $\gamma$ (making it less likely to be selected).</li>
+    <li>If expert $i$ is handling fewer tokens than average, increase $b_i$ by $\gamma$ (making it more likely to be selected).</li>
+</ul>
+
+<p>The critical detail: $b_i$ shifts which experts get selected, but the actual gating weights $g_j$ (which determine how much each expert's output contributes) are computed from the original unbiased scores. This means the balance adjustment never introduces gradient noise into the model's learning signal.</p>
+
+<p><strong>Concrete example.</strong> Suppose you have 4 experts with router scores $s = [2.0,\; 1.5,\; 0.3,\; 0.1]$ and TopK = 2. Without any balancing, experts 1 and 2 are selected, and the gating weights are $g_1 = e^{2.0}/(e^{2.0} + e^{1.5}) \approx 0.62$ and $g_2 \approx 0.38$. Now suppose expert 2 is overloaded and acquires a bias of $b_2 = -1.5$, while underloaded expert 3 gets $b_3 = +1.0$. The biased selection scores become $[2.0,\; 0.0,\; 1.3,\; 0.1]$, so TopK now picks experts 1 and 3. But the gating weights are computed from the <em>original</em> scores of the selected pair: $g_1 = e^{2.0}/(e^{2.0} + e^{0.3}) \approx 0.85$ and $g_3 \approx 0.15$. Expert 3 got into the room because of the bias, but its low original score means it contributes only 15% of the output. The model still weights experts by true relevance.</p>
+
+<div class="note">
+    <p><strong>Intuition:</strong> Think of it as two separate decisions. First: "which experts should this token visit?" (influenced by the bias). Second: "how much should I weight each expert's answer?" (unbiased, purely based on relevance). The bias is like a bouncer redirecting people to shorter queues at a club, but once you are inside, the DJ plays the same music regardless of how you got in. The model's loss function never sees the bias term, so its gradients are clean.</p>
+</div>
+
+<h3>Scale</h3>
+
+<p>In DeepSeek-V3, this means 671B total parameters but only ~37B activated per token. You get the capacity of a 671B model at roughly the inference cost of a 37B dense model.</p>
+
+
+<!-- ============================================================ -->
+<h2 id="dsa">4. DeepSeek Sparse Attention (DSA)</h2>
+
+<p>Standard attention is $O(n^2)$ in sequence length. At 128K tokens, this is the dominant cost. DeepSeek Sparse Attention reduces this to near-linear by selecting only the most relevant tokens for each query to attend to.</p>
+
+<h3>The Core Idea</h3>
+
+<p>DSA operates in two stages:</p>
+
+<ol class="steps">
+    <li>
+        <strong>Lightning Indexer:</strong> A lightweight scoring function quickly estimates the relevance of every token in the context. It uses the compressed latent representations from MLA (which are already cached), so this step adds minimal overhead.
+    </li>
+    <li>
+        <strong>Selective Attention:</strong> Each query attends only to the top-$B$ tokens (where $B$ is a fixed budget, e.g., 4096) identified by the indexer, plus local sliding-window tokens for nearby context.
+    </li>
+</ol>
+
+<p>The attention computation for query at position $t$:</p>
+
+<div class="equation-block">
+    <span class="eq-label">Sparse Attention</span>
+    $$\text{Attn}(q_t) = \text{softmax}\!\left(\frac{q_t K_{\mathcal{S}_t}^\top}{\sqrt{d}}\right) V_{\mathcal{S}_t}$$
+</div>
+
+<p>where $\mathcal{S}_t = \text{TopB}(\text{score}(q_t, c_1, \ldots, c_{t-1})) \cup \text{Window}(t)$ is the union of the top-$B$ globally relevant tokens and the local window.</p>
+
+<div class="note">
+    <p><strong>Intuition:</strong> Instead of every token attending to every other token (quadratic), DSA first does a cheap scan to find which tokens matter, then only computes full attention on those. It is like reading a book: you do not re-read every page when answering a question, you scan the table of contents, flip to the relevant sections, and read those carefully.</p>
+</div>
+
+<h3>Why It Works with MLA</h3>
+
+<p>The lightning indexer reuses the compressed representations $c_t^{KV}$ from MLA. Since these are already stored in the KV cache, the indexer does not need to recompute or store anything extra. The scoring function is a simple dot product in the compressed space, making it extremely fast.</p>
+
+<div class="warning">
+    <p><strong>Key limitation:</strong> DSA requires the model to be trained with sparse attention from the start (or at least fine-tuned with it). You cannot simply drop DSA into a pre-trained dense-attention model and expect it to work; the model needs to learn which tokens are worth selecting.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="rl">5. Scalable Reinforcement Learning</h2>
+
+<p>After pre-training, DeepSeek uses reinforcement learning to improve reasoning, tool use, and safety. The core algorithm is <strong>Group Relative Policy Optimization (GRPO)</strong>, which avoids the need for a separate value model (unlike PPO).</p>
+
+<h3>GRPO</h3>
+
+<p>For a given prompt $q$, GRPO samples a group of $G$ responses $\{o_1, \ldots, o_G\}$ from the current policy. Each response is scored by a reward function $r(o_i)$. The advantage is computed relative to the group:</p>
+
+<div class="equation-block">
+    <span class="eq-label">Group Advantage</span>
+    $$\hat{A}_i = \frac{r(o_i) - \text{mean}(\{r(o_j)\})}{\text{std}(\{r(o_j)\})}$$
+</div>
+
+<p>The policy gradient loss clips the ratio (like PPO) and includes a KL penalty against the reference policy $\pi_{\text{ref}}$:</p>
+
+<div class="equation-block">
+    <span class="eq-label">GRPO Objective</span>
+    $$\mathcal{L}_{\text{GRPO}} = -\mathbb{E}\!\left[\min\!\left(\frac{\pi_\theta}{\pi_{\text{old}}} \hat{A},\; \text{clip}\!\left(\frac{\pi_\theta}{\pi_{\text{old}}}, 1\!\pm\!\epsilon\right) \hat{A}\right) - \beta\, D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})\right]$$
+</div>
+
+<p>where $\pi_\theta / \pi_{\text{old}}$ is the importance sampling ratio, $\epsilon$ is the clipping range, and $\beta$ controls the KL penalty strength.</p>
+
+<div class="note">
+    <p><strong>Intuition:</strong> GRPO skips the value model entirely. Instead of estimating "how good is this state?" with a learned critic, it just compares each response to its siblings in the same group. If your response scored 0.8 and the group average was 0.5 with std 0.2, your advantage is $(0.8 - 0.5)/0.2 = 1.5$. Simple, stable, and cheap.</p>
+</div>
+
+<h3>Stability Fixes</h3>
+
+<p>Scaling GRPO to large models and diverse reward signals revealed several instabilities. DeepSeek-V3 introduced four fixes:</p>
+
+<table>
+    <thead>
+        <tr><th>Problem</th><th>Fix</th><th>Mechanism</th></tr>
     </thead>
     <tbody>
         <tr>
-            <td>MHA</td>
-            <td>$2 \cdot n_h \cdot d_h$ (full)</td>
-            <td>Full (independent heads)</td>
+            <td>KL divergence biased upward</td>
+            <td>Unbiased KL estimator</td>
+            <td>Use $r - 1 - \log r$ instead of $r \log r$, where $r = \pi_\theta / \pi_{\text{ref}}$</td>
         </tr>
         <tr>
-            <td>GQA (g groups)</td>
-            <td>$2 \cdot g \cdot d_h$</td>
-            <td>Reduced (shared within groups)</td>
+            <td>Stale data from replay buffer</td>
+            <td>Off-policy masking</td>
+            <td>Discard tokens where $|\pi_\theta / \pi_{\text{old}} - 1| > \delta$</td>
         </tr>
         <tr>
-            <td>MQA</td>
-            <td>$2 \cdot d_h$</td>
-            <td>Lowest (single KV head)</td>
+            <td>Expert collapse during RL</td>
+            <td>Keep routing</td>
+            <td>Freeze router weights, only update expert FFN parameters</td>
         </tr>
         <tr>
-            <td>MLA</td>
-            <td>$d_c + d_h^R$ (e.g., 576)</td>
-            <td>Full (learned compression)</td>
+            <td>Reward hacking via length</td>
+            <td>Keep sampling mask</td>
+            <td>Continue sampling past EOS to compute accurate per-token KL</td>
         </tr>
     </tbody>
 </table>
 
-<!-- ───────────────────────── DSA ───────────────────────── -->
-<h2 id="dsa">DeepSeek Sparse Attention (DSA)</h2>
+<h3>Unified Training Pipeline</h3>
 
-<h3>The Problem with Full Attention</h3>
+<p>Rather than separate RL stages for reasoning, tool use, and safety, DeepSeek runs a <strong>three-phase unified pipeline</strong>:</p>
 
-<p>
-Standard attention computes a score between every query token and every key token. For a sequence of length $L$, that is $O(L^2)$ operations. At 128k context length, this becomes the dominant bottleneck for both prefilling (processing the prompt) and decoding (generating tokens).
-</p>
+<ol class="steps">
+    <li>
+        <strong>Specialist Training:</strong> Train domain-specific expert policies (math, code, agents) using verifiable rewards. Math uses answer correctness; code uses test-case pass rates; agents use task completion signals.
+    </li>
+    <li>
+        <strong>Distillation:</strong> Distill the specialist policies into a single generalist model using KL-divergence minimization against each specialist's output distribution.
+    </li>
+    <li>
+        <strong>Unified RL:</strong> Run GRPO on the distilled model with a mixed reward signal combining all domains: correctness rewards for reasoning, execution rewards for code, task rewards for agents, and a safety classifier.
+    </li>
+</ol>
 
-<p>
-The core observation: most attention weight is concentrated on a small subset of tokens. If you could identify the important tokens cheaply, you could skip computing attention over the rest.
-</p>
+<p>The unified stage uses domain-specific reward functions applied to a shared prompt pool. Each batch contains prompts from all domains, and the model receives the appropriate reward signal for each.</p>
 
-<h3>The Two-Stage Design</h3>
+<h3>Agentic Task Synthesis</h3>
 
-<p>
-DSA has two components: a <strong>lightning indexer</strong> that cheaply identifies which tokens matter, and a <strong>fine-grained token selector</strong> that runs standard attention only on those tokens.
-</p>
+<p>For tool-use training, DeepSeek generates synthetic multi-step tasks. The synthesis pipeline produces over 85,000 tasks spanning web browsing, file operations, API calls, and multi-tool composition. Each task comes with a programmatic verifier that checks whether the agent's execution trace achieves the intended outcome.</p>
 
-<svg viewBox="0 0 520 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:2em auto;">
+
+<!-- ============================================================ -->
+<h2 id="engram">6. Engram: Conditional Memory</h2>
+
+<p>This is the most recent innovation, introduced in <a href="https://arxiv.org/abs/2601.07372" target="_blank" rel="noopener">"Conditional Memory via Scalable Lookup" (Cheng et al., Jan 2026)</a>. The core insight: transformers waste depth on static pattern retrieval (named entities, idiomatic phrases, factual associations) that could be handled by direct lookup.</p>
+
+<h3>The Problem</h3>
+
+<p>Consider what happens when a model encounters "Alexander the". A standard transformer must propagate this through multiple attention and FFN layers to "compute" that the next likely token is "Great". But this is not reasoning; it is memorized factual recall. The model is using expensive conditional computation to simulate what should be a cheap table lookup.</p>
+
+<p>Engram adds a dedicated <strong>conditional memory module</strong> that retrieves static embeddings via hash-based lookup in O(1) time, freeing the transformer's depth for genuine reasoning.</p>
+
+<h3>Architecture</h3>
+
+<p>Engram operates in two phases. Here is what happens concretely when the model processes the sequence "... the great ruler Alexander the ___":</p>
+
+<div class="diagram-container">
+<svg viewBox="0 0 500 690" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
   <defs>
-    <filter id="shadow2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
-    <marker id="arrowhead2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2563eb"/>
-    </marker>
-    <marker id="arrowgreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#16a34a"/>
-    </marker>
+    <filter id="sh2"><feDropShadow dx="0" dy="1" stdDeviation="2.5" flood-opacity="0.07"/></filter>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10z" fill="#aaa"/></marker>
+    <marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10z" fill="#16a34a"/></marker>
+    <marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10z" fill="#dc2626"/></marker>
   </defs>
 
-  <!-- Query token -->
-  <rect x="200" y="10" width="120" height="36" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
-  <text x="260" y="33" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#1e40af">Query token $h_t$</text>
+  <!-- ============================================ -->
+  <!--  SECTION 1: Input tokens                     -->
+  <!-- ============================================ -->
 
-  <!-- Arrow to indexer -->
-  <line x1="260" y1="46" x2="260" y2="78" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead2)"/>
+  <!-- Context tokens (faded) -->
+  <rect x="40" y="30" width="40" height="30" rx="6" fill="#f9fafb" stroke="#ddd"/>
+  <text x="60" y="50" text-anchor="middle" font-size="11" fill="#bbb">...</text>
+  <rect x="88" y="30" width="52" height="30" rx="6" fill="#f9fafb" stroke="#ddd"/>
+  <text x="114" y="50" text-anchor="middle" font-size="11" fill="#888">ruler</text>
 
-  <!-- Lightning Indexer -->
-  <rect x="100" y="80" width="320" height="90" rx="8" fill="#fff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
-  <text x="260" y="103" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#1e40af">Lightning Indexer</text>
-  <text x="260" y="123" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#555">Computes cheap relevance scores for all L tokens</text>
-  <text x="260" y="143" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#555">FP8, few heads, ReLU activation</text>
-  <text x="260" y="160" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#999">Complexity: O(L) per query (lightweight)</text>
+  <!-- Key tokens (highlighted) -->
+  <rect x="152" y="30" width="95" height="30" rx="6" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5"/>
+  <text x="199" y="50" text-anchor="middle" font-size="11" fill="#4c3a8a" font-weight="bold">Alexander</text>
+  <rect x="255" y="30" width="46" height="30" rx="6" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5"/>
+  <text x="278" y="50" text-anchor="middle" font-size="11" fill="#4c3a8a" font-weight="bold">the</text>
 
-  <!-- Arrow to top-k -->
-  <line x1="260" y1="170" x2="260" y2="202" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead2)"/>
+  <!-- Prediction target -->
+  <rect x="309" y="30" width="46" height="30" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="332" y="50" text-anchor="middle" font-size="11" fill="#1e40af" font-weight="bold">???</text>
 
-  <!-- Top-k Selection -->
-  <rect x="140" y="204" width="240" height="44" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow2)"/>
-  <text x="260" y="222" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#333">Top-k Selection</text>
-  <text x="260" y="238" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Select k=2048 highest-scoring KV tokens</text>
+  <!-- Bracket under bigram -->
+  <path d="M 156 64 L 156 72 L 297 72 L 297 64" fill="none" stroke="#7c5cbf" stroke-width="1"/>
+  <line x1="226" y1="72" x2="226" y2="84" stroke="#7c5cbf" stroke-width="1"/>
+  <text x="226" y="97" text-anchor="middle" font-size="10" fill="#4c3a8a" font-style="italic">bigram: ("alexander", "the")</text>
 
-  <!-- Arrows from top-k: selected tokens -->
-  <line x1="260" y1="248" x2="260" y2="285" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowgreen)"/>
+  <!-- ============================================ -->
+  <!--  SECTION 2: Hash + Embedding Table           -->
+  <!-- ============================================ -->
 
-  <!-- Full MLA Attention (only on selected) -->
-  <rect x="100" y="287" width="320" height="70" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow2)"/>
-  <text x="260" y="312" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="#166534">Standard MLA Attention</text>
-  <text x="260" y="332" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#555">Full-precision attention on k selected tokens only</text>
-  <text x="260" y="348" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#999">Complexity: O(k) per query, where k &lt;&lt; L</text>
+  <text x="42" y="128" font-size="11" fill="#666" font-weight="bold">Phase 1</text>
+  <text x="42" y="142" font-size="10" fill="#999">Retrieval</text>
 
-  <!-- Arrow to output -->
-  <line x1="260" y1="357" x2="260" y2="389" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowgreen)"/>
+  <!-- Arrow into hash -->
+  <line x1="226" y1="100" x2="226" y2="125" stroke="#aaa" marker-end="url(#a2)"/>
 
-  <!-- Output -->
-  <rect x="190" y="391" width="140" height="36" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
-  <text x="260" y="414" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#1e40af">Output $u_t$</text>
+  <!-- Hash function box -->
+  <rect x="100" y="130" width="252" height="40" rx="10" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="226" y="155" text-anchor="middle" font-size="12" fill="#4c3a8a" font-weight="bold">8 Independent Hash Functions</text>
 
-  <!-- Side annotation: L tokens -->
-  <rect x="440" y="95" width="68" height="55" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
-  <text x="474" y="113" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">All L</text>
-  <text x="474" y="126" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">tokens</text>
-  <text x="474" y="143" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#999">(cheap)</text>
+  <!-- 8 small arrows fanning down into table -->
+  <line x1="130" y1="170" x2="110" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="155" y1="170" x2="145" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="185" y1="170" x2="183" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="210" y1="170" x2="210" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="240" y1="170" x2="240" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="265" y1="170" x2="268" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="295" y1="170" x2="306" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <line x1="320" y1="170" x2="340" y2="195" stroke="#c4b5e0" stroke-width="1"/>
+  <text x="390" y="188" font-size="9" fill="#999" font-style="italic">8 indices</text>
 
-  <rect x="440" y="297" width="68" height="50" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
-  <text x="474" y="315" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#166534">Only k</text>
-  <text x="474" y="328" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#166534">tokens</text>
-  <text x="474" y="341" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#999">(full)</text>
+  <!-- ===== Embedding Table ===== -->
+  <rect x="68" y="200" width="315" height="140" rx="10" fill="#fff" stroke="#d0d0d0" filter="url(#sh2)"/>
+
+  <!-- Table label -->
+  <text x="226" y="220" text-anchor="middle" font-size="11" fill="#666" font-weight="bold">Embedding Table</text>
+  <text x="226" y="234" text-anchor="middle" font-size="9" fill="#aaa">2.3 million rows, 80 dimensions each</text>
+
+  <!-- Row visualization: horizontal bars, most gray, some blue -->
+  <!-- Gray rows -->
+  <rect x="88" y="246" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <rect x="88" y="255" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <!-- Retrieved -->
+  <rect x="88" y="264" width="275" height="5" rx="2.5" fill="#bfdbfe" stroke="#60a5fa" stroke-width="0.5"/>
+  <!-- Gray -->
+  <rect x="88" y="273" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <rect x="88" y="282" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <rect x="88" y="291" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <!-- Retrieved -->
+  <rect x="88" y="300" width="275" height="5" rx="2.5" fill="#bfdbfe" stroke="#60a5fa" stroke-width="0.5"/>
+  <!-- Gray -->
+  <rect x="88" y="309" width="275" height="5" rx="2.5" fill="#ececec"/>
+  <!-- Retrieved -->
+  <rect x="88" y="318" width="275" height="5" rx="2.5" fill="#bfdbfe" stroke="#60a5fa" stroke-width="0.5"/>
+  <!-- Gray -->
+  <rect x="88" y="327" width="275" height="5" rx="2.5" fill="#ececec"/>
+
+  <!-- "retrieved" annotation -->
+  <text x="398" y="270" font-size="8" fill="#60a5fa">retrieved</text>
+  <line x1="363" y1="266" x2="391" y2="266" stroke="#60a5fa" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="398" y="306" font-size="8" fill="#60a5fa">retrieved</text>
+  <line x1="363" y1="302" x2="391" y2="302" stroke="#60a5fa" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="398" y="324" font-size="8" fill="#60a5fa">retrieved</text>
+  <line x1="363" y1="320" x2="391" y2="320" stroke="#60a5fa" stroke-width="0.5" stroke-dasharray="2,2"/>
+
+  <!-- Arrow out of table -->
+  <line x1="226" y1="340" x2="226" y2="365" stroke="#aaa" marker-end="url(#a2)"/>
+  <text x="260" y="358" font-size="9" fill="#999" font-style="italic">concatenate</text>
+
+  <!-- Retrieved Embedding result bar -->
+  <rect x="88" y="370" width="275" height="36" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="226" y="393" text-anchor="middle" font-size="12" fill="#1e40af" font-weight="bold">Retrieved Embedding</text>
+  <text x="398" y="385" font-size="9" fill="#999" font-style="italic">1,280 dims</text>
+  <text x="398" y="397" font-size="9" fill="#999" font-style="italic">(8 heads x 2 n-grams x 80)</text>
+
+  <!-- ============================================ -->
+  <!--  SECTION 3: Context-Aware Gate               -->
+  <!-- ============================================ -->
+
+  <text x="42" y="435" font-size="11" fill="#666" font-weight="bold">Phase 2</text>
+  <text x="42" y="449" font-size="10" fill="#999">Gating</text>
+
+  <!-- Retrieved flows down-left into gate -->
+  <line x1="180" y1="406" x2="180" y2="462" stroke="#aaa" marker-end="url(#a2)"/>
+
+  <!-- Hidden state box enters from right -->
+  <rect x="290" y="420" width="155" height="38" rx="8" fill="#f9fafb" stroke="#ccc" filter="url(#sh2)"/>
+  <text x="367" y="436" text-anchor="middle" font-size="10" fill="#555" font-weight="bold">Hidden State</text>
+  <text x="367" y="449" text-anchor="middle" font-size="9" fill="#aaa">from attention layers</text>
+
+  <!-- Arrow from hidden state to gate -->
+  <line x1="330" y1="458" x2="280" y2="478" stroke="#aaa" marker-end="url(#a2)"/>
+
+  <!-- Gate: rounded pill -->
+  <rect x="130" y="467" width="170" height="32" rx="16" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="215" y="488" text-anchor="middle" font-size="11" fill="#4c3a8a" font-weight="bold">sigmoid( similarity )</text>
+
+  <!-- Fork: two branches -->
+  <line x1="175" y1="499" x2="120" y2="535" stroke="#16a34a" stroke-width="1.5" marker-end="url(#aG)"/>
+  <line x1="255" y1="499" x2="345" y2="535" stroke="#dc2626" stroke-width="1.5" marker-end="url(#aR)"/>
+
+  <!-- ===== Scenario A: Context aligns (green) ===== -->
+  <rect x="15" y="540" width="220" height="105" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="125" y="561" text-anchor="middle" font-size="10" fill="#166534" font-weight="bold">"... great ruler Alexander the __"</text>
+  <text x="125" y="578" text-anchor="middle" font-size="10" fill="#166534">Context aligns with memory</text>
+
+  <!-- Progress bar: 90% filled -->
+  <rect x="35" y="592" width="180" height="10" rx="5" fill="#e5e7eb"/>
+  <rect x="35" y="592" width="162" height="10" rx="5" fill="#4ade80"/>
+  <text x="35" y="622" font-size="12" fill="#166534" font-weight="bold">gate = 0.9</text>
+  <text x="130" y="622" font-size="10" fill="#166534">memory used strongly</text>
+
+  <!-- ===== Scenario B: Context disagrees (red) ===== -->
+  <rect x="265" y="540" width="220" height="105" rx="10" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5" filter="url(#sh2)"/>
+  <text x="375" y="561" text-anchor="middle" font-size="10" fill="#991b1b" font-weight="bold">"... call Alexander the plumber __"</text>
+  <text x="375" y="578" text-anchor="middle" font-size="10" fill="#991b1b">Context disagrees with memory</text>
+
+  <!-- Progress bar: 10% filled -->
+  <rect x="285" y="592" width="180" height="10" rx="5" fill="#e5e7eb"/>
+  <rect x="285" y="592" width="18" height="10" rx="5" fill="#f87171"/>
+  <text x="285" y="622" font-size="12" fill="#991b1b" font-weight="bold">gate = 0.1</text>
+  <text x="380" y="622" font-size="10" fill="#991b1b">memory suppressed</text>
+
+  <!-- ===== Bottom annotation ===== -->
+  <text x="250" y="668" text-anchor="middle" font-size="10" fill="#aaa" font-style="italic">Same N-gram always retrieves the same embedding. The gate decides how much to use it.</text>
+  <text x="250" y="683" text-anchor="middle" font-size="10" fill="#aaa" font-style="italic">Gated output passes through a causal convolution, then adds to the residual stream.</text>
 </svg>
+</div>
 
-<h3>The Lightning Indexer</h3>
 
-<p>
-The indexer computes a relevance score between each query token $t$ and every preceding token $s$:
-</p>
+<h3>Phase 1: Retrieval</h3>
+
+<p>For each token position $t$, Engram extracts the preceding N-gram contexts (bigrams and trigrams). A <strong>tokenizer compression</strong> function first maps tokens to canonical IDs via NFKC normalization and lowercasing, reducing the effective vocabulary by 23%.</p>
+
+<p>Each N-gram is hashed using $K = 8$ independent hash heads per N-gram order, and the resulting indices look up rows from large embedding tables:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 4: Index Score</span>
-    $$I_{t,s} = \sum_{j=1}^{H^I} w_{t,j}^I \cdot \text{ReLU}\left(q_{t,j}^I \cdot k_s^I\right)$$
+    <span class="eq-label">Hash Lookup</span>
+    $$e_{t,n,k} = E_{n,k}[\phi_{n,k}(g_{t,n})], \quad e_t = \|_{n=2}^{N} \|_{k=1}^{K} e_{t,n,k}$$
 </div>
 
-<p>Where:</p>
-<ul>
-    <li>$H^I$ is the number of indexer heads (deliberately kept small)</li>
-    <li>$q_{t,j}^I$ and $k_s^I$ are lightweight projections of the query and key tokens</li>
-    <li>$w_{t,j}^I$ are per-head weights that combine scores across heads</li>
-    <li>ReLU is used instead of softmax for throughput (cheaper to compute on hardware)</li>
-</ul>
+<p>where $\phi_{n,k}$ is a deterministic hash function for N-gram order $n$ and head $k$, $E_{n,k}$ is the embedding table, and $\|$ denotes concatenation. The hash uses lightweight multiplicative-XOR operations: each token ID in the N-gram is multiplied by a large prime, the results are XOR'd together, and the final value is taken modulo the table size $M$ (itself a prime). For example, for head $k$ with primes $p_k$: $\phi_{2,k}(a, b) = (a \cdot p_k \oplus b \cdot p_k') \bmod M$. Different heads use different primes, so the same N-gram maps to different rows in each head's table.</p>
 
-<p>
-The indexer runs in FP8 precision. Even though it still scans all $L$ tokens (technically $O(L^2)$ across all queries), it uses far fewer heads and lower precision than full MLA attention. The compute cost is a fraction of standard attention.
-</p>
+<details class="example">
+<summary>Worked example: retrieving the embedding for "Alexander the"</summary>
+<div class="example-body">
 
-<div class="note-box">
-    <p><strong>Intuition:</strong> Think of the indexer as a fast, approximate "search engine" for each query. It does a cheap scan of the entire sequence to find which tokens are worth paying full attention to. The expensive, high-precision attention then runs only on the selected subset.</p>
+<p><em>Step 1: Extract N-grams.</em> The preceding tokens are compressed to canonical IDs (lowercased, normalized): "alexander" = ID 4821, "the" = ID 12. The bigram context is (4821, 12) and the trigram context includes the token before that, say (917, 4821, 12).</p>
+
+<p><em>Step 2: Hash each N-gram, multiple times.</em> Each N-gram is hashed with $K = 8$ independent hash functions. For the bigram (4821, 12), hash head 1 might compute $\phi_{2,1}(4821, 12) = 738{,}201$ and hash head 2 computes $\phi_{2,2}(4821, 12) = 1{,}402{,}557$, and so on for all 8 heads. The trigram is hashed the same way with its own 8 hash functions. That is 16 hash lookups total (8 for bigrams + 8 for trigrams).</p>
+
+<p><em>Step 3: Retrieve embeddings.</em> Each hash index pulls one row from its embedding table. If each row has dimension $d_{\text{mem}} / (N \cdot K)$, say 80 dimensions, then the 16 retrieved vectors are concatenated into a single vector $e_t$ of dimension $16 \times 80 = 1{,}280$. This is the complete retrieved embedding for this position.</p>
+
+<p>The whole process is deterministic: the same N-gram always retrieves the same embeddings. During training, backpropagation updates only the 16 retrieved rows (out of millions), making gradient updates sparse and efficient. The multiple hash heads serve a purpose similar to multiple attention heads: they give the model several independent "views" of each N-gram pattern, reducing the impact of hash collisions.</p>
+
 </div>
+</details>
 
-<h3>Fine-Grained Token Selection</h3>
+<h3>Phase 2: Fusion</h3>
 
-<p>
-Once the indexer assigns scores, the system selects the top-$k$ tokens and runs full MLA attention only on those:
-</p>
+<p>The retrieved embedding $e_t$ is a <strong>context-independent prior</strong>: it only depends on the preceding N-gram, not on the broader sentence. The phrase "Alexander the" always retrieves the same embedding, whether it appears in "Alexander the Great conquered Persia" or "Alexander the plumber fixed my sink". The fusion phase makes this prior context-dependent.</p>
+
+<p>The current hidden state $h_t$ (which has already been through attention and carries full-sentence context) acts as a query. The retrieved embedding is projected into a key and a value:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 5: Sparse Attention Output</span>
-    $$u_t = \text{Attn}\left(h_t, \{c_s \mid I_{t,s} \in \text{Top-}k(I_{t,:})\}\right)$$
+    <span class="eq-label">Gating</span>
+    $$\alpha_t = \sigma\!\left(\frac{\textbf{RMSNorm}(h_t)^\top \;\textbf{RMSNorm}(W_k e_t)}{\sqrt{d}}\right)$$
 </div>
 
-<p>Where:</p>
+<div class="eq-interactive" style="justify-content: flex-start; gap: 12px; padding: 0.5em 0 0.8em;">
+    <span style="font-size:12px; color:var(--muted);">Hover for details:</span>
+    <span class="eq-term" style="font-size:13px;">RMSNorm<span class="eq-tooltip">
+        <span class="eq-tooltip-title">RMSNorm (Root Mean Square Normalization)</span>
+        <svg viewBox="0 0 290 155" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif" style="width:100%">
+            <text x="145" y="15" text-anchor="middle" font-size="9" fill="#666" font-weight="bold">Before vs After RMSNorm</text>
+            <!-- Input vector: uniform cells, values inside -->
+            <text x="10" y="38" font-size="8" fill="#999">input</text>
+            <rect x="50" y="28" width="42" height="16" rx="3" fill="#fee2e2" stroke="#dc2626" stroke-width="0.8"/>
+            <text x="71" y="40" text-anchor="middle" font-size="8" fill="#991b1b">2.4</text>
+            <rect x="96" y="28" width="42" height="16" rx="3" fill="#fee2e2" stroke="#dc2626" stroke-width="0.8"/>
+            <text x="117" y="40" text-anchor="middle" font-size="8" fill="#991b1b">0.6</text>
+            <rect x="142" y="28" width="42" height="16" rx="3" fill="#fee2e2" stroke="#dc2626" stroke-width="0.8"/>
+            <text x="163" y="40" text-anchor="middle" font-size="8" fill="#991b1b">1.8</text>
+            <rect x="188" y="28" width="42" height="16" rx="3" fill="#fee2e2" stroke="#dc2626" stroke-width="0.8"/>
+            <text x="209" y="40" text-anchor="middle" font-size="8" fill="#991b1b">1.2</text>
+            <text x="245" y="32" font-size="7" fill="#999">RMS =</text>
+            <text x="245" y="42" font-size="7" fill="#999">1.70</text>
+            <!-- Arrow: divide by RMS -->
+            <text x="145" y="60" text-anchor="middle" font-size="8" fill="#aaa">divide each by 1.70</text>
+            <line x1="145" y1="63" x2="145" y2="74" stroke="#aaa" stroke-width="1"/>
+            <polygon points="141,74 149,74 145,79" fill="#aaa"/>
+            <!-- Output vector: same uniform cells, new values -->
+            <text x="10" y="93" font-size="8" fill="#999">output</text>
+            <rect x="50" y="83" width="42" height="16" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.8"/>
+            <text x="71" y="95" text-anchor="middle" font-size="8" fill="#166534">1.41</text>
+            <rect x="96" y="83" width="42" height="16" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.8"/>
+            <text x="117" y="95" text-anchor="middle" font-size="8" fill="#166534">0.35</text>
+            <rect x="142" y="83" width="42" height="16" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.8"/>
+            <text x="163" y="95" text-anchor="middle" font-size="8" fill="#166534">1.06</text>
+            <rect x="188" y="83" width="42" height="16" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="0.8"/>
+            <text x="209" y="95" text-anchor="middle" font-size="8" fill="#166534">0.71</text>
+            <text x="245" y="87" font-size="7" fill="#999">RMS =</text>
+            <text x="245" y="97" font-size="7" fill="#999">1.00</text>
+            <!-- Formula box -->
+            <rect x="30" y="115" width="230" height="30" rx="6" fill="#f9fafb" stroke="#ddd"/>
+            <text x="145" y="130" text-anchor="middle" font-size="9" fill="#555">RMS = sqrt( mean( x_i^2 ) ) = 1.70</text>
+            <text x="145" y="142" text-anchor="middle" font-size="9" fill="#555">output_i = x_i / 1.70</text>
+        </svg>
+        <span class="eq-tooltip-desc">Normalizes by dividing by root-mean-square: $\text{RMSNorm}(x)_i = x_i / \sqrt{\frac{1}{d}\sum_j x_j^2}$. Simpler than LayerNorm (no mean subtraction). Makes the dot product measure direction only, not magnitude.</span>
+    </span></span>
+    <span class="eq-term" style="font-size:13px;">Why normalize both?<span class="eq-tooltip">
+        <span class="eq-tooltip-title">Why normalize both vectors?</span>
+        <svg viewBox="0 0 290 130" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif" style="width:100%">
+            <text x="145" y="14" text-anchor="middle" font-size="9" fill="#666" font-weight="bold">Dot product: direction AND magnitude</text>
+            <text x="10" y="42" font-size="8" fill="#999">without</text>
+            <text x="10" y="52" font-size="8" fill="#999">norm:</text>
+            <line x1="60" y1="47" x2="180" y2="47" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="180,43 190,47 180,51" fill="#dc2626"/>
+            <text x="200" y="51" font-size="8" fill="#dc2626">big vector = big dot</text>
+            <text x="200" y="62" font-size="8" fill="#dc2626">(misleading)</text>
+            <text x="10" y="95" font-size="8" fill="#999">with</text>
+            <text x="10" y="105" font-size="8" fill="#999">norm:</text>
+            <line x1="60" y1="100" x2="120" y2="100" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="120,96 130,100 120,104" fill="#16a34a"/>
+            <text x="140" y="104" font-size="8" fill="#16a34a">unit vector = pure direction</text>
+            <text x="140" y="115" font-size="8" fill="#16a34a">(measures alignment only)</text>
+        </svg>
+        <span class="eq-tooltip-desc">Both $h_t$ and $W_k e_t$ are normalized before the dot product. This makes the gate measure <strong>directional alignment</strong> only. A large hidden state cannot spuriously open the gate; only genuine semantic similarity does.</span>
+    </span></span>
+</div>
+
+<p>This is a scalar sigmoid gate $\alpha_t \in [0, 1]$. It computes a normalized dot product between the hidden state and the projected memory, then squashes it through a sigmoid. The gated output is $\tilde{v}_t = \alpha_t \cdot W_v e_t$.</p>
+
+<details class="example">
+<summary>Worked example: same N-gram, two different contexts</summary>
+<div class="example-body">
+
+<p>Consider "Alexander the" appearing in two sentences:</p>
+
 <ul>
-    <li>$h_t$ is the hidden state of the query token</li>
-    <li>$c_s$ is the compressed key-value entry (MLA's latent vector)</li>
-    <li>$k = 2048$ tokens are selected per query</li>
+    <li><em>"... the great ruler Alexander the ___"</em>: The hidden state $h_t$ encodes "great ruler" context from earlier attention. This context is highly aligned with the N-gram embedding for "Alexander the" (which has learned associations with "Great" during training). The dot product is large, so $\alpha_t \approx 0.9$. The memory contributes strongly, pushing the model toward predicting "Great".</li>
+    <li><em>"... call Alexander the plumber and ask ___"</em>: The hidden state encodes "call ... plumber and ask" context. This context is poorly aligned with the "Alexander the" embedding's learned associations. The dot product is small, so $\alpha_t \approx 0.1$. The memory is mostly suppressed, and the transformer proceeds with its own reasoning about what you would ask a plumber.</li>
 </ul>
 
-<p>
-This reduces the core attention complexity from $O(L^2)$ to $O(L \cdot k)$. At 128k context length with $k = 2048$, that is roughly a 60x reduction in the expensive attention computation.
-</p>
+</div>
+</details>
 
-<h3>Integration with MLA</h3>
+<p>The gated values then pass through a depthwise causal convolution (kernel size 4, dilation equal to the max N-gram order) with SiLU activation and a residual connection:</p>
 
-<p>
-As described in the <a href="#mla">MLA section above</a>, each token's keys and values are compressed into a single shared latent vector $\mathbf{c}_t^{KV}$. DSA exploits this directly: the indexer selects the top-$k$ latent vectors, and those selections serve all query heads simultaneously. You select 2048 latent vectors, not 2048 separate key-value pairs per head. This is what makes sparse attention over MLA particularly efficient compared to sparse attention over standard MHA.
-</p>
-
-<h3>Training DSA</h3>
-
-<p>
-The indexer cannot be trained from scratch alongside the model; the model would never learn to rely on full attention if the indexer starts randomly. Instead, DSA training happens in two stages:
-</p>
-
-<div class="numbered-steps">
-    <div class="step">
-        <strong>Dense warm-up.</strong> Freeze all model parameters. Train only the indexer using a KL-divergence loss that aligns its scores to the actual attention weights from full dense attention:
-        $$\mathcal{L}^I = \sum_t D_{\text{KL}}\left(p_{t,:} \;\|\; \text{Softmax}(I_{t,:})\right)$$
-        where $p_{t,:}$ are the aggregated attention probabilities from the main model. This runs for 1,000 steps (2.1B tokens) at learning rate $10^{-3}$.
+<div class="equation-block">
+    <span class="eq-label">Fusion Output (hover terms for details)</span>
+    <div class="eq-interactive">
+        <span>$Y$ = </span>
+        <span class="eq-term">SiLU<span class="eq-tooltip">
+            <span class="eq-tooltip-title">SiLU Activation (Sigmoid Linear Unit)</span>
+            <canvas id="silu-plot" data-plot="silu" style="width:100%;height:auto;border-radius:4px;display:block;"></canvas>
+            <span class="eq-tooltip-desc">$\text{SiLU}(x) = x \cdot \sigma(x)$. Smooth, non-monotonic activation. Unlike ReLU, it allows small negative values (the dip near $x \approx -1$), which helps gradient flow. Dashed line shows ReLU for comparison.</span>
+        </span></span>(
+        <span class="eq-term">Conv1D<span class="eq-tooltip">
+            <span class="eq-tooltip-title">Causal Depthwise Conv1D (kernel=4)</span>
+            <svg viewBox="0 0 290 170" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif" style="width:100%">
+                <!-- Input positions (gated values) -->
+                <text x="10" y="18" font-size="9" fill="#666" font-weight="bold">Input: gated values at each position</text>
+                <!-- Position boxes -->
+                <rect x="15" y="28" width="50" height="24" rx="4" fill="#f9fafb" stroke="#ddd"/>
+                <text x="40" y="44" text-anchor="middle" font-size="8" fill="#999">t-3</text>
+                <rect x="75" y="28" width="50" height="24" rx="4" fill="#f9fafb" stroke="#ddd"/>
+                <text x="100" y="44" text-anchor="middle" font-size="8" fill="#999">t-2</text>
+                <rect x="135" y="28" width="50" height="24" rx="4" fill="#f9fafb" stroke="#ddd"/>
+                <text x="160" y="44" text-anchor="middle" font-size="8" fill="#999">t-1</text>
+                <rect x="195" y="28" width="50" height="24" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+                <text x="220" y="44" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="bold">t</text>
+                <!-- Kernel bracket -->
+                <path d="M 15 56 L 15 62 L 245 62 L 245 56" fill="none" stroke="#2563eb" stroke-width="1"/>
+                <line x1="130" y1="62" x2="130" y2="72" stroke="#2563eb"/>
+                <text x="130" y="84" text-anchor="middle" font-size="9" fill="#2563eb" font-weight="bold">kernel window (size 4)</text>
+                <!-- Weights -->
+                <text x="40" y="102" text-anchor="middle" font-size="8" fill="#999">w1</text>
+                <text x="100" y="102" text-anchor="middle" font-size="8" fill="#999">w2</text>
+                <text x="160" y="102" text-anchor="middle" font-size="8" fill="#999">w3</text>
+                <text x="220" y="102" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="bold">w4</text>
+                <!-- Multiply + sum arrows -->
+                <text x="65" y="102" text-anchor="middle" font-size="10" fill="#ccc">×</text>
+                <text x="125" y="102" text-anchor="middle" font-size="10" fill="#ccc">×</text>
+                <text x="185" y="102" text-anchor="middle" font-size="10" fill="#ccc">×</text>
+                <!-- Output -->
+                <line x1="130" y1="108" x2="130" y2="125" stroke="#aaa" stroke-width="1"/>
+                <text x="145" y="120" font-size="8" fill="#999">sum</text>
+                <rect x="85" y="130" width="90" height="24" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+                <text x="130" y="146" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="bold">output at t</text>
+                <!-- Causal note -->
+                <text x="255" y="44" font-size="8" fill="#dc2626">causal:</text>
+                <text x="255" y="55" font-size="8" fill="#dc2626">no future</text>
+                <text x="255" y="66" font-size="8" fill="#dc2626">positions</text>
+            </svg>
+            <span class="eq-tooltip-desc">Slides a window of 4 learned weights over adjacent positions. <strong>Causal</strong>: only looks at current + past positions (not future). <strong>Depthwise</strong>: each channel is convolved independently. This smooths gated values across neighbors.</span>
+        </span></span>(RMSNorm($\tilde{V}$))) + $\tilde{V}$
     </div>
-    <div class="step">
-        <strong>Sparse training.</strong> Switch to sparse attention (indexer selects tokens, model attends only to those). Now optimize all model parameters to adapt to the sparse pattern, while the indexer continues to be refined with a narrower KL loss focused only on the selected tokens:
-        $$\mathcal{L}^I = \sum_t D_{\text{KL}}\left(p_{t,S_t} \;\|\; \text{Softmax}(I_{t,S_t})\right)$$
-        The indexer is detached from the main computation graph and optimized separately. This runs for 15,000 steps (943.7B tokens) at learning rate $7.3 \times 10^{-6}$.
-    </div>
 </div>
 
-<div class="note-box">
-    <p><strong>Intuition:</strong> The warm-up teaches the indexer "what the model would have attended to" under full attention. The sparse stage then teaches the model to work well under sparse attention, while the indexer keeps refining its selections.</p>
+<p>The convolution operates over adjacent token positions with a receptive field of 4 tokens. Each output position is a weighted mix of itself and its neighbors' gated values. This serves two purposes: reinforcing consistent signals and suppressing noise.</p>
+
+<p><strong>Why this matters.</strong> The gate at each position makes an independent decision based on its own N-gram and hidden state. But language has multi-token patterns where individual positions should cooperate. The convolution lets them.</p>
+
+<p>Consider the sequence "the Milky Way galaxy". At position "Milky", the bigram ("the", "Milky") retrieves an embedding with a strong gate (say 0.85). At "Way", the bigram ("Milky", "Way") also has a strong gate (0.88). Without convolution, each position's memory contribution is independent. With convolution, the kernel sees two adjacent high-gate values and amplifies both, because a 1D convolution computes a weighted sum over the window: $\text{out}_t = w_1 \cdot \tilde{v}_{t-3} + w_2 \cdot \tilde{v}_{t-2} + w_3 \cdot \tilde{v}_{t-1} + w_4 \cdot \tilde{v}_t$. When multiple neighbors carry strong memory signals, they reinforce each other in the output.</p>
+
+<p>Now consider a hash collision: the bigram ("set", "the") at some position accidentally maps to the same table row as a common idiom, producing a spuriously high gate of 0.7. But the positions before and after it have low gates (0.1, 0.05), because their N-grams did not match anything meaningful. The convolution window sees one high value surrounded by near-zero values, and the weighted sum dilutes the outlier. The spurious signal is dampened rather than passed through at full strength.</p>
+
+<div class="note">
+    <p><strong>Intuition:</strong> The gate at each position asks: "does my context agree with this N-gram's memory?" The convolution then asks: "do my neighbors agree too?" If multiple adjacent positions all have high gates (a named entity, an idiom), the convolution reinforces the signal. If only one position lights up while its neighbors are dark (likely a hash collision or noise), the convolution smooths it out. It is a consensus mechanism across positions.</p>
 </div>
 
-<div class="warning-box">
-    <p><strong>Key design choice:</strong> The indexer's gradient is detached from the main model during sparse training. This prevents the model from "gaming" the indexer (learning representations that are easy to index rather than useful for the task).</p>
-</div>
+<h3>The U-Shaped Scaling Law</h3>
 
-<!-- ───────────────────────── Scalable RL ───────────────────────── -->
-<h2 id="scalable-rl">Scalable Reinforcement Learning</h2>
-
-<h3>The Core Problem</h3>
-
-<p>
-Post-training for frontier LLMs typically involves multiple objectives: mathematical reasoning, code generation, tool use, instruction following, and human preference alignment. The standard approach chains these as separate stages: SFT for reasoning, then SFT for tools, then RLHF for alignment. Each stage risks degrading capabilities learned in previous stages.
-</p>
-
-<p>
-DeepSeek-V3.2 solves this by merging all objectives into a single RL stage, built on an improved version of <strong>GRPO (Group Relative Policy Optimization)</strong>.
-</p>
-
-<h3>GRPO Refresher</h3>
-
-<p>
-GRPO (introduced in earlier DeepSeek work) is a variant of PPO that removes the value network. Instead of estimating advantages with a critic, it samples a group of $G$ completions for each prompt and computes advantages relative to the group mean:
-</p>
+<p>Given a fixed parameter budget, how should you split inactive parameters between MoE experts and Engram memory? DeepSeek defines an allocation ratio $\rho \in [0, 1]$ where $\rho$ is the fraction going to MoE:</p>
 
 <div class="equation-block">
-    <span class="equation-label">Eq. 6: GRPO Objective</span>
-    $$J_{\text{GRPO}}(\theta) = \mathbb{E}_{q, \{o_i\} \sim \pi_{\text{old}}} \left[\sum_{i=1}^{G} \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \min\left(r_{i,t}(\theta)\hat{A}_{i,t},\; \text{clip}(r_{i,t}(\theta), 1{-}\epsilon, 1{+}\epsilon)\hat{A}_{i,t}\right) - \beta\, D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})\right]$$
+    <span class="eq-label">Allocation</span>
+    $$P_{\text{MoE}}^{\text{sparse}} = \rho \cdot P_{\text{sparse}}, \quad P_{\text{Engram}} = (1 - \rho) \cdot P_{\text{sparse}}$$
 </div>
 
-<p>Where:</p>
-<ul>
-    <li>$r_{i,t}(\theta) = \frac{\pi_\theta(o_{i,t} | q, o_{i,&lt;t})}{\pi_{\text{old}}(o_{i,t} | q, o_{i,&lt;t})}$ is the importance sampling ratio</li>
-    <li>$\hat{A}_{i,t} = R_i - \text{mean}(R)$ is the group-relative advantage (reward minus group mean)</li>
-    <li>$\epsilon$ is the clipping parameter</li>
-    <li>$\beta$ controls the KL penalty against a reference policy $\pi_{\text{ref}}$</li>
-</ul>
-
-<p>
-If you want deeper background on GRPO and its relationship to PPO, see <a href="/blog/2026/ppo-grpo/">PPO & GRPO for LLM Alignment</a>.
-</p>
-
-<h3>Stability Improvements</h3>
-
-<p>
-Running GRPO at scale (thousands of steps, diverse task mixtures) exposes stability issues that do not appear in smaller settings. The paper introduces four fixes:
-</p>
-
-<h4>1. Unbiased KL Estimation</h4>
-
-<p>
-The standard KL estimator (K3 estimator) becomes biased when the current policy $\pi_\theta$ drifts from the sampling policy $\pi_{\text{old}}$. The corrected estimator uses importance sampling:
-</p>
-
-<div class="equation-block">
-    <span class="equation-label">Eq. 7: Unbiased KL</span>
-    $$D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}}) = \frac{\pi_\theta}{\pi_{\text{old}}} \cdot \left[\frac{\pi_{\text{ref}}}{\pi_\theta} - \log\frac{\pi_{\text{ref}}}{\pi_\theta} - 1\right]$$
-</div>
-
-<p>
-This prevents the KL term from producing unbounded gradient weights when $\pi_\theta \ll \pi_{\text{ref}}$, a scenario that becomes common during extended training.
-</p>
-
-<h4>2. Off-Policy Sequence Masking</h4>
-
-<p>
-Between data generation and gradient computation, the policy can drift. Sequences that were generated under the old policy but have large KL divergence under the current policy are masked out:
-</p>
-
-<div class="equation-block">
-    <span class="equation-label">Eq. 8: Sequence Mask</span>
-    $$M_{i,t} = \begin{cases} 0 & \text{if } \hat{A}_{i,t} < 0 \text{ or } D_{\text{KL}} > \delta \\ 1 & \text{otherwise} \end{cases}$$
-</div>
-
-<p>
-This removes negative-advantage sequences that have drifted significantly from the current policy, preventing large, destabilizing gradient updates.
-</p>
-
-<h4>3. Keep Routing (MoE-specific)</h4>
-
-<p>
-DeepSeek-V3.2 uses a Mixture-of-Experts (MoE) architecture. During RL, the same input can route to different experts during sampling versus training due to subtle numerical differences. This causes abrupt shifts in which parameters are active. <strong>Keep Routing</strong> saves the expert routing decisions from inference and replays them during training, ensuring the same experts handle the same tokens.
-</p>
-
-<h4>4. Keep Sampling Mask</h4>
-
-<p>
-When sampling uses top-p or top-k truncation, the set of possible tokens differs between the sampling policy and the training policy evaluation. This creates a mismatch in action spaces. <strong>Keep Sampling Mask</strong> records the truncation mask from sampling and applies it consistently during training log-probability computation.
-</p>
-
-<div class="note-box">
-    <p><strong>Intuition:</strong> These four fixes share a common theme: when you do RL at scale, small inconsistencies between "what the model did during rollout" and "what the model sees during training" compound into instability. The fixes ensure the training step sees exactly the same conditions as the generation step.</p>
-</div>
-
-<h3>The Training Pipeline</h3>
-
-<p>
-The full post-training pipeline has three phases:
-</p>
-
-<svg viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px;display:block;margin:2em auto;">
-  <defs>
-    <filter id="shadow3"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
-    <marker id="arrowhead3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="#2563eb"/>
-    </marker>
-  </defs>
-
-  <!-- Phase 1: Specialist Training -->
-  <text x="260" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#555">Phase 1: Specialist Training</text>
-
-  <rect x="20" y="32" width="100" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
-  <text x="70" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#166534">Math</text>
-  <text x="70" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">RL specialist</text>
-
-  <rect x="135" y="32" width="100" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
-  <text x="185" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#166534">Code</text>
-  <text x="185" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">RL specialist</text>
-
-  <rect x="250" y="32" width="100" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
-  <text x="300" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#166534">Reasoning</text>
-  <text x="300" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">RL specialist</text>
-
-  <rect x="365" y="32" width="130" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
-  <text x="430" y="53" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#166534">Agentic</text>
-  <text x="430" y="70" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#555">RL specialist</text>
-
-  <!-- Arrows down from specialists -->
-  <line x1="70" y1="82" x2="70" y2="110" stroke="#2563eb" stroke-width="1" marker-end="url(#arrowhead3)"/>
-  <line x1="185" y1="82" x2="185" y2="110" stroke="#2563eb" stroke-width="1" marker-end="url(#arrowhead3)"/>
-  <line x1="300" y1="82" x2="300" y2="110" stroke="#2563eb" stroke-width="1" marker-end="url(#arrowhead3)"/>
-  <line x1="430" y1="82" x2="430" y2="110" stroke="#2563eb" stroke-width="1" marker-end="url(#arrowhead3)"/>
-
-  <!-- Phase 2: Distillation -->
-  <text x="260" y="127" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#555">Phase 2: Distillation</text>
-
-  <rect x="70" y="135" width="380" height="50" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow3)"/>
-  <text x="260" y="158" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#333">Collect rollout data from each specialist</text>
-  <text x="260" y="175" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">SFT the base model on combined specialist outputs</text>
-
-  <line x1="260" y1="185" x2="260" y2="215" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead3)"/>
-
-  <!-- Phase 3: Unified RL -->
-  <text x="260" y="232" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#555">Phase 3: Unified RL</text>
-
-  <rect x="70" y="240" width="380" height="110" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow3)"/>
-
-  <!-- Reward types inside -->
-  <text x="260" y="264" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="bold" fill="#1e40af">Mixed-Domain GRPO Training</text>
-
-  <rect x="90" y="275" width="155" height="30" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
-  <text x="167" y="294" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#333">Rule-based rewards</text>
-  <text x="167" y="306" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#555">outcome, length, language</text>
-
-  <rect x="260" y="275" width="170" height="30" rx="6" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
-  <text x="345" y="294" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#333">Generative reward model</text>
-  <text x="345" y="306" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#555">per-prompt rubrics</text>
-
-  <text x="260" y="338" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#555">Thousands of steps with stability fixes (KL, masking, routing)</text>
-
-  <line x1="260" y1="350" x2="260" y2="374" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowhead3)"/>
-</svg>
-
-<h4>Phase 1: Specialist Training</h4>
-
-<p>
-Multiple domain-specific models are fine-tuned from the same base checkpoint. Each specialist trains with large-scale RL on its domain: math, code, general reasoning, agentic coding, agentic search. All specialists support both thinking (chain-of-thought) and non-thinking modes.
-</p>
-
-<h4>Phase 2: Specialist Distillation</h4>
-
-<p>
-Each specialist generates rollout data on its domain. This data is collected and used to SFT a single unified checkpoint. This gives you one model that inherits capabilities from all specialists, though with some performance gap compared to each individual specialist.
-</p>
-
-<h4>Phase 3: Unified RL</h4>
-
-<p>
-The distilled model undergoes thousands of steps of GRPO training on a mixture of all domains simultaneously. The reward signal varies by domain:
-</p>
+<p>Experiments at two compute scales ($2 \times 10^{20}$ and $6 \times 10^{20}$ FLOPs) reveal a <strong>U-shaped curve</strong>: validation loss is minimized at $\rho \approx 0.75\text{-}0.80$, meaning roughly 75-80% of sparse capacity should go to MoE and 20-25% to Engram.</p>
 
 <table>
     <thead>
-        <tr>
-            <th>Domain</th>
-            <th>Reward Type</th>
-            <th>Details</th>
-        </tr>
+        <tr><th>Allocation ($\rho$)</th><th>Val Loss ($C = 2 \times 10^{20}$)</th><th>Interpretation</th></tr>
     </thead>
     <tbody>
-        <tr>
-            <td>Math / Code</td>
-            <td>Rule-based</td>
-            <td>Outcome correctness (binary), length penalty, language consistency</td>
-        </tr>
-        <tr>
-            <td>Agentic tasks</td>
-            <td>Rule-based</td>
-            <td>Verifier functions from synthesized environments</td>
-        </tr>
-        <tr>
-            <td>General / Open-ended</td>
-            <td>Generative RM</td>
-            <td>Per-prompt rubrics evaluated by a reward model</td>
-        </tr>
+        <tr><td>1.0 (pure MoE)</td><td>1.7248</td><td>Wastes depth simulating lookup</td></tr>
+        <tr><td>0.75-0.80 (optimal)</td><td>1.7109</td><td>Best trade-off</td></tr>
+        <tr><td>0.0 (pure Engram)</td><td>Higher</td><td>Lacks conditional computation</td></tr>
     </tbody>
 </table>
 
-<p>
-The key claim: the performance gap from distillation is "effectively eliminated" by this final RL stage. The unified training also avoids catastrophic forgetting because all domains are optimized jointly rather than sequentially.
-</p>
-
-<div class="note-box">
-    <p><strong>Intuition:</strong> Instead of "train reasoning, then hope it survives tool-use training, then hope both survive alignment," you train everything at once. The specialist distillation gives you a strong starting point, and the unified RL fine-tunes all capabilities simultaneously.</p>
+<div class="note">
+    <p><strong>Intuition:</strong> Go too far toward MoE ($\rho \to 1$) and the model wastes expert capacity memorizing static facts. Go too far toward Engram ($\rho \to 0$) and the model lacks the dynamic computation needed for reasoning. The sweet spot dedicates most sparse capacity to experts (for reasoning) with a meaningful slice for memory (for facts).</p>
 </div>
 
-<!-- ───────────────────────── Agentic ───────────────────────── -->
-<h2 id="agentic">Agentic Task Synthesis</h2>
+<h3>Engram-27B Results</h3>
 
-<p>
-Training models to use tools requires structured data: an environment, available tools, a task, and a way to verify the solution. DeepSeek-V3.2 generates this data at scale using automated pipelines across four categories:
-</p>
+<p>The headline model, Engram-27B, has 26.7B total parameters with 3.8B active per token and 5.7B in Engram memory. Compared to a MoE-27B baseline (same total params, same FLOPs), it uses 55 routed experts instead of 72 (trading 17 experts for memory):</p>
 
 <table>
     <thead>
-        <tr>
-            <th>Category</th>
-            <th>Tasks</th>
-            <th>Environment</th>
-            <th>Prompts</th>
-        </tr>
+        <tr><th>Benchmark</th><th>MoE-27B</th><th>Engram-27B</th><th>Gain</th></tr>
     </thead>
     <tbody>
-        <tr>
-            <td>Code Agent</td>
-            <td>~24.7k</td>
-            <td>Real (GitHub issue-PR pairs)</td>
-            <td>Extracted from issues</td>
-        </tr>
-        <tr>
-            <td>Search Agent</td>
-            <td>~50.3k</td>
-            <td>Real (web search)</td>
-            <td>Synthesized (long-tail entities)</td>
-        </tr>
-        <tr>
-            <td>Code Interpreter</td>
-            <td>~5.9k</td>
-            <td>Real (Jupyter)</td>
-            <td>Extracted from notebooks</td>
-        </tr>
-        <tr>
-            <td>General Agent</td>
-            <td>~4.4k</td>
-            <td>Synthesized (1,827 envs)</td>
-            <td>Synthesized</td>
-        </tr>
+        <tr><td>MMLU</td><td>57.4%</td><td>60.4%</td><td>+3.0</td></tr>
+        <tr><td>BBH</td><td>50.9%</td><td>55.9%</td><td>+5.0</td></tr>
+        <tr><td>ARC-Challenge</td><td>70.1%</td><td>73.8%</td><td>+3.7</td></tr>
+        <tr><td>HumanEval</td><td>37.8%</td><td>40.8%</td><td>+3.0</td></tr>
+        <tr><td>MATH</td><td>28.3%</td><td>30.7%</td><td>+2.4</td></tr>
+        <tr><td>GSM8K</td><td>58.4%</td><td>60.6%</td><td>+2.2</td></tr>
+        <tr><td>RULER (long-ctx)</td><td>84.2%</td><td>97.0%</td><td>+12.8</td></tr>
     </tbody>
 </table>
 
-<p>
-The general agent pipeline is particularly interesting. An automated agent synthesizes environments (including tool definitions and databases), generates tasks of increasing difficulty, and creates verification functions. The design principle is "hard to solve, easy to verify": the model must reason through multi-step tool calls, but correctness is checked by a simple verifier function.
-</p>
+<p>The RULER result is remarkable: +12.8 points on multi-query needle-in-a-haystack. Engram's hash-based lookup gives the model near-perfect retrieval for factual patterns in long contexts.</p>
 
-<p>
-For the search agent, a multi-agent pipeline samples long-tail entities, constructs questions through exploration, generates diverse answers, and validates them with a verification agent that has search access. Only instances with non-zero pass@100 are retained for training.
-</p>
+<h3>A New Axis of Sparsity</h3>
 
-<p>
-All 85,000+ tasks produce structured (environment, tools, task, verifier) tuples that plug directly into the RL framework with rule-based rewards.
-</p>
+<p>The key conceptual contribution: language modeling has two qualitatively different sub-tasks, and they benefit from different types of sparsity:</p>
 
-<!-- ───────────────────────── Practical ───────────────────────── -->
-<h2 id="practical">Practical Notes</h2>
+<table>
+    <thead>
+        <tr><th>Sub-task</th><th>Sparsity Type</th><th>Mechanism</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Compositional reasoning</td><td>Conditional computation (MoE)</td><td>Route to relevant experts</td><td>Multi-step math derivation</td></tr>
+        <tr><td>Knowledge retrieval</td><td>Conditional memory (Engram)</td><td>Hash-based embedding lookup</td><td>"capital of France" => Paris</td></tr>
+    </tbody>
+</table>
 
-<h3>DSA Trade-offs</h3>
+<p>Standard transformers force both tasks through the same computational pathway. Engram gives the model a native "memory fetch" primitive, analogous to how CPUs separate cache/memory access from ALU computation.</p>
 
-<ul>
-    <li><strong>When DSA helps:</strong> Long sequences where $L \gg k$. At 128k context, selecting 2048 tokens gives ~60x reduction in the expensive attention computation. The indexer overhead is small due to FP8 and few heads.</li>
-    <li><strong>When DSA is less helpful:</strong> Short sequences where $L$ is close to $k$. At $L = 4096$ with $k = 2048$, you are only skipping half the tokens, and the indexer adds overhead.</li>
-    <li><strong>Training cost:</strong> DSA requires ~946B tokens of continued pre-training (warm-up + sparse stage). This is a significant investment, but it is a one-time cost amortized over all downstream serving.</li>
-</ul>
+<h3>System Design</h3>
 
-<h3>RL Stability Matters More Than You Think</h3>
+<p>Engram's embedding tables can grow to billions of parameters (the Engram-40B variant has 18.5B in memory alone). The system handles this through:</p>
 
 <ul>
-    <li>The four stability fixes (unbiased KL, off-policy masking, keep routing, keep sampling mask) are not optional at scale. Small inconsistencies between rollout and training compound across thousands of steps.</li>
-    <li>The post-training compute budget exceeds 10% of pre-training cost. This is not a light fine-tuning pass; it is a substantial continuation of training.</li>
-    <li>Rule-based rewards work well for domains with verifiable answers (math, code, tool use). For open-ended tasks, they use a generative reward model with per-prompt rubrics rather than a single scalar reward model.</li>
+    <li><strong>Training:</strong> Tables are sharded across GPUs using all-to-all communication for active embedding retrieval.</li>
+    <li><strong>Inference:</strong> Hash indices are deterministic, enabling prefetching. A multi-level cache hierarchy exploits the Zipfian distribution of N-grams: frequent patterns in GPU HBM, rare patterns in host DRAM or NVMe.</li>
+    <li><strong>Overhead:</strong> Offloading a 100B-parameter table incurs only 2.8% throughput penalty (6,316 tok/s baseline vs 6,140 tok/s with offloading).</li>
 </ul>
 
-<h3>Context Management for Agentic Reasoning</h3>
+<h3>Layer Placement</h3>
 
-<p>
-When the model uses tools in thinking mode, it retains historical reasoning content when tool outputs arrive but discards reasoning when a new user message appears. This avoids the token inefficiency of re-reasoning from scratch on every turn while keeping the context clean across conversation turns.
-</p>
+<p>Where you insert the Engram module within the transformer stack matters significantly. The paper sweeps single-module insertion across layers 1-12 of a 12-layer backbone and finds a clear pattern:</p>
+
+<table>
+    <thead>
+        <tr><th>Configuration</th><th>Val Loss</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>MoE baseline (no Engram)</td><td>1.808</td><td>All params in experts</td></tr>
+        <tr><td>Layer 1 (earliest)</td><td>1.776</td><td>Hidden state lacks context for gating</td></tr>
+        <tr><td><strong>Layer 2 (best single)</strong></td><td><strong>1.770</strong></td><td>One attention round provides enough context</td></tr>
+        <tr><td>Layer 6 (middle)</td><td>1.778</td><td>Good gating but backbone already spent depth</td></tr>
+        <tr><td>Layer 12 (latest)</td><td>1.785</td><td>Too late: backbone already reconstructed patterns</td></tr>
+        <tr><td><strong>Layers 2 + 6 (split)</strong></td><td><strong>1.768</strong></td><td>Best overall: early offload + mid-layer refinement</td></tr>
+    </tbody>
+</table>
+
+<p>The core trade-off: early insertion lets Engram offload static patterns before the backbone wastes depth reconstructing them, but the hidden state at layer 1 has not yet been through any attention and lacks the context needed for accurate gating. Layer 2 is the sweet spot: one round of attention provides a meaningfully contextualized hidden state while still being early enough to save depth.</p>
+
+<p>Splitting the memory budget across two layers (2 and 6 in the ablation; 2 and 15 in the full Engram-27B model) outperforms any single-layer configuration. The early module handles high-confidence local patterns (named entities, common collocations). The later module handles patterns that require more accumulated context to gate correctly (e.g., domain-specific phrases where the gate needs to see several preceding tokens to decide relevance). This split also has a practical system benefit: two smaller tables are easier to distribute across the memory hierarchy than one large one.</p>
+
+<div class="warning">
+    <p><strong>Warning:</strong> Late-only insertion (layer 12) is worse than no Engram at all in some configurations. By the time the backbone reaches layer 12, it has already spent its depth budget reconstructing static patterns through computation. Adding a lookup primitive at this point provides little benefit because the work has already been done.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="notes">7. Practical Notes</h2>
+
+<h3>Which innovations matter most for your use case?</h3>
+
+<table>
+    <thead>
+        <tr><th>Bottleneck</th><th>Innovation</th><th>When to care</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Inference memory</td><td>MLA</td><td>Serving long contexts (>8K tokens) at scale</td></tr>
+        <tr><td>Inference/training compute</td><td>MoE</td><td>Want large model capacity without proportional cost</td></tr>
+        <tr><td>Long-context quality</td><td>DSA</td><td>Processing 64K+ token inputs</td></tr>
+        <tr><td>Post-training efficiency</td><td>GRPO</td><td>RL alignment without the cost of training a value model</td></tr>
+        <tr><td>Factual accuracy</td><td>Engram</td><td>Knowledge-heavy tasks, long-context retrieval</td></tr>
+    </tbody>
+</table>
+
+<h3>The efficiency compounds</h3>
+
+<p>These innovations are not independent. MLA's compressed representations enable DSA's lightweight token scoring. MoE's sparse routing pairs with Engram's sparse memory. GRPO's simplicity makes it feasible to run unified RL across many reward domains. Each piece makes the others more effective.</p>
+
+<h3>What Engram changes about scaling</h3>
+
+<p>Engram introduces a genuinely new scaling axis. Previous scaling laws focused on compute (FLOPs) and model parameters (active and total). Engram demonstrates that <em>memory capacity</em> (lookup table size) scales independently: adding memory from 5.7B to 18.5B parameters improves performance with zero additional compute per token. This follows a power-law relationship with no sign of saturation at current scales.</p>
+
+<div class="warning">
+    <p><strong>Warning:</strong> Engram's gains are largest on knowledge-intensive and long-context tasks (+5.0 on BBH, +12.8 on RULER). On tasks that are primarily reasoning-bound (like MATH or GSM8K), the gains are more modest (+2-3 points). If your workload is pure chain-of-thought reasoning, MoE and GRPO matter more than Engram.</p>
+</div>
+
+<h3>Pitfalls</h3>
+
+<ul>
+    <li><strong>MLA:</strong> The up-projection matrices $W^{UK}$ and $W^{UV}$ add latency to each attention computation. This is usually hidden by the memory savings, but on very short sequences where KV cache is not a bottleneck, MLA can be slightly slower than standard MHA.</li>
+    <li><strong>MoE:</strong> Expert parallelism requires all-to-all communication across devices. On poorly connected clusters (low bisection bandwidth), MoE can be slower than dense models of the same active size.</li>
+    <li><strong>GRPO:</strong> The group size $G$ matters. Too small ($G < 8$) and the advantage estimates are noisy. Too large ($G > 64$) and you waste compute generating low-information samples. DeepSeek uses $G = 16\text{-}64$ depending on the task.</li>
+    <li><strong>Engram:</strong> Layer placement is critical (see <a href="#engram">Layer Placement</a> above). Late-only insertion can be worse than no Engram at all. Always place the first module at layer 2, with an optional second at a middle layer.</li>
+</ul>
+
+<h2>References</h2>
+
+<ol>
+    <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2401.06066">DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</a>. Introduces MLA and DeepSeekMoE with loss-free load balancing.</li>
+    <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>. Scales MLA + MoE to 671B params, introduces the multi-token prediction training objective.</li>
+    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>. GRPO for reasoning, distillation pipeline.</li>
+    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2502.11089">Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention</a>. DeepSeek Sparse Attention (DSA) with lightning indexer.</li>
+    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2503.10140">DeepSeek-V3.1 (0324) Technical Report</a>. Unified RL pipeline, agentic task synthesis, GRPO stability fixes.</li>
+    <li>Cheng et al. (2026). <a href="https://arxiv.org/abs/2601.07372">Conditional Memory via Scalable Lookup: A New Axis of Sparsity for Large Language Models</a>. Engram architecture, U-shaped scaling law, layer placement analysis.</li>
+    <li>Shazeer (2020). <a href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a>. SwiGLU activation used in DeepSeek's expert FFNs.</li>
+    <li>Zhang &amp; Sennrich (2019). <a href="https://arxiv.org/abs/1910.07467">Root Mean Square Layer Normalization</a>. RMSNorm used throughout DeepSeek and in Engram's gating mechanism.</li>
+    <li>Shao et al. (2024). <a href="https://arxiv.org/abs/2402.03300">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</a>. Introduces GRPO (Group Relative Policy Optimization).</li>
+</ol>
 
 </article>
 </div>
 
 <footer class="site-footer">
-  <p>&copy; 2026 Suvash Sedhain</p>
+    <div class="footer-inner">
+        &copy; 2026 Suvash Sedhain
+    </div>
 </footer>
 
+<script src="/assets/js/plot.js"></script>
 </body>
 </html>
