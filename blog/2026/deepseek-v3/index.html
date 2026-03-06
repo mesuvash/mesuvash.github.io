@@ -95,7 +95,7 @@
     <li><strong>Static knowledge retrieval</strong> forces transformers to waste depth simulating lookup. Engram adds a dedicated O(1) memory primitive.</li>
 </ul>
 
-<p>The pattern is consistent: identify where compute or memory is wasted, then design a sparse or compressed alternative that preserves quality. The following diagram shows how these pieces fit inside a single transformer layer, plus the post-training stage that sits on top.</p>
+<p>The pattern is consistent: identify where compute or memory is wasted, then design a sparse or compressed alternative that preserves quality. The following diagram is a composed view showing how all of these innovations would fit inside a single transformer layer. Note that Engram is a separate 2026 paper, not part of the shipped DeepSeek-V3 architecture; the diagram shows the full playbook, not a single model checkpoint.</p>
 
 <div class="diagram-container">
 <svg viewBox="0 0 500 520" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
@@ -106,7 +106,7 @@
   </defs>
 
   <!-- Title -->
-  <text x="250" y="18" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">One Transformer Layer (DeepSeek-V3 + Engram)</text>
+  <text x="250" y="18" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">Composed View: DeepSeek Innovations in One Layer</text>
 
   <!-- Input tokens -->
   <rect x="160" y="34" width="180" height="30" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shBP)"/>
@@ -144,7 +144,7 @@
   <!-- MoE block -->
   <rect x="120" y="242" width="260" height="50" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shBP)"/>
   <text x="250" y="264" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">DeepSeekMoE (Sparse FFN)</text>
-  <text x="250" y="280" text-anchor="middle" font-size="9" fill="#6b7280">2 shared + top-8 of 256 routed experts</text>
+  <text x="250" y="280" text-anchor="middle" font-size="9" fill="#6b7280">1 shared + top-8 of 256 routed experts</text>
 
   <!-- Arrow down to output -->
   <line x1="250" y1="292" x2="250" y2="314" stroke="#aaa" marker-end="url(#aBP)"/>
@@ -187,7 +187,7 @@
 <!-- ============================================================ -->
 <h2 id="mla">2. Multi-head Latent Attention (MLA)</h2>
 
-<p>Standard multi-head attention stores separate key and value vectors for every token at every layer. For a 128K context window with 128 attention heads and head dimension 128, this means storing ~4 GB of KV cache per sequence. MLA compresses this by projecting keys and values into a shared low-dimensional <strong>latent space</strong>.</p>
+<p>Standard multi-head attention stores separate key and value vectors for every token at every layer. For a 128K context window with 128 attention heads and head dimension 128 across 60 layers in BF16, this means storing roughly 8-9 GB of KV cache per sequence (the exact number depends on the number of layers and precision; FP8 quantization halves it). MLA compresses this by projecting keys and values into a shared low-dimensional <strong>latent space</strong>.</p>
 
 <h3>How It Works</h3>
 
@@ -254,7 +254,7 @@
 <p>DeepSeekMoE uses two types of experts:</p>
 
 <ul>
-    <li><strong>Shared experts</strong> (typically 2): Always activated for every token. These handle common, cross-domain patterns.</li>
+    <li><strong>Shared experts</strong> (1 in DeepSeek-V3): Always activated for every token. These handle common, cross-domain patterns.</li>
     <li><strong>Routed experts</strong> (up to 256): A gating network selects the top-$k$ (typically $k = 8$) most relevant experts per token.</li>
 </ul>
 
@@ -405,7 +405,7 @@
 
 <h3>Stability Fixes</h3>
 
-<p>Scaling GRPO to large models and diverse reward signals revealed several instabilities. DeepSeek-V3 introduced four fixes:</p>
+<p>Scaling GRPO to large models and diverse reward signals revealed several instabilities. DeepSeek-V3.2 introduced four fixes:</p>
 
 <table>
     <thead>
@@ -970,11 +970,12 @@
 <h2>References</h2>
 
 <ol>
-    <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2401.06066">DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</a>. Introduces MLA and DeepSeekMoE with loss-free load balancing.</li>
+    <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2401.06066">DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</a>. Introduces fine-grained expert segmentation and shared expert isolation.</li>
+    <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model</a>. Introduces MLA and loss-free load balancing for MoE.</li>
     <li>DeepSeek-AI (2024). <a href="https://arxiv.org/abs/2412.19437">DeepSeek-V3 Technical Report</a>. Scales MLA + MoE to 671B params, introduces the multi-token prediction training objective.</li>
     <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>. GRPO for reasoning, distillation pipeline.</li>
     <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2502.11089">Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention</a>. DeepSeek Sparse Attention (DSA) with lightning indexer.</li>
-    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2503.10140">DeepSeek-V3.1 (0324) Technical Report</a>. Unified RL pipeline, agentic task synthesis, GRPO stability fixes.</li>
+    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2512.02556">DeepSeek-V3.2 Technical Report</a>. Unified RL pipeline, agentic task synthesis, GRPO stability fixes (keep routing, off-policy masking, unbiased KL).</li>
     <li>Cheng et al. (2026). <a href="https://arxiv.org/abs/2601.07372">Conditional Memory via Scalable Lookup: A New Axis of Sparsity for Large Language Models</a>. Engram architecture, U-shaped scaling law, layer placement analysis.</li>
     <li>Shazeer (2020). <a href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a>. SwiGLU activation used in DeepSeek's expert FFNs.</li>
     <li>Zhang &amp; Sennrich (2019). <a href="https://arxiv.org/abs/1910.07467">Root Mean Square Layer Normalization</a>. RMSNorm used throughout DeepSeek and in Engram's gating mechanism.</li>
@@ -982,6 +983,19 @@
 </ol>
 
 </article>
+
+  <div id="disqus_thread"></div>
+  <script>
+    var disqus_shortname = 'ssedhain';
+    var disqus_config = function() { this.page.reactions_enabled = 0; };
+    (function() {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
 </div>
 
 <footer class="site-footer">
