@@ -1,0 +1,132 @@
+/*
+ * blog-components.css
+ * Reusable interactive components for blog posts.
+ * Requires blog.css to be loaded first (uses its CSS custom properties).
+ *
+ * Components:
+ *   1. Collapsible examples   — <details class="example">
+ *   2. Hoverable eq tooltips  — <span class="eq-term"> inside <div class="eq-interactive">
+ */
+
+/* ============================================================
+   1. Collapsible Examples
+   Usage:
+     <details class="example">
+       <summary>Title of the example</summary>
+       <div class="example-body">
+         <p>Content here...</p>
+       </div>
+     </details>
+   ============================================================ */
+
+details.example {
+    margin: 1.2em 0;
+}
+
+details.example summary {
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: bold;
+    padding: 0.4em 0;
+    list-style: none;
+}
+
+details.example summary::before {
+    content: "▸ ";
+}
+
+details.example[open] summary::before {
+    content: "▾ ";
+}
+
+details.example summary::-webkit-details-marker {
+    display: none;
+}
+
+details.example .example-body {
+    border-left: 3px solid var(--border);
+    padding: 0.8em 0 0.4em 1.2em;
+    margin-top: 0.3em;
+}
+
+/* ============================================================
+   2. Hoverable Equation Tooltips
+   Usage:
+     <div class="eq-interactive">
+       <span>$Y$ = </span>
+       <span class="eq-term">SiLU
+         <span class="eq-tooltip">
+           <span class="eq-tooltip-title">Title</span>
+           <!-- SVG, canvas, or image here -->
+           <span class="eq-tooltip-desc">Description text</span>
+         </span>
+       </span>
+       <span>(rest of equation)</span>
+     </div>
+   ============================================================ */
+
+.eq-interactive {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 1em 0;
+}
+
+.eq-term {
+    position: relative;
+    cursor: help;
+    border-bottom: 1.5px dashed var(--accent);
+    padding-bottom: 1px;
+}
+
+.eq-term:hover {
+    color: var(--accent);
+}
+
+.eq-term .eq-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    width: 320px;
+    text-align: left;
+}
+
+.eq-term .eq-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: var(--border);
+}
+
+.eq-term:hover .eq-tooltip {
+    display: block;
+}
+
+.eq-tooltip-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--fg);
+    margin-bottom: 6px;
+}
+
+.eq-tooltip-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 6px;
+}

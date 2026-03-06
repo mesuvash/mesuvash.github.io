@@ -30,16 +30,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
         onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
-            primaryColor: '#f0f4ff', primaryBorderColor: '#2563eb', primaryTextColor: '#1e40af',
-            secondaryColor: '#faf5ff', secondaryBorderColor: '#7c5cbf', secondaryTextColor: '#4c3a8a',
-            tertiaryColor: '#f0fdf4', tertiaryBorderColor: '#16a34a', tertiaryTextColor: '#166534',
-            lineColor: '#999', fontFamily: 'Georgia, serif', fontSize: '13px',
-            nodeBorder: '#2563eb', mainBkg: '#f0f4ff', clusterBkg: '#fafafa', clusterBorder: '#e0e0e0'
-        }});
-    </script>
     <link rel="stylesheet" href="/assets/css/blog-components.css">
 </head>
 <body>
@@ -87,6 +77,7 @@
         <li><a href="#dsa">DeepSeek Sparse Attention (DSA)</a></li>
         <li><a href="#rl">Scalable Reinforcement Learning</a></li>
         <li><a href="#engram">Engram: Conditional Memory</a></li>
+        <li><a href="#engram-practice">Engram in Practice</a></li>
         <li><a href="#notes">Practical Notes</a></li>
     </ol>
 </div>
@@ -104,7 +95,93 @@
     <li><strong>Static knowledge retrieval</strong> forces transformers to waste depth simulating lookup. Engram adds a dedicated O(1) memory primitive.</li>
 </ul>
 
-<p>The pattern is consistent: identify where compute or memory is wasted, then design a sparse or compressed alternative that preserves quality. Each layer in the transformer uses MLA for attention (compressing the KV cache), optionally injects Engram for static pattern retrieval, then routes through sparse MoE experts for the feed-forward computation. DSA handles long-context scenarios by selecting only the most relevant tokens. After pre-training, a unified RL stage trains reasoning, tool use, and safety simultaneously. This post walks through each innovation.</p>
+<p>The pattern is consistent: identify where compute or memory is wasted, then design a sparse or compressed alternative that preserves quality. The following diagram shows how these pieces fit inside a single transformer layer, plus the post-training stage that sits on top.</p>
+
+<div class="diagram-container">
+<svg viewBox="0 0 500 520" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shBP"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+    <marker id="aBP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10z" fill="#aaa"/></marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="250" y="18" text-anchor="middle" font-size="12" fill="#555" font-weight="bold">One Transformer Layer (DeepSeek-V3 + Engram)</text>
+
+  <!-- Input tokens -->
+  <rect x="160" y="34" width="180" height="30" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shBP)"/>
+  <text x="250" y="54" text-anchor="middle" font-size="11" fill="#555">Input Token Embeddings</text>
+
+  <!-- Arrow down -->
+  <line x1="250" y1="64" x2="250" y2="86" stroke="#aaa" marker-end="url(#aBP)"/>
+
+  <!-- MLA block -->
+  <rect x="120" y="90" width="260" height="50" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shBP)"/>
+  <text x="250" y="112" text-anchor="middle" font-size="12" fill="#1e40af" font-weight="bold">Multi-head Latent Attention (MLA)</text>
+  <text x="250" y="128" text-anchor="middle" font-size="9" fill="#6b7280">compressed KV cache: 93% smaller</text>
+
+  <!-- DSA annotation on right -->
+  <rect x="395" y="90" width="95" height="50" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-dasharray="4,2" filter="url(#shBP)"/>
+  <text x="442" y="111" text-anchor="middle" font-size="9" fill="#92400e" font-weight="bold">DSA variant</text>
+  <text x="442" y="124" text-anchor="middle" font-size="8" fill="#92400e">sparse token</text>
+  <text x="442" y="134" text-anchor="middle" font-size="8" fill="#92400e">selection</text>
+  <line x1="380" y1="115" x2="395" y2="115" stroke="#d97706" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Arrow down -->
+  <line x1="250" y1="140" x2="250" y2="162" stroke="#aaa" marker-end="url(#aBP)"/>
+
+  <!-- Engram block (optional) -->
+  <rect x="120" y="166" width="260" height="50" rx="10" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5" filter="url(#shBP)"/>
+  <text x="250" y="188" text-anchor="middle" font-size="12" fill="#4c3a8a" font-weight="bold">Engram Memory Module</text>
+  <text x="250" y="204" text-anchor="middle" font-size="9" fill="#6b7280">hash-based O(1) lookup, context-gated</text>
+
+  <!-- "optional" annotation -->
+  <text x="108" y="196" text-anchor="end" font-size="9" fill="#7c5cbf" font-style="italic">layers 2, 15</text>
+
+  <!-- Arrow down -->
+  <line x1="250" y1="216" x2="250" y2="238" stroke="#aaa" marker-end="url(#aBP)"/>
+
+  <!-- MoE block -->
+  <rect x="120" y="242" width="260" height="50" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shBP)"/>
+  <text x="250" y="264" text-anchor="middle" font-size="12" fill="#166534" font-weight="bold">DeepSeekMoE (Sparse FFN)</text>
+  <text x="250" y="280" text-anchor="middle" font-size="9" fill="#6b7280">2 shared + top-8 of 256 routed experts</text>
+
+  <!-- Arrow down to output -->
+  <line x1="250" y1="292" x2="250" y2="314" stroke="#aaa" marker-end="url(#aBP)"/>
+
+  <!-- Residual output -->
+  <rect x="160" y="318" width="180" height="30" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shBP)"/>
+  <text x="250" y="338" text-anchor="middle" font-size="11" fill="#555">Layer Output (+ residual)</text>
+
+  <!-- Residual connection line on left -->
+  <line x1="140" y1="49" x2="115" y2="49" stroke="#ccc" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="115" y1="49" x2="115" y2="333" stroke="#ccc" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="115" y1="333" x2="160" y2="333" stroke="#ccc" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <text x="102" y="195" text-anchor="end" font-size="8" fill="#bbb" transform="rotate(-90, 102, 195)">residual</text>
+
+  <!-- Separator -->
+  <line x1="50" y1="370" x2="450" y2="370" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="6,4"/>
+  <text x="250" y="388" text-anchor="middle" font-size="10" fill="#999">after pre-training</text>
+
+  <!-- GRPO block -->
+  <rect x="90" y="400" width="320" height="65" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shBP)"/>
+  <text x="250" y="422" text-anchor="middle" font-size="12" fill="#1e40af" font-weight="bold">Unified RL (GRPO)</text>
+  <text x="250" y="440" text-anchor="middle" font-size="9" fill="#6b7280">specialist training → distillation → unified stage</text>
+  <text x="250" y="455" text-anchor="middle" font-size="9" fill="#6b7280">reasoning + tool use + safety in one pass</text>
+
+  <!-- Legend -->
+  <rect x="70" y="485" width="12" height="10" rx="3" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="88" y="494" font-size="9" fill="#555">Attention</text>
+  <rect x="155" y="485" width="12" height="10" rx="3" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1"/>
+  <text x="173" y="494" font-size="9" fill="#555">Memory</text>
+  <rect x="225" y="485" width="12" height="10" rx="3" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+  <text x="243" y="494" font-size="9" fill="#555">FFN/Experts</text>
+  <rect x="320" y="485" width="12" height="10" rx="3" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-dasharray="3,1"/>
+  <text x="338" y="494" font-size="9" fill="#555">Long-context variant</text>
+</svg>
+</div>
+
+<p>This post walks through each component in order: attention compression (MLA), sparse routing (MoE), sparse attention (DSA), post-training (GRPO), and conditional memory (Engram).</p>
 
 
 <!-- ============================================================ -->
@@ -161,6 +238,11 @@
 
 <p>MLA achieves better compression than MQA while matching or exceeding the quality of full MHA. The key advantage over GQA/MQA: instead of reducing the <em>number</em> of heads, MLA reduces the <em>dimensionality</em> of the cached representation, preserving expressiveness.</p>
 
+<div class="note">
+    <p><strong>Why not GQA?</strong> Grouped Query Attention (used by Llama 3, Gemma 2, and most open models) is simpler to implement and works well in practice. But GQA forces a hard trade-off: fewer KV groups means more compression but less per-head specialization. At DeepSeek's scale (128 heads, 128K context), even 8-group GQA still caches $2 \times 8 \times 128 = 2{,}048$ values per token, while MLA caches $d_c + d_R \approx 576$. MLA also preserves the full expressiveness of all 128 heads during attention computation (since keys and values are reconstructed per-head from the shared latent), whereas GQA forces heads within a group to share identical keys and values. The cost is implementation complexity: MLA requires the decoupled RoPE design and careful kernel optimization for the up-projections.</p>
+</div>
+
+<p>MLA handles the attention side of the efficiency equation. But each transformer layer also has a feed-forward network, and in a dense model, every parameter in that FFN fires for every token.</p>
 
 <!-- ============================================================ -->
 <h2 id="moe">3. DeepSeekMoE</h2>
@@ -225,51 +307,79 @@
 
 <p>In DeepSeek-V3, this means 671B total parameters but only ~37B activated per token. You get the capacity of a 671B model at roughly the inference cost of a 37B dense model.</p>
 
+<p>MoE makes each layer cheaper by activating fewer parameters. But even with sparse FFNs, attention still scales quadratically with sequence length, and at 128K tokens, it dominates the compute budget.</p>
 
 <!-- ============================================================ -->
 <h2 id="dsa">4. DeepSeek Sparse Attention (DSA)</h2>
 
-<p>Standard attention is $O(n^2)$ in sequence length. At 128K tokens, this is the dominant cost. DeepSeek Sparse Attention reduces this to near-linear by selecting only the most relevant tokens for each query to attend to.</p>
+<p>Standard attention is $O(n^2)$ in sequence length. At 128K tokens, the attention matrix has $\sim$16 billion entries per layer per head. DeepSeek Sparse Attention reduces this to near-linear by selecting only the most relevant tokens for each query to attend to.</p>
 
 <h3>The Core Idea</h3>
 
-<p>DSA operates in two stages:</p>
+<p>DSA splits the context into two categories for each query: a small set of globally relevant tokens (selected by a cheap scoring pass) and a local window of nearby tokens. Only these selected tokens participate in the full attention computation.</p>
+
+<p>The process has two stages:</p>
 
 <ol class="steps">
     <li>
-        <strong>Lightning Indexer:</strong> A lightweight scoring function quickly estimates the relevance of every token in the context. It uses the compressed latent representations from MLA (which are already cached), so this step adds minimal overhead.
+        <strong>Lightning Indexer (cheap scoring):</strong> For each query position $t$, compute a relevance score for every past token. The scoring uses MLA's compressed latent representations $c_j^{KV}$ (which are already cached), so this step adds minimal overhead. Concretely, the score for token $j$ given query $q_t$ is a dot product in the compressed space:
+
+        <div class="equation-block">
+            <span class="eq-label">Token Relevance Score</span>
+            $$\text{score}(q_t, j) = q_t^{\text{idx}} \cdot (c_j^{KV})^\top$$
+        </div>
+
+        <p>where $q_t^{\text{idx}}$ is a lightweight query projection (a small linear layer applied to the query, separate from the main attention query). This is much cheaper than full attention because it operates in the compressed dimension $d_c$ (e.g., 512) rather than the full head dimension.</p>
     </li>
     <li>
-        <strong>Selective Attention:</strong> Each query attends only to the top-$B$ tokens (where $B$ is a fixed budget, e.g., 4096) identified by the indexer, plus local sliding-window tokens for nearby context.
+        <strong>Selective Attention:</strong> Select the top-$B$ tokens by score (where $B$ is a fixed budget per query, typically 4,096) and combine them with the local sliding window (typically 4,096 tokens). Only this subset participates in the full attention computation:
+
+        <div class="equation-block">
+            <span class="eq-label">Sparse Attention</span>
+            $$\text{Attn}(q_t) = \text{softmax}\!\left(\frac{q_t K_{\mathcal{S}_t}^\top}{\sqrt{d}}\right) V_{\mathcal{S}_t}$$
+        </div>
+
+        <p>where $\mathcal{S}_t = \text{TopB}(\text{score}(q_t, \cdot)) \cup \text{Window}(t, w)$ is the union of the top-$B$ globally relevant tokens and the local window of size $w$.</p>
     </li>
 </ol>
 
-<p>The attention computation for query at position $t$:</p>
-
-<div class="equation-block">
-    <span class="eq-label">Sparse Attention</span>
-    $$\text{Attn}(q_t) = \text{softmax}\!\left(\frac{q_t K_{\mathcal{S}_t}^\top}{\sqrt{d}}\right) V_{\mathcal{S}_t}$$
-</div>
-
-<p>where $\mathcal{S}_t = \text{TopB}(\text{score}(q_t, c_1, \ldots, c_{t-1})) \cup \text{Window}(t)$ is the union of the top-$B$ globally relevant tokens and the local window.</p>
-
 <div class="note">
-    <p><strong>Intuition:</strong> Instead of every token attending to every other token (quadratic), DSA first does a cheap scan to find which tokens matter, then only computes full attention on those. It is like reading a book: you do not re-read every page when answering a question, you scan the table of contents, flip to the relevant sections, and read those carefully.</p>
+    <p><strong>Intuition:</strong> Instead of every token attending to every other token (quadratic), DSA first does a cheap scan to find which tokens matter, then computes full attention only on those. At 128K context with $B = 4{,}096$ and window $w = 4{,}096$, each query attends to at most ~8K tokens instead of 128K, a 16x reduction. The scoring pass itself is cheap because it operates in MLA's compressed space ($d_c = 512$) rather than the full attention dimension.</p>
 </div>
 
 <h3>Why It Works with MLA</h3>
 
-<p>The lightning indexer reuses the compressed representations $c_t^{KV}$ from MLA. Since these are already stored in the KV cache, the indexer does not need to recompute or store anything extra. The scoring function is a simple dot product in the compressed space, making it extremely fast.</p>
+<p>This is where MLA and DSA reinforce each other. MLA already compresses keys and values into latent vectors $c_t^{KV}$ for the purpose of reducing cache memory. DSA reuses these exact same compressed representations as input to the lightning indexer. The indexer does not need its own separate index or data structure; it simply dot-products the query against the cached latents. Without MLA's compression, the indexer would need to score against full-dimensional keys, making the "cheap scan" much less cheap.</p>
+
+<details class="example">
+<summary>Worked example: token selection at 128K context</summary>
+<div class="example-body">
+
+<p>Consider a model processing a 128K-token document. At position $t = 100{,}000$, the query asks about "the treaty signed in 1648". With dense attention, this query would compute 100,000 dot products at full dimension.</p>
+
+<p><em>Step 1: Scoring.</em> The lightning indexer computes $\text{score}(q_t, j)$ for all $j < t$ using the compressed latents. This is 100,000 dot products, but in dimension $d_c = 512$ instead of $d_h = 128 \times 128 = 16{,}384$. Tokens mentioning "treaty", "Westphalia", "1648", and "Peace" score highest.</p>
+
+<p><em>Step 2: Selection.</em> The top $B = 4{,}096$ tokens by score are selected globally. These might be scattered across the document: some from the section discussing the Treaty of Westphalia (positions ~12,000-12,500), some from a timeline section (positions ~45,000-45,200), and some from a cross-reference (position ~89,000). The local window captures positions 95,904 to 100,000.</p>
+
+<p><em>Step 3: Full attention.</em> The query computes full multi-head attention over only these ~8K tokens. The attention matrix has 8K entries instead of 100K, a 12.5x reduction, while still attending to the most relevant passages anywhere in the document.</p>
+
+</div>
+</details>
+
+<h3>Hardware Alignment</h3>
+
+<p>DSA is designed to be hardware-friendly. The token selection produces contiguous blocks (tokens are grouped into blocks of 64 for the scoring pass, and entire blocks are selected or rejected). This avoids the scattered memory access patterns that plague naive sparse attention implementations. The block-sparse structure maps efficiently to GPU tensor cores and allows the use of standard FlashAttention kernels on the selected blocks.</p>
 
 <div class="warning">
-    <p><strong>Key limitation:</strong> DSA requires the model to be trained with sparse attention from the start (or at least fine-tuned with it). You cannot simply drop DSA into a pre-trained dense-attention model and expect it to work; the model needs to learn which tokens are worth selecting.</p>
+    <p><strong>Key limitation:</strong> DSA requires the model to be trained with sparse attention from the start (or at least fine-tuned with it for an extended period). You cannot simply drop DSA into a pre-trained dense-attention model and expect it to work. The model needs to learn which tokens are worth selecting, and the lightning indexer's query projection must be trained jointly with the rest of the attention mechanism.</p>
 </div>
 
+<p>MLA, MoE, and DSA together address the core inference bottlenecks: memory, compute per layer, and quadratic attention. But a pre-trained model still needs alignment. The next section covers how DeepSeek handles post-training with a unified RL approach.</p>
 
 <!-- ============================================================ -->
 <h2 id="rl">5. Scalable Reinforcement Learning</h2>
 
-<p>After pre-training, DeepSeek uses reinforcement learning to improve reasoning, tool use, and safety. The core algorithm is <strong>Group Relative Policy Optimization (GRPO)</strong>, which avoids the need for a separate value model (unlike PPO).</p>
+<p>After pre-training, DeepSeek uses reinforcement learning to improve reasoning, tool use, and safety. The core algorithm is <strong><a href="/blog/2026/ppo-grpo/">Group Relative Policy Optimization (GRPO)</a></strong>, which avoids the need for a separate value model (unlike PPO).</p>
 
 <h3>GRPO</h3>
 
@@ -327,26 +437,33 @@
 
 <h3>Unified Training Pipeline</h3>
 
-<p>Rather than separate RL stages for reasoning, tool use, and safety, DeepSeek runs a <strong>three-phase unified pipeline</strong>:</p>
+<p>Rather than running separate RL stages for reasoning, tool use, and safety (which risks catastrophic forgetting between stages), DeepSeek runs a <strong>three-phase unified pipeline</strong>:</p>
 
 <ol class="steps">
     <li>
-        <strong>Specialist Training:</strong> Train domain-specific expert policies (math, code, agents) using verifiable rewards. Math uses answer correctness; code uses test-case pass rates; agents use task completion signals.
+        <strong>Specialist Training:</strong> Train domain-specific expert policies using GRPO with verifiable rewards. Each specialist focuses on a single domain:
+        <ul>
+            <li><em>Math specialist:</em> trained on competition-level problems; reward = 1 if final answer matches ground truth, 0 otherwise.</li>
+            <li><em>Code specialist:</em> trained on programming challenges; reward = fraction of test cases passed (0.0 to 1.0).</li>
+            <li><em>Agent specialist:</em> trained on multi-step tool-use tasks; reward = binary task completion signal from a programmatic verifier.</li>
+        </ul>
+        Each specialist starts from the same SFT checkpoint and diverges during RL. This phase runs for thousands of GRPO steps per domain, producing 3-5 specialist checkpoints.
     </li>
     <li>
-        <strong>Distillation:</strong> Distill the specialist policies into a single generalist model using KL-divergence minimization against each specialist's output distribution.
+        <strong>Distillation:</strong> Merge the specialist policies into a single generalist model. For each domain's prompt distribution, the generalist is trained to minimize KL divergence against the corresponding specialist's output distribution: $\mathcal{L}_{\text{distill}} = \sum_{d \in \text{domains}} \mathbb{E}_{x \sim \mathcal{D}_d}\left[D_{\text{KL}}(\pi_{\text{specialist}}^d(\cdot|x) \| \pi_{\text{generalist}}(\cdot|x))\right]$. This is cheaper than training from scratch because the specialists have already found good policies; distillation just needs to merge them. The result is a single model that is competent (but not yet optimal) across all domains.
     </li>
     <li>
-        <strong>Unified RL:</strong> Run GRPO on the distilled model with a mixed reward signal combining all domains: correctness rewards for reasoning, execution rewards for code, task rewards for agents, and a safety classifier.
+        <strong>Unified RL:</strong> Run GRPO on the distilled model with a <strong>mixed-domain reward signal</strong>. Each training batch contains prompts from all domains simultaneously. The router selects the appropriate reward function based on the prompt's domain tag: correctness for math, test-case pass rate for code, task completion for agents, and a safety classifier score for all prompts. The mixed batches are critical: they prevent the model from overfitting to any single domain's reward signal. The KL penalty against the distilled checkpoint acts as an anchor, preventing the model from forgetting capabilities while improving on each domain.
     </li>
 </ol>
 
-<p>The unified stage uses domain-specific reward functions applied to a shared prompt pool. Each batch contains prompts from all domains, and the model receives the appropriate reward signal for each.</p>
-
 <h3>Agentic Task Synthesis</h3>
 
-<p>For tool-use training, DeepSeek generates synthetic multi-step tasks. The synthesis pipeline produces over 85,000 tasks spanning web browsing, file operations, API calls, and multi-tool composition. Each task comes with a programmatic verifier that checks whether the agent's execution trace achieves the intended outcome.</p>
+<p>The agent specialist in phase 1 needs training data, but real multi-step agentic tasks are scarce and expensive to annotate. DeepSeek solves this with a synthesis pipeline that generates over 85,000 tasks spanning web browsing, file operations, API calls, and multi-tool composition.</p>
 
+<p>The synthesis process works in three steps: (1) an LLM generates a task description and the ground-truth execution plan, (2) a programmatic verifier is auto-generated that checks whether an agent's execution trace achieves the intended outcome (not just the final answer, but intermediate state transitions), and (3) the task is validated by running it against a baseline agent to ensure it is solvable but non-trivial. Tasks that are either trivially solved (>90% baseline pass rate) or unsolvable (<5% pass rate) are filtered out.</p>
+
+<p>All five innovations so far target efficiency during pre-training or post-training. The final innovation, Engram, addresses a different question: can we give the transformer a fundamentally new primitive for tasks it currently handles inefficiently?</p>
 
 <!-- ============================================================ -->
 <h2 id="engram">6. Engram: Conditional Memory</h2>
@@ -769,6 +886,11 @@
 
 <p>Standard transformers force both tasks through the same computational pathway. Engram gives the model a native "memory fetch" primitive, analogous to how CPUs separate cache/memory access from ALU computation.</p>
 
+<!-- ============================================================ -->
+<h2 id="engram-practice">7. Engram in Practice</h2>
+
+<p>The architecture above describes what Engram does. This section covers how to deploy it: where to place it in the transformer stack, how to manage the large embedding tables, and the scaling properties.</p>
+
 <h3>System Design</h3>
 
 <p>Engram's embedding tables can grow to billions of parameters (the Engram-40B variant has 18.5B in memory alone). The system handles this through:</p>
@@ -807,7 +929,7 @@
 
 
 <!-- ============================================================ -->
-<h2 id="notes">7. Practical Notes</h2>
+<h2 id="notes">8. Practical Notes</h2>
 
 <h3>Which innovations matter most for your use case?</h3>
 
@@ -842,7 +964,7 @@
     <li><strong>MLA:</strong> The up-projection matrices $W^{UK}$ and $W^{UV}$ add latency to each attention computation. This is usually hidden by the memory savings, but on very short sequences where KV cache is not a bottleneck, MLA can be slightly slower than standard MHA.</li>
     <li><strong>MoE:</strong> Expert parallelism requires all-to-all communication across devices. On poorly connected clusters (low bisection bandwidth), MoE can be slower than dense models of the same active size.</li>
     <li><strong>GRPO:</strong> The group size $G$ matters. Too small ($G < 8$) and the advantage estimates are noisy. Too large ($G > 64$) and you waste compute generating low-information samples. DeepSeek uses $G = 16\text{-}64$ depending on the task.</li>
-    <li><strong>Engram:</strong> Layer placement is critical (see <a href="#engram">Layer Placement</a> above). Late-only insertion can be worse than no Engram at all. Always place the first module at layer 2, with an optional second at a middle layer.</li>
+    <li><strong>Engram:</strong> Layer placement is critical (see <a href="#engram-practice">Layer Placement</a> above). Late-only insertion can be worse than no Engram at all. Always place the first module at layer 2, with an optional second at a middle layer.</li>
 </ul>
 
 <h2>References</h2>
