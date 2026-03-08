@@ -509,6 +509,16 @@ $$E^{(0)} \to E^{(1)} \to \cdots \to E^{(L)}$$
 </p>
 
 <div class="note">
+    <strong>Intuition:</strong> the two deltas carry different kinds of knowledge.
+    $\text{Attn}(E)$ is <strong>contextual information</strong>: it is computed on the fly
+    from the tokens seen so far, so it captures what is relevant <em>in this particular sequence</em>.
+    $\text{MLP}(E')$ is <strong>world knowledge</strong>: it is produced by fixed, learned weight
+    matrices, so it injects facts and patterns absorbed during training into the
+    (now context-aware) representation $E'$.
+    Attention figures out what to pay attention to; the MLP recalls what it knows about it.
+</div>
+
+<div class="note">
     <strong>Intuition:</strong> Think of the residual stream as a shared whiteboard. Each
     attention layer reads from the whiteboard, computes a suggestion based on context, and
     writes it back. Each MLP layer reads from the whiteboard, does some per-token thinking,
