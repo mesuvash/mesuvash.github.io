@@ -579,12 +579,6 @@ E_out = E_prime + Delta  # residual update</code></pre>
     the last token's hidden state through $W_U$ to get vocabulary logits.
 </p>
 
-<div class="note">
-    <strong>Scaling note:</strong> The $1/\sqrt{d_k}$ factor prevents dot products from
-    growing large as $d_k$ increases, which would push softmax into saturation (near-zero
-    gradients). This is why the original paper calls it "Scaled Dot-Product Attention."
-</div>
-
 <hr>
 
 <h2>Summary</h2>
