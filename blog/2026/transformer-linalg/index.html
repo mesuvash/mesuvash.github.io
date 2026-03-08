@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | WTF Is Happening Inside a Transformer</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="WTF Is Happening Inside a Transformer (Linear Algebra Edition)" />
+    <meta property="og:description" content="An intuition-first guide to what transformers actually compute, explained through the lens of linear algebra. Q, K, V demystified." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/transformer-linalg/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="WTF Is Happening Inside a Transformer (Linear Algebra Edition)" />
+    <meta name="twitter:description" content="An intuition-first guide to what transformers actually compute, explained through the lens of linear algebra. Q, K, V demystified." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>WTF Is Happening Inside a Transformer</h1>
+    <p class="post-meta">March 7, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F&text=WTF%20Is%20Happening%20Inside%20a%20Transformer%20(Linear%20Algebra%20Edition)" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F&title=WTF%20Is%20Happening%20Inside%20a%20Transformer%20(Linear%20Algebra%20Edition)" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    The linear algebra behind attention and MLPs, stripped to the essentials.<br>
+    If you can internalize "compute delta, add it back," most of the transformer stops being magical.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#big-picture">The One Pattern That Repeats</a></li>
+        <li><a href="#notation">Notation: Text as a Matrix</a></li>
+        <li><a href="#problem">The Problem: Per-Token Layers Can't Do Context</a></li>
+        <li><a href="#attention">Attention: Context Mixing</a></li>
+        <li><a href="#mlp">MLP: Feature Computation</a></li>
+        <li><a href="#full-layer">One Full Transformer Layer</a></li>
+        <li><a href="#next-token">From Transformer Stack to Next-Token Prediction</a></li>
+        <li><a href="#pseudocode">Pseudocode</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">1. The One Pattern That Repeats</h2>
+
+<p>
+    Transformer diagrams look like a maze of boxes. But there is one pattern that repeats
+    through the entire architecture:
+</p>
+
+<blockquote>
+    <p>Every layer computes an update vector $\Delta$ and adds it back to the input (residual connection). Repeat ~100 times. Done.</p>
+</blockquote>
+
+<p>
+    That is the entire structure of GPT, LLaMA, and every other decoder-only
+    transformer. Each layer does two sub-steps, both wrapped in this same residual pattern:
+</p>
+
+<ol>
+    <li><strong>Attention:</strong> mix information <em>across tokens</em>. Rows of the matrix talk to each other. The output is a delta: $E' = E + \Delta_{\text{attn}}$.</li>
+    <li><strong>MLP:</strong> mix information <em>within each token</em>. Features inside a single row get remixed. Another delta: $E'' = E' + \Delta_{\text{mlp}}$.</li>
+</ol>
+
+<p>
+    Stack $L$ of these layers, slap a vocabulary projection on the final hidden state,
+    and you get next-token prediction. That is the whole model.
+</p>
+
+<div class="note">
+    <strong>Simplifications in this post:</strong> We intentionally drop LayerNorm, dropout,
+    multi-head splitting, and keep nonlinearity optional until we need it. These are important
+    engineering details, but they obscure the core linear algebra story. We will note where
+    they matter.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="notation">2. Notation: Text as a Matrix</h2>
+
+<p>
+    Take a sequence like "a cat sat ...". Tokenize it into $n$ tokens. Each token $i$
+    gets looked up in an embedding table to produce a vector:
+</p>
+
+$$e_i \in \mathbb{R}^d$$
+
+<p>
+    where $d$ is the model dimension (e.g., 4096 for LLaMA-7B). Stack all $n$ token vectors
+    as rows of a matrix:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Embedding matrix:</div>
+    $$E = \begin{bmatrix} e_1^\top \\ e_2^\top \\ \vdots \\ e_n^\top \end{bmatrix} \in \mathbb{R}^{n \times d}$$
+</div>
+
+<p>
+    The whole sequence is one $n \times d$ matrix. Row $i$ is token $i$'s representation.
+    Columns correspond to features in the embedding space. A transformer layer is a function
+    that takes this matrix and returns a refined version of it: $E \mapsto E_{\text{new}}$.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of $E$ as a spreadsheet. Each row is a word. Each column
+    is some learned feature (you don't choose what the features mean; training does). The
+    transformer edits this spreadsheet in place, refining the rows one layer at a time.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="problem">3. The Problem: Per-Token Layers Can't Do Context</h2>
+
+<p>
+    Suppose all we did was apply a per-token linear map:
+</p>
+
+$$e_i \mapsto e_i W$$
+
+<p>
+    Each row gets multiplied by the same matrix $W$ independently. Token "sat" cannot look
+    at token "cat." It is isolated. This is fine for bag-of-words models, but terrible for
+    language, where meaning depends on context ("bank" means different things in
+    "river bank" vs. "bank account").
+</p>
+
+<p>
+    We need a mechanism where token $i$ can <strong>pull information</strong> from other
+    tokens $j$. That mechanism is attention.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="attention">4. Attention: Context Mixing</h2>
+
+<h3>What are Q, K, V?</h3>
+
+<p>
+    For each token vector $e_i$, we create three derived vectors using learned linear
+    projections (matrix multiplications with learned weights):
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Query, Key, Value projections:</div>
+    $$q_i = e_i W_Q, \quad k_i = e_i W_K, \quad v_i = e_i W_V$$
+</div>
+
+<p>
+    where $W_Q, W_K \in \mathbb{R}^{d \times d_k}$ and $W_V \in \mathbb{R}^{d \times d}$.
+    The same three weight matrices are applied to every token. Each one extracts a different
+    "view" of the same embedding:
+</p>
+
+<ul>
+    <li><strong>Query ($q_i \in \mathbb{R}^{d_k}$):</strong> "what am I looking for?" This token's search request.</li>
+    <li><strong>Key ($k_i \in \mathbb{R}^{d_k}$):</strong> "what do I contain?" The label this token advertises to others.</li>
+    <li><strong>Value ($v_i \in \mathbb{R}^{d}$):</strong> "what information should be added to whichever token attends to me?" The actual payload.</li>
+</ul>
+
+<p>
+    Notice the shapes. Q and K are projected <em>down</em> into a smaller $d_k$-dimensional space.
+    This is the matching space: its only job is to produce dot-product scores that decide
+    "who attends to whom." The value, by contrast, stays in the full $d$-dimensional embedding
+    space, because its job is to be added back into the residual stream (which lives in
+    $\mathbb{R}^d$).
+</p>
+
+<div class="warning">
+    <strong>What really happens with $W_V$:</strong>
+    In the actual implementation, V is first projected <em>down</em> to $d_k$ (just like Q and K),
+    then the attention output is projected back <em>up</em> to $d$ via a separate output matrix $W_O$.
+    Following
+    <a href="https://www.youtube.com/watch?v=eMlx5fFNoYc" target="_blank" rel="noopener">3Blue1Brown's
+    excellent visual explanation</a>, we collapse these two steps into a single
+    $W_V \in \mathbb{R}^{d \times d}$ that maps directly from embedding space to embedding space.
+    This is mathematically equivalent and makes the intuition cleaner: $W_V$ answers the
+    question "if someone attends to me, what $d$-dimensional update should they receive?"
+</div>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of a library. The query is the question you walk in with.
+    The key is the label on the spine of each book. The value is the content inside the book.
+    You compare your question (query) against every label (key), and then read the content (value)
+    of the books that match best.
+</div>
+
+<h3>Attention scores are dot products</h3>
+
+<p>
+    How much should token $i$ attend to token $j$? Compute the dot product between
+    token $i$'s query and token $j$'s key:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention score:</div>
+    $$s_{ij} = \langle q_i, k_j \rangle$$
+</div>
+
+<p>
+    The dot product has a clean geometric interpretation:
+</p>
+
+<ul>
+    <li><strong>Large positive:</strong> $q_i$ and $k_j$ point in the same direction. "Very relevant."</li>
+    <li><strong>Near zero:</strong> orthogonal. "Irrelevant."</li>
+    <li><strong>Negative:</strong> opposing directions. "Actively not what I want."</li>
+</ul>
+
+<p>
+    Then normalize scores across all $j$ with softmax so they form a probability distribution
+    (non-negative, sum to 1):
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention weights:</div>
+    $$\alpha_{ij} = \text{softmax}_j(s_{ij}) = \frac{\exp(s_{ij})}{\sum_{k} \exp(s_{ik})}$$
+</div>
+
+<p>
+    For <strong>causal (GPT-style) models</strong>, we mask out positions $j > i$ (set them
+    to $-\infty$ before softmax) so each token can only look at the past and itself.
+    This prevents the model from cheating by reading future tokens.
+</p>
+
+<h3>The core operation: weighted sum of values</h3>
+
+<p>
+    With the attention weights in hand, the output for token $i$ is simply a
+    weighted average of all the value vectors it can see:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention output (per token):</div>
+    $$\Delta e_i = \sum_{j \le i} \alpha_{ij} \, v_j$$
+</div>
+
+<p>
+    Then the residual update:
+</p>
+
+$$e'_i = e_i + \Delta e_i$$
+
+<p>
+    That is the entire attention mechanism in one sentence: <strong>make a weighted mixture of
+    other tokens' value vectors and add it to the current token.</strong> The original embedding
+    is always preserved; attention only adds to it.
+</p>
+
+<h3>Walking through a concrete example</h3>
+
+<p>
+    Consider three tokens: "a" ($e_1$), "cat" ($e_2$), "sat" ($e_3$), with causal masking.
+</p>
+
+<p>
+    <strong>Token 1 ("a"):</strong> can only see itself. Its attention weights are trivially
+    $[\alpha_{11} = 1]$, so $\Delta e_1 = v_1$. It just copies its own value.
+</p>
+
+<p>
+    <strong>Token 2 ("cat"):</strong> can see tokens 1 and 2. First, compute two dot products:
+    $\langle q_2, k_1 \rangle$ and $\langle q_2, k_2 \rangle$. Softmax these to get
+    $[\alpha_{21}, \alpha_{22}]$ (two numbers that sum to 1). Then:
+</p>
+
+$$\Delta e_2 = \alpha_{21} \cdot v_1 + \alpha_{22} \cdot v_2$$
+
+<p>
+    If "cat" strongly attends to "a" (maybe it learned that articles modify nouns),
+    $\alpha_{21}$ will be large, and $\Delta e_2$ will contain mostly $v_1$'s information.
+</p>
+
+<p>
+    <strong>Token 3 ("sat"):</strong> sees all three. Three dot products, three softmax weights,
+    three value vectors mixed:
+</p>
+
+$$\Delta e_3 = \alpha_{31} \cdot v_1 + \alpha_{32} \cdot v_2 + \alpha_{33} \cdot v_3$$
+
+<p>
+    Each later token can attend to more context. This growing triangle of attention is why
+    transformer language models get better at prediction as they see more tokens.
+</p>
+
+<h3>Matrix form (the whole trick in 3 lines)</h3>
+
+<p>
+    Stack all queries, keys, and values into matrices:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Matrix projections:</div>
+    $$Q = EW_Q, \quad K = EW_K, \quad V = EW_V$$
+</div>
+
+<p>
+    Compute the $n \times n$ attention weight matrix:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention weights:</div>
+    $$A = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) \in \mathbb{R}^{n \times n}$$
+</div>
+
+<p>
+    Apply to values and add the residual:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Attention output + residual:</div>
+    $$E' = E + AV$$
+</div>
+
+<p>
+    Three lines. The $1/\sqrt{d_k}$ scaling prevents dot products from growing large as
+    $d_k$ increases (which would push softmax into saturation with near-zero gradients).
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> $A$ is a <strong>data-dependent mixing matrix</strong>.
+    Unlike a fixed weight matrix that does the same thing regardless of input, $A$ is
+    computed fresh from the actual token content for every input sequence. It tells each
+    token how much to "read from" every other token. Attention is essentially: "compute your
+    own mixing matrix, then use it to blend the value payloads."
+</div>
+
+<h3>Two facts worth internalizing</h3>
+
+<ol>
+    <li>
+        <strong>Each $\Delta e_i$ lies in the span of $\{v_j\}$.</strong> Attention does not
+        invent new directions; it recombines existing value vectors. The weights $\alpha_{ij}$
+        are just the coefficients of this linear combination.
+    </li>
+    <li>
+        <strong>The mixing matrix $A$ depends on the input.</strong> A fixed matrix would
+        apply the same transformation to any text. Attention computes $A$ from the data
+        itself, which is what makes it context-sensitive.
+    </li>
+</ol>
+
+<div class="warning">
+    <strong>Note on multi-head attention:</strong> Real transformers split $Q$, $K$, $V$ into
+    $h$ "heads" (e.g., $h = 32$), each with dimension $d_k = d/h$. Each head computes its own
+    attention pattern independently, then the $h$ outputs are concatenated and projected back to
+    dimension $d$. The math per head is identical to what we described above. Multi-head just runs
+    multiple attention patterns in parallel so different heads can attend to different things
+    (one head might track syntax, another might track coreference).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mlp">5. MLP: Feature Computation</h2>
+
+<p>
+    After attention, each token vector $e'_i$ now contains contextual information from
+    other tokens. The MLP layer processes each token independently, so no cross-token mixing
+    happens here.
+</p>
+
+<blockquote>
+    <p>Attention mixes across tokens. MLP mixes within a token.</p>
+</blockquote>
+
+<h3>The shape story: expand, activate, compress</h3>
+
+<p>
+    The MLP has a characteristic "bottleneck in reverse" shape. It expands the dimension,
+    applies a nonlinearity, then compresses back:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">MLP per token:</div>
+    $$\text{MLP}(x) = \phi(x \, W_{\text{up}}) \; W_{\text{down}}$$
+</div>
+
+<p>Where:</p>
+
+<ul>
+    <li>$W_{\text{up}} \in \mathbb{R}^{d \times d_{ff}}$ <strong>expands</strong> the dimension. Typically $d_{ff} = 4d$ (e.g., 4096 to 16384).</li>
+    <li>$\phi$ is a nonlinearity (GELU, SiLU, etc.) applied element-wise.</li>
+    <li>$W_{\text{down}} \in \mathbb{R}^{d_{ff} \times d}$ <strong>compresses</strong> back to the original dimension.</li>
+</ul>
+
+<p>
+    With the residual connection:
+</p>
+
+$$e''_i = e'_i + \text{MLP}(e'_i)$$
+
+<h3>What the up-projection actually computes</h3>
+
+<p>
+    When you multiply $e'_i \in \mathbb{R}^d$ by $W_{\text{up}} \in \mathbb{R}^{d \times d_{ff}}$,
+    each element $j$ of the resulting hidden vector $h_i \in \mathbb{R}^{d_{ff}}$ is a
+    dot product:
+</p>
+
+$$h_{i,j} = \langle w^{\text{up}}_j, \; e'_i \rangle$$
+
+<p>
+    where $w^{\text{up}}_j$ is the $j$-th column of $W_{\text{up}}$ (or equivalently, the
+    $j$-th row of $W_{\text{up}}^\top$). Each of the $d_{ff}$ hidden units is checking:
+    "how much does this token's embedding align with my learned direction?" The nonlinearity
+    $\phi$ then selectively activates some of these matches and suppresses others.
+</p>
+
+<p>
+    The down-projection $W_{\text{down}}$ recombines the activated features back into a
+    $d$-dimensional update vector $\Delta e'_i$.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> The MLP has a menu of $d_{ff}$ possible features it can detect.
+    The up-projection asks "is this feature present?" for each one. The nonlinearity decides
+    "yes" or "no." The down-projection says "given which features fired, here is the update
+    to add to the token." For a token like "bank" in "river bank," the attention step
+    already mixed in context from "river." Now the MLP can fire features like
+    "natural_landform" and suppress "financial_institution."
+</div>
+
+<h3>If you remove the nonlinearity, the MLP collapses</h3>
+
+<p>
+    Without $\phi$:
+</p>
+
+$$\text{MLP}(x) = x \, W_{\text{up}} W_{\text{down}}$$
+
+<p>
+    That is just $x \cdot M$ where $M = W_{\text{up}} W_{\text{down}}$ is a single matrix. Two
+    linear layers without a nonlinearity between them collapse into one. The expansion to
+    $d_{ff}$ dimensions buys you nothing. The nonlinearity (and often gating, as in SwiGLU)
+    is what makes the MLP a flexible feature detector rather than a redundant linear transform.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="full-layer">6. One Full Transformer Layer</h2>
+
+<p>
+    Putting both pieces together (ignoring LayerNorm):
+</p>
+
+<div class="steps">
+    <div class="step">
+        <strong>Attention update:</strong> mix information across tokens.
+        $$E' = E + \text{Attn}(E)$$
+        Each token reads from other tokens and adds the gathered information to itself.
+    </div>
+    <div class="step">
+        <strong>MLP update:</strong> compute features within each token.
+        $$E'' = E' + \text{MLP}(E')$$
+        Each token independently processes its (now context-enriched) representation.
+    </div>
+</div>
+
+<p>
+    That is one layer. Stack $L$ layers:
+</p>
+
+$$E^{(0)} \to E^{(1)} \to \cdots \to E^{(L)}$$
+
+<p>
+    Each layer refines the token representations by adding learned deltas. The residual
+    connections mean information from early layers flows directly to later layers without
+    being forced through every intermediate computation.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of the residual stream as a shared whiteboard. Each
+    attention layer reads from the whiteboard, computes a suggestion based on context, and
+    writes it back. Each MLP layer reads from the whiteboard, does some per-token thinking,
+    and writes that back too. After $L$ rounds, the whiteboard holds a rich, refined
+    representation of each token.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="next-token">7. From Transformer Stack to Next-Token Prediction</h2>
+
+<p>
+    After $L$ layers, we have the final representation $E^{(L)} \in \mathbb{R}^{n \times d}$.
+    To predict the next token, take the last row (the representation of the most recent token)
+    and project it into vocabulary space:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Logits:</div>
+    $$\text{logits} = e^{(L)}_n \, W_U \in \mathbb{R}^{|\mathcal{V}|}$$
+</div>
+
+<p>
+    where $W_U \in \mathbb{R}^{d \times |\mathcal{V}|}$ is the <strong>unembedding matrix</strong> and
+    $|\mathcal{V}|$ is the vocabulary size (e.g., 32000 for LLaMA). Apply softmax to get a
+    probability distribution over the vocabulary: $P(\text{next token})$.
+</p>
+
+<p>
+    <strong>Geometric interpretation:</strong> each column of $W_U$ is a direction in
+    $\mathbb{R}^d$ corresponding to one vocabulary token. The logit for token $w$ is the
+    dot product $\langle e^{(L)}_n, w_U \rangle$: how aligned is the hidden state with that
+    token's direction? The predicted next token is whichever vocabulary direction is most
+    aligned with the final hidden state. The entire transformer stack's job is to produce a
+    hidden state that points toward the correct next token.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="pseudocode">8. Pseudocode</h2>
+
+<p>
+    The complete forward pass for one layer, single-head, in readable Python-style pseudocode:
+</p>
+
+<pre><code># E: (n, d) — the sequence matrix
+
+# === Attention ===
+Q = E @ W_Q          # (n, d_k) — queries
+K = E @ W_K          # (n, d_k) — keys
+V = E @ W_V          # (n, d)   — values (stays in embedding dim)
+
+S = Q @ K.T          # (n, n)   — raw scores
+S = S / sqrt(d_k)    # scale to keep gradients stable
+S = S + causal_mask  # set j > i entries to -inf
+A = softmax(S, dim=-1)  # (n, n) — attention weights (rows sum to 1)
+
+O = A @ V            # (n, d)   — weighted sum of values
+E_prime = E + O      # residual update
+
+# === MLP ===
+H = E_prime @ W_up   # (n, d_ff) — expand
+H = phi(H)           # nonlinearity (GELU, SiLU, etc.)
+Delta = H @ W_down   # (n, d)   — compress back
+
+E_out = E_prime + Delta  # residual update</code></pre>
+
+<p>
+    That is one transformer layer. For the full model: apply this $L$ times, then project
+    the last token's hidden state through $W_U$ to get vocabulary logits.
+</p>
+
+<div class="note">
+    <strong>Scaling note:</strong> The $1/\sqrt{d_k}$ factor prevents dot products from
+    growing large as $d_k$ increases, which would push softmax into saturation (near-zero
+    gradients). This is why the original paper calls it "Scaled Dot-Product Attention."
+</div>
+
+<hr>
+
+<h2>Summary</h2>
+
+<table>
+    <tr><th>Component</th><th>What it does</th><th>Operates on</th></tr>
+    <tr>
+        <td><strong>Q, K, V projections</strong></td>
+        <td>Create three views of each token</td>
+        <td>Per token (same $W$ for all)</td>
+    </tr>
+    <tr>
+        <td><strong>$QK^\top$</strong></td>
+        <td>Compute pairwise relevance scores</td>
+        <td>All token pairs</td>
+    </tr>
+    <tr>
+        <td><strong>softmax + mask</strong></td>
+        <td>Normalize into a mixing distribution</td>
+        <td>Per query (each row)</td>
+    </tr>
+    <tr>
+        <td><strong>$AV$</strong></td>
+        <td>Weighted sum of value payloads</td>
+        <td>Across tokens</td>
+    </tr>
+    <tr>
+        <td><strong>Residual add</strong></td>
+        <td>$E' = E + \Delta$</td>
+        <td>Per token</td>
+    </tr>
+    <tr>
+        <td><strong>MLP (up → $\phi$ → down)</strong></td>
+        <td>Per-token feature detection</td>
+        <td>Per token independently</td>
+    </tr>
+    <tr>
+        <td><strong>Residual add</strong></td>
+        <td>$E'' = E' + \Delta'$</td>
+        <td>Per token</td>
+    </tr>
+    <tr>
+        <td><strong>$W_U$ + softmax</strong></td>
+        <td>Project to vocabulary, predict next token</td>
+        <td>Last token only (at inference)</td>
+    </tr>
+</table>
+
+</article>
+
+  <div id="disqus_thread"></div>
+  <script>
+    var disqus_shortname = 'ssedhain';
+    var disqus_config = function() { this.page.reactions_enabled = 0; };
+    (function() {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+<!-- Share bottom -->
+<div class="share-bottom">
+    <p>Found this useful? Share it.</p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F&text=WTF%20Is%20Happening%20Inside%20a%20Transformer%20(Linear%20Algebra%20Edition)" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftransformer-linalg%2F&title=WTF%20Is%20Happening%20Inside%20a%20Transformer%20(Linear%20Algebra%20Edition)" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a> for more.</p>
+</div>
+
+</div><!-- page-content -->
+
+<footer class="site-footer">
+    <div class="container">
+        &copy; 2026 Suvash Sedhain
+    </div>
+</footer>
+
+</body>
+</html>
