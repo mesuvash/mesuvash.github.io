@@ -223,22 +223,26 @@ When people say "scaling slowed," a lot of the time they mean: we scaled paramet
 <h2 id="math">4. The Math (Kept Simple)</h2>
 
 <p>
-The empirical relationship between loss and scale, first characterized systematically by <a href="https://arxiv.org/abs/2001.08361">Kaplan et al. (2020)</a>, can be approximated as:
+<a href="https://arxiv.org/abs/2001.08361">Kaplan et al. (2020)</a> first characterized systematic power-law relationships between loss and scale. They showed that when you vary one axis at a time (holding the other sufficient), loss follows clean power laws in $N$ alone or $D$ alone.
+</p>
+
+<p>
+A useful joint form, introduced by <a href="https://arxiv.org/abs/2203.15556">Hoffmann et al. (2022)</a> (Chinchilla), decomposes loss into additive terms:
 </p>
 
 <div class="eq-block">
-    <div class="eq-label">Scaling law (decomposed form):</div>
-    $$L(N, D) \;\approx\; L_{\infty} \;+\; \frac{a}{N^{\alpha}} \;+\; \frac{b}{D^{\beta}}$$
+    <div class="eq-label">Scaling law (additive decomposition, Chinchilla):</div>
+    $$L(N, D) \;\approx\; E \;+\; \frac{A}{N^{\alpha}} \;+\; \frac{B}{D^{\beta}}$$
 </div>
 
 <p>
 Where:
 </p>
 <ul>
-    <li>$L_{\infty}$ is the <strong>irreducible loss</strong>: the floor you cannot beat with any amount of scale (entropy of the data itself).</li>
-    <li>$N$ is the number of parameters and $\alpha$ controls how fast bigger models help (typically $\alpha \approx 0.07$).</li>
-    <li>$D$ is the number of training tokens and $\beta$ controls how fast more data helps (typically $\beta \approx 0.20$).</li>
-    <li>$a, b$ are constants that depend on the architecture, data distribution, and training recipe.</li>
+    <li>$E$ is the <strong>irreducible loss</strong>: the floor you cannot beat with any amount of scale (entropy of the data itself).</li>
+    <li>$N$ is the number of parameters and $\alpha$ controls how fast bigger models help.</li>
+    <li>$D$ is the number of training tokens and $\beta$ controls how fast more data helps.</li>
+    <li>$A, B$ are constants that depend on the architecture, data distribution, and training recipe.</li>
 </ul>
 
 <p>
@@ -250,7 +254,7 @@ Read the equation like this: there is a floor you cannot beat. More parameters h
 </div>
 
 <div class="warning">
-    <strong>Warning:</strong> The exponents $\alpha$ and $\beta$ are not universal constants. They depend on architecture, tokenizer, data quality, and training details. Different papers report different values. The qualitative story (two diminishing-returns terms plus a floor) is robust; the exact numbers are not.
+    <strong>Warning:</strong> The exponents $\alpha$ and $\beta$ are not universal constants. Kaplan's one-variable power laws report $\alpha_N \approx 0.076$ and $\alpha_D \approx 0.095$ for parameter-limited and data-limited scaling respectively. Chinchilla's main empirical fits of the additive decomposition yield $\alpha$ and $\beta$ both close to 0.5, though a different decomposition in the same paper gives $\alpha \approx 0.34$, $\beta \approx 0.28$. These vary because they belong to different functional forms with different fitting procedures. The qualitative story (two diminishing-returns terms plus a floor) is robust; the exact numbers are recipe-specific.
 </div>
 
 <!-- ============================================================ -->
@@ -375,12 +379,12 @@ This is still scaling. It is scaling <strong>inference compute</strong> instead 
   <line x1="130" y1="165" x2="210" y2="218" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue2)"/>
   <line x1="390" y1="165" x2="310" y2="218" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow-green2)"/>
 
-  <text x="260" y="305" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Reference: Chen et al. (2024), Simple and Provable Scaling Laws for Test-Time Compute</text>
+  <text x="260" y="305" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Reference: Chen et al. (2024), Provable Scaling Laws for Test-Time Compute (Chen et al., 2024)</text>
 </svg>
 </div>
 
 <p>
-Reference: <a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a>, "Simple and Provable Scaling Laws for the Test-Time Compute of LLMs."
+Reference: <a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a>, "Provable Scaling Laws for the Test-Time Compute of Large Language Models."
 </p>
 
 <!-- ============================================================ -->
@@ -445,7 +449,7 @@ The question is not "should we scale?" The question is:
     <li>Hoffmann et al. (2022). <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a> (Chinchilla).</li>
     <li>Apple ML Research (2025). <a href="https://machinelearning.apple.com/research/optimal-data-mixtures">Scaling Laws for Optimal Data Mixtures</a>.</li>
     <li>Google Research (2026). <a href="https://research.google/blog/atlas-practical-scaling-laws-for-multilingual-models/">ATLAS: Practical Scaling Laws for Multilingual Models</a>.</li>
-    <li>Chen et al. (2024). <a href="https://arxiv.org/abs/2411.19477">Simple and Provable Scaling Laws for the Test-Time Compute of LLMs</a>.</li>
+    <li>Chen et al. (2024). <a href="https://arxiv.org/abs/2411.19477">Provable Scaling Laws for the Test-Time Compute of Large Language Models</a>.</li>
     <li>Wei et al. (2022). <a href="https://arxiv.org/abs/2206.07682">Emergent Abilities of Large Language Models</a>.</li>
     <li>Schaeffer et al. (2023). <a href="https://arxiv.org/abs/2304.15004">Are Emergent Abilities of LLMs a Mirage?</a></li>
 </ol>
