@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Scaling Laws for LLMs</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Scaling Laws for LLMs: The 3 Knobs You Actually Have" />
+    <meta property="og:description" content="Scaling is not 'bigger model.' It's a budget allocation problem across parameters, tokens, and compute. A first-principles guide to what scaling laws actually say." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/scaling-laws/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Scaling Laws for LLMs: The 3 Knobs You Actually Have" />
+    <meta name="twitter:description" content="Scaling is not 'bigger model.' It's a budget allocation problem across parameters, tokens, and compute. A first-principles guide to what scaling laws actually say." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        .knob-table td:first-child {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Scaling Laws for LLMs: The 3 Knobs You Actually Have</h1>
+    <p class="post-meta">March 10, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fscaling-laws%2F&text=Scaling%20Laws%20for%20LLMs%3A%20The%203%20Knobs%20You%20Actually%20Have" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fscaling-laws%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fscaling-laws%2F&title=Scaling%20Laws%20for%20LLMs%3A%20The%203%20Knobs%20You%20Actually%20Have" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    "Bigger model" is not a scaling strategy. Scaling is a 3-knob system: parameters, tokens, and compute.<br>
+    If you crank only one knob, you hit a bottleneck and scaling looks dead.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#why">Why This Matters</a></li>
+        <li><a href="#power-law">The Power Law Picture</a></li>
+        <li><a href="#three-knobs">The 3 Knobs</a></li>
+        <li><a href="#math">The Math (Kept Simple)</a></li>
+        <li><a href="#chinchilla">The Chinchilla Insight</a></li>
+        <li><a href="#beyond-pretraining">Beyond Pretraining Loss</a></li>
+        <li><a href="#limits">What Scaling Laws Cannot Promise</a></li>
+        <li><a href="#cheatsheet">Cheatsheet</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="why">1. Why This Matters</h2>
+
+<p>
+There are two types of scaling discourse. The first says: "just add parameters, bigger model equals bigger brain." The second says: "scaling is dead, gains are slowing, we hit the wall." Both are partially right, and both miss the same boring truth.
+</p>
+
+<p>
+Scaling works when you scale the right things together. If you scale the wrong thing in isolation, you hit a bottleneck and it <em>feels</em> like the laws of physics stopped working.
+</p>
+
+<p>
+This post is an intuition-first map of scaling laws for LLMs: the stuff that lets you predict returns from scale, and the stuff that explains why a giant model can still be weirdly mediocre.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="power-law">2. The Power Law Picture</h2>
+
+<p>
+If you plot "how surprised the model is by text" (cross-entropy loss) against "scale" on a log-log plot, you often see something close to a straight line.
+</p>
+
+<p>
+A straight line on a log-log plot means a <strong>power law</strong>. Each doubling of scale gives you a predictable improvement, but the improvement shrinks as you go. Diminishing returns are not a bug; they are the shape of the curve.
+</p>
+
+<div class="diagram">
+<svg width="520" height="320" viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow1">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect x="60" y="20" width="440" height="260" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shadow1)"/>
+
+  <!-- Grid lines -->
+  <g stroke="#e0e0e0" stroke-width="0.8">
+    <line x1="100" y1="60" x2="470" y2="60"/>
+    <line x1="100" y1="110" x2="470" y2="110"/>
+    <line x1="100" y1="160" x2="470" y2="160"/>
+    <line x1="100" y1="210" x2="470" y2="210"/>
+    <line x1="160" y1="40" x2="160" y2="260"/>
+    <line x1="230" y1="40" x2="230" y2="260"/>
+    <line x1="300" y1="40" x2="300" y2="260"/>
+    <line x1="370" y1="40" x2="370" y2="260"/>
+    <line x1="440" y1="40" x2="440" y2="260"/>
+  </g>
+
+  <!-- Axes -->
+  <line x1="100" y1="260" x2="470" y2="260" stroke="#333" stroke-width="1.5"/>
+  <line x1="100" y1="40" x2="100" y2="260" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Axis labels -->
+  <text x="285" y="295" text-anchor="middle" font-size="13" fill="#555">log(scale): parameters, tokens, or compute</text>
+  <text x="30" y="155" text-anchor="middle" font-size="13" fill="#555" transform="rotate(-90 30 155)">log(loss)</text>
+
+  <!-- Power law curve -->
+  <path d="M110,55 C140,120 170,170 220,200 C270,225 350,242 465,250" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+
+  <!-- Annotations -->
+  <text x="155" y="120" font-size="11" fill="#166534" font-style="italic">steep drop:</text>
+  <text x="155" y="135" font-size="11" fill="#166534" font-style="italic">big gains</text>
+  <line x1="150" y1="122" x2="140" y2="122" stroke="#166534" stroke-width="0.8"/>
+
+  <text x="350" y="215" font-size="11" fill="#991b1b" font-style="italic">flat region:</text>
+  <text x="350" y="230" font-size="11" fill="#991b1b" font-style="italic">smaller gains</text>
+
+  <!-- Dashed annotation line at midpoint -->
+  <line x1="220" y1="200" x2="220" y2="260" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="220" y="195" text-anchor="middle" font-size="11" fill="#555">diminishing returns</text>
+</svg>
+</div>
+
+<p>
+So yes, scaling works. But the part people forget: <strong>scale is not one number.</strong> There are three independent axes you can push, and pushing only one leads to a wall.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="three-knobs">3. The 3 Knobs</h2>
+
+<p>
+During pretraining, you have exactly three practical knobs:
+</p>
+
+<table class="knob-table">
+    <tr><th>Knob</th><th>What it is</th><th>Analogy</th></tr>
+    <tr>
+        <td>Parameters ($N$)</td>
+        <td>Number of trainable weights in the model</td>
+        <td>Brain size</td>
+    </tr>
+    <tr>
+        <td>Tokens ($D$)</td>
+        <td>Amount of text the model reads during training</td>
+        <td>Books read</td>
+    </tr>
+    <tr>
+        <td>Compute ($C$)</td>
+        <td>Total budget: roughly $C \approx 6ND$ FLOPs</td>
+        <td>Time and hardware</td>
+    </tr>
+</table>
+
+<p>
+These three are not independent. Compute is roughly the product of how big the model is and how much data it processes: $C \approx 6ND$. So a fixed compute budget forces a tradeoff: bigger model with fewer tokens, or smaller model with more tokens.
+</p>
+
+<div class="diagram">
+<svg width="520" height="380" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow2">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a1a">Pretraining is a 3-knob system</text>
+
+  <!-- Parameters box -->
+  <rect x="10" y="55" width="150" height="100" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="85" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">Parameters (N)</text>
+  <text x="85" y="100" text-anchor="middle" font-size="11" fill="#555">model capacity</text>
+  <text x="85" y="118" text-anchor="middle" font-size="11" fill="#555">"brain size"</text>
+  <text x="85" y="143" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">risk: undertrained</text>
+
+  <!-- Tokens box -->
+  <rect x="185" y="55" width="150" height="100" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="260" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">Tokens (D)</text>
+  <text x="260" y="100" text-anchor="middle" font-size="11" fill="#555">training data volume</text>
+  <text x="260" y="118" text-anchor="middle" font-size="11" fill="#555">"books read"</text>
+  <text x="260" y="143" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">risk: data exhaustion</text>
+
+  <!-- Compute box -->
+  <rect x="360" y="55" width="150" height="100" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="435" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">Compute (C)</text>
+  <text x="435" y="100" text-anchor="middle" font-size="11" fill="#555">total budget</text>
+  <text x="435" y="118" text-anchor="middle" font-size="11" fill="#555">C &#x2248; 6ND FLOPs</text>
+  <text x="435" y="143" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">risk: misallocated</text>
+
+  <!-- Arrows to loss box -->
+  <line x1="85" y1="155" x2="200" y2="220" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="260" y1="155" x2="260" y2="220" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="435" y1="155" x2="320" y2="220" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Loss box -->
+  <rect x="160" y="225" width="200" height="70" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="260" y="255" text-anchor="middle" font-size="14" font-weight="600" fill="#166534">Loss &#x2193; / Capability &#x2191;</text>
+  <text x="260" y="278" text-anchor="middle" font-size="11" fill="#555">improves smoothly with balanced scale</text>
+
+  <!-- Bottleneck callout -->
+  <rect x="100" y="325" width="320" height="40" rx="8" fill="#fff5f5" stroke="#dc2626" stroke-width="1" filter="url(#shadow2)"/>
+  <text x="260" y="350" text-anchor="middle" font-size="12" fill="#991b1b">Crank only one knob &#x2192; bottleneck &#x2192; "scaling is dead"</text>
+
+  <!-- Arrow from loss to bottleneck -->
+  <line x1="260" y1="295" x2="260" y2="323" stroke="#dc2626" stroke-width="1" stroke-dasharray="4 3"/>
+</svg>
+</div>
+
+<h3>The classic trap: scaling parameters without scaling tokens</h3>
+
+<p>
+A big model with not enough tokens is like hiring a PhD and giving them two blog posts to read. They might memorize those posts perfectly, but they will not develop taste or generalization.
+</p>
+
+<p>
+When people say "scaling slowed," a lot of the time they mean: we scaled parameters faster than we scaled tokens. The model became <strong>data-limited</strong>, not scale-limited.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of $N$ (parameters) as the size of a notebook and $D$ (tokens) as the lectures you attend. A huge notebook is useless if you only go to two lectures. A small notebook fills up fast even with great lectures. Optimal learning requires matching notebook size to lecture count.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="math">4. The Math (Kept Simple)</h2>
+
+<p>
+The empirical relationship between loss and scale, first characterized systematically by <a href="https://arxiv.org/abs/2001.08361">Kaplan et al. (2020)</a>, can be approximated as:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Scaling law (decomposed form):</div>
+    $$L(N, D) \;\approx\; L_{\infty} \;+\; \frac{a}{N^{\alpha}} \;+\; \frac{b}{D^{\beta}}$$
+</div>
+
+<p>
+Where:
+</p>
+<ul>
+    <li>$L_{\infty}$ is the <strong>irreducible loss</strong>: the floor you cannot beat with any amount of scale (entropy of the data itself).</li>
+    <li>$N$ is the number of parameters and $\alpha$ controls how fast bigger models help (typically $\alpha \approx 0.07$).</li>
+    <li>$D$ is the number of training tokens and $\beta$ controls how fast more data helps (typically $\beta \approx 0.20$).</li>
+    <li>$a, b$ are constants that depend on the architecture, data distribution, and training recipe.</li>
+</ul>
+
+<p>
+Read the equation like this: there is a floor you cannot beat. More parameters help, but with diminishing returns. More tokens help, but with diminishing returns. If you fix one and scale the other, you eventually get stuck against one of the two power-law walls.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> The equation says loss is made of three parts: an unbeatable floor, a "model too small" tax, and a "not enough data" tax. Scaling is about reducing both taxes simultaneously. If you only reduce one, the other dominates and progress stalls.
+</div>
+
+<div class="warning">
+    <strong>Warning:</strong> The exponents $\alpha$ and $\beta$ are not universal constants. They depend on architecture, tokenizer, data quality, and training details. Different papers report different values. The qualitative story (two diminishing-returns terms plus a floor) is robust; the exact numbers are not.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="chinchilla">5. The Chinchilla Insight</h2>
+
+<p>
+Given a fixed compute budget $C$, how should you split it between parameters and tokens? This is the question <a href="https://arxiv.org/abs/2203.15556">Hoffmann et al. (2022)</a> (the "Chinchilla" paper) answered.
+</p>
+
+<p>
+Their headline finding, stated as a rule of thumb: if you double parameters, you should roughly double training tokens too. More precisely, for compute-optimal training, the number of tokens should scale linearly with parameters: $D_{\text{opt}} \propto N$.
+</p>
+
+<p>
+The memorable demonstration: Chinchilla (70B parameters, 1.4T tokens) outperformed Gopher (280B parameters, 300B tokens) at similar compute. A model 4x smaller, trained on ~5x more data, won.
+</p>
+
+<table>
+    <tr><th>Model</th><th>Parameters</th><th>Tokens</th><th>Tokens / Param ratio</th><th>Result</th></tr>
+    <tr>
+        <td><strong>Gopher</strong></td>
+        <td>280B</td>
+        <td>300B</td>
+        <td>~1</td>
+        <td>Undertrained</td>
+    </tr>
+    <tr>
+        <td><strong>Chinchilla</strong></td>
+        <td>70B</td>
+        <td>1.4T</td>
+        <td>~20</td>
+        <td>Better loss at similar compute</td>
+    </tr>
+</table>
+
+<p>
+The lesson: many large models before Chinchilla were <strong>undertrained</strong>. They spent compute on parameters without feeding the model enough experience. You can waste compute by over-investing in model size.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Chinchilla said: stop buying brains, buy books too. A moderately-sized model that reads a lot outperforms a giant model that reads a little, at the same total cost.
+</div>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Chinchilla-optimal ratios minimize <em>training</em> compute for a given loss. But in practice, inference cost matters too. A smaller model is cheaper to serve. So production models are often intentionally "overtrained" relative to Chinchilla (trained on more tokens than compute-optimal) because the savings at inference time outweigh the extra training cost. Llama models are a prominent example of this strategy.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="beyond-pretraining">6. Beyond Pretraining Loss</h2>
+
+<p>
+The original scaling laws focused on pretraining loss. But the field has moved on. There are now scaling results for several other dimensions.
+</p>
+
+<h3>Data mixture scaling: which tokens matter</h3>
+
+<p>
+Not all tokens are equal. The mix of domains in your training data (code, math, web text, multilingual) shifts the loss curve. More code might help reasoning. More math text changes behavior. "More data" becomes "more data in the right proportions."
+</p>
+
+<p>
+<a href="https://machinelearning.apple.com/research/optimal-data-mixtures">Apple (2025)</a> showed that you can derive scaling laws for optimal data mixtures: given a fixed token budget, the optimal proportion of each domain depends on the model size and the target task distribution.
+</p>
+
+<h3>Multilingual scaling: transfer is not free</h3>
+
+<p>
+Adding languages is not just adding data. Languages interfere with and transfer to each other. Some pairs help (Spanish and Portuguese share structure), some fight (unrelated scripts can compete for capacity).
+</p>
+
+<p>
+<a href="https://research.google/blog/atlas-practical-scaling-laws-for-multilingual-models/">Google's ATLAS work (2026)</a> provides practical scaling laws for multilingual models, showing that the return from adding a language depends on how much capacity the model has and how related the new language is to existing ones.
+</p>
+
+<h3>Test-time scaling: spend compute at inference</h3>
+
+<p>
+Sometimes you do not train a larger model. Instead, you let the model "think longer" at inference: sample multiple solutions, verify each, pick the best, or run a search process.
+</p>
+
+<p>
+This is still scaling. It is scaling <strong>inference compute</strong> instead of training compute. And it follows its own power-law-like curves: more test-time compute yields better results, with diminishing returns.
+</p>
+
+<div class="diagram">
+<svg width="520" height="320" viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow3">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow-blue2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a1a">Compute budget: two places to spend</text>
+
+  <!-- Training compute box -->
+  <rect x="20" y="55" width="220" height="110" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="130" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">Training compute</text>
+  <text x="130" y="104" text-anchor="middle" font-size="11" fill="#555">bigger N, more D, longer training</text>
+  <text x="130" y="122" text-anchor="middle" font-size="11" fill="#555">moves the base model curve</text>
+  <text x="130" y="150" text-anchor="middle" font-size="10" fill="#555" font-style="italic">one-time cost, amortized over queries</text>
+
+  <!-- Inference compute box -->
+  <rect x="280" y="55" width="220" height="110" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="390" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="#166534">Inference compute</text>
+  <text x="390" y="104" text-anchor="middle" font-size="11" fill="#555">sample more, verify, search</text>
+  <text x="390" y="122" text-anchor="middle" font-size="11" fill="#555">"think longer" per query</text>
+  <text x="390" y="150" text-anchor="middle" font-size="10" fill="#555" font-style="italic">per-query cost, applied selectively</text>
+
+  <!-- Result box -->
+  <rect x="80" y="220" width="360" height="60" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="260" y="248" text-anchor="middle" font-size="13" font-weight="600" fill="#333">Performance = f(train compute, test compute)</text>
+  <text x="260" y="268" text-anchor="middle" font-size="11" fill="#555">both follow power-law-like diminishing returns</text>
+
+  <!-- Arrows -->
+  <line x1="130" y1="165" x2="210" y2="218" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue2)"/>
+  <line x1="390" y1="165" x2="310" y2="218" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow-green2)"/>
+
+  <text x="260" y="305" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Reference: Chen et al. (2024), Simple and Provable Scaling Laws for Test-Time Compute</text>
+</svg>
+</div>
+
+<p>
+Reference: <a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a>, "Simple and Provable Scaling Laws for the Test-Time Compute of LLMs."
+</p>
+
+<!-- ============================================================ -->
+<h2 id="limits">7. What Scaling Laws Cannot Promise</h2>
+
+<p>
+Scaling laws are good at predicting smooth, average quantities like cross-entropy loss. They are less reliable for the things people actually care about:
+</p>
+
+<ul>
+    <li>"Will it suddenly learn to do task X?" (emergence)</li>
+    <li>"Will it stop hallucinating?" (factuality)</li>
+    <li>"Will it become aligned?" (safety)</li>
+</ul>
+
+<p>
+You can observe threshold-like jumps on some benchmarks as models scale. <a href="https://arxiv.org/abs/2206.07682">Wei et al. (2022)</a> called these <strong>emergent abilities</strong>: capabilities that appear abruptly at a certain scale. But <a href="https://arxiv.org/abs/2304.15004">Schaeffer et al. (2023)</a> showed that many apparent emergence effects are artifacts of the metric. Switch from a sharp metric (exact-match accuracy) to a smooth one (log-likelihood), and the "sudden jump" often becomes a gradual curve that was always there.
+</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Treat "emergent abilities" as an interesting observation, not a product roadmap. You cannot reliably predict <em>when</em> a specific capability will appear by extrapolating a loss curve. Scaling laws predict loss well. They predict specific task behavior poorly.
+</div>
+
+<p>
+The other important caveat: scaling laws are <strong>local to your recipe</strong>. Change the data cleaning pipeline, the training objective, the architecture, the tokenizer, or the learning rate schedule, and you move the entire curve. The laws describe what happens <em>within</em> a fixed recipe, not across recipes.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="cheatsheet">8. Cheatsheet</h2>
+
+<h3>If you are compute-limited (fixed GPU budget)</h3>
+
+<ul>
+    <li>Do not overspend on parameters if you cannot afford enough tokens to train them properly.</li>
+    <li>Invest in data quality and diversity earlier than your instincts want.</li>
+    <li>Expect diminishing returns. Plan improvements as a curve, not a step function.</li>
+    <li>Use the Chinchilla ratio ($D \approx 20N$) as a starting point, adjust for your serving constraints.</li>
+</ul>
+
+<h3>If you are inference-limited (serving cost matters)</h3>
+
+<ul>
+    <li>A smaller, well-trained model often wins on price-performance versus a larger, undertrained one.</li>
+    <li>Consider overtraining: spend more on training compute now to get a smaller model that is cheaper to serve forever.</li>
+    <li>Apply test-time scaling selectively. Spend extra inference compute on hard queries, not easy ones.</li>
+</ul>
+
+<h3>The one question that matters</h3>
+
+<p>
+The question is not "should we scale?" The question is:
+</p>
+
+<div class="note">
+    <strong>Which bottleneck are we hitting, and which knob removes it cheapest?</strong>
+</div>
+
+<h2>References</h2>
+
+<ol>
+    <li>Kaplan et al. (2020). <a href="https://arxiv.org/abs/2001.08361">Scaling Laws for Neural Language Models</a>.</li>
+    <li>Hoffmann et al. (2022). <a href="https://arxiv.org/abs/2203.15556">Training Compute-Optimal Large Language Models</a> (Chinchilla).</li>
+    <li>Apple ML Research (2025). <a href="https://machinelearning.apple.com/research/optimal-data-mixtures">Scaling Laws for Optimal Data Mixtures</a>.</li>
+    <li>Google Research (2026). <a href="https://research.google/blog/atlas-practical-scaling-laws-for-multilingual-models/">ATLAS: Practical Scaling Laws for Multilingual Models</a>.</li>
+    <li>Chen et al. (2024). <a href="https://arxiv.org/abs/2411.19477">Simple and Provable Scaling Laws for the Test-Time Compute of LLMs</a>.</li>
+    <li>Wei et al. (2022). <a href="https://arxiv.org/abs/2206.07682">Emergent Abilities of Large Language Models</a>.</li>
+    <li>Schaeffer et al. (2023). <a href="https://arxiv.org/abs/2304.15004">Are Emergent Abilities of LLMs a Mirage?</a></li>
+</ol>
+
+</article>
+
+  <div id="disqus_thread"></div>
+  <script>
+    var disqus_shortname = 'ssedhain';
+    var disqus_config = function() { this.page.reactions_enabled = 0; };
+    (function() {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
