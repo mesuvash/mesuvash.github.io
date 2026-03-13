@@ -170,16 +170,6 @@ Until you play with a transformer and watch it learn, you will never truly feel 
     <button class="demo-btn" id="load-btn">Load Pythia-14M</button>
     <div id="status" style="margin-top:8px;"></div>
   </div>
-  <div id="viz-wrapper" style="display:none; margin-top:16px;">
-    <p style="font-size:15px; color:var(--muted); margin-bottom:8px;">Interactive 3D view of the loaded model. Drag to rotate, scroll to zoom, Shift+drag to pan. Click any block to inspect.</p>
-    <div style="display:flex; gap:6px; margin-bottom:8px;">
-      <button class="demo-btn" id="viz-reset-btn" style="font-size:12px; padding:4px 12px;">Reset View</button>
-      <button class="demo-btn" id="viz-collapse-btn" style="font-size:12px; padding:4px 12px;">Collapse All</button>
-    </div>
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div id="viz-container" style="width:100%; height:700px;"></div>
-    </div>
-  </div>
 </section>
 
 <!-- 2. SFT Dataset -->
@@ -352,7 +342,6 @@ Until you play with a transformer and watch it learn, you will never truly feel 
 </footer>
 
 <script src="/assets/js/tinyllms.umd.js"></script>
-<script src="/assets/js/transformer-viz.umd.js"></script>
 <script>
 (async function() {
   const {
@@ -589,51 +578,6 @@ Until you play with a transformer and watch it learn, you will never truly feel 
       log(`Tokenizer loaded (vocab: ${tokenizer.vocabSize})`);
 
       updateModeUI();
-
-      // -- Initialize 3D model visualization --
-      try {
-        const { TransformerViz, pythiaToModelSpec, buildPythiaWeightMapping } = window.TransformerViz;
-        const vizWrapper = document.getElementById('viz-wrapper');
-        const vizContainer = document.getElementById('viz-container');
-
-        // Show wrapper first so container has measurable dimensions
-        vizWrapper.style.display = 'block';
-        // Force layout reflow before reading width
-        const vizWidth = vizContainer.clientWidth || 800;
-
-        const vizSpec = pythiaToModelSpec(manifest.config);
-        const viz = new TransformerViz({
-          container: vizContainer,
-          spec: vizSpec,
-          width: vizWidth,
-          height: 700,
-          gap: 1.2,
-          cameraPosition: {
-            azimuth: 0.0,
-            elevation: 0.15,
-            distance: 18,
-          },
-        });
-
-        // Load actual weights for color-by-norm visualization
-        const weightMap = buildPythiaWeightMapping(manifest.config);
-        const vizWeights = new Map();
-        for (const [name, tensor] of allWeights.entries()) {
-          vizWeights.set(name, { data: tensor.data, shape: tensor.shape });
-        }
-        viz.loadWeights(vizWeights, weightMap);
-
-        // Start with collapsed, centered view
-        viz.collapseAll();
-        viz.resetCamera();
-
-        document.getElementById('viz-reset-btn').addEventListener('click', () => viz.resetCamera());
-        document.getElementById('viz-collapse-btn').addEventListener('click', () => viz.collapseAll());
-
-        log('Model architecture visualization loaded.');
-      } catch (vizErr) {
-        console.warn('Viz init failed:', vizErr);
-      }
 
       log('Ready.');
       document.getElementById('baseline-btn').disabled = false;
