@@ -287,11 +287,11 @@ Their key finding: coverage follows a <strong>log-linear</strong> relationship w
 </div>
 
 <p>
-The concrete example is striking. On SWE-bench Lite (a coding benchmark), DeepSeek-Coder-V2-Instruct went from <strong>15.9%</strong> with a single sample to <strong>56%</strong> with 250 samples. That is a 3.5x improvement from pure repeated sampling, beating the then-best single-sample systems.
+The concrete example is striking. On SWE-bench Lite (a coding benchmark with automatic unit-test verification), DeepSeek-Coder-V2-Instruct went from <strong>15.9%</strong> with a single sample to <strong>56%</strong> with 250 samples. That is a 3.5x improvement from pure repeated sampling, beating the then-best single-sample systems.
 </p>
 
 <p>
-But there is a catch: that 56% assumes a <strong>perfect verifier</strong> (you always pick the correct solution when one exists). Real selection methods, such as majority voting and reward models, plateau after several hundred samples. The gap between coverage and what you can actually extract is the <strong>verification gap</strong>.
+But there is a catch: that 56% relies on benchmark unit tests to identify correct solutions. While these are automatic verifiers, they are imperfect: Brown et al. document flaky tests and false positives/negatives. Real-world selection methods like majority voting and reward models plateau even sooner, after several hundred samples. The gap between what automatic verification can extract and what a truly perfect oracle would extract is the <strong>verification gap</strong>.
 </p>
 
 <div class="warning">
@@ -312,7 +312,7 @@ There are three ways to get a model to think longer.
 <h3>4.1 RL-trained reasoning (DeepSeek-R1, OpenAI o1)</h3>
 
 <p>
-<a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1</a> demonstrated that pure reinforcement learning, without human-labeled reasoning trajectories, can teach a model to produce extended reasoning chains. The model learns to self-reflect, verify intermediate steps, and adapt its strategy during generation.
+<a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1-Zero</a> demonstrated that pure reinforcement learning, without human-labeled reasoning trajectories, can teach a model to produce extended reasoning chains. The model learns to self-reflect, verify intermediate steps, and adapt its strategy during generation. The full <strong>DeepSeek-R1</strong> builds on this by adding cold-start data and multiple SFT/RL stages to improve readability and consistency.
 </p>
 
 <p>
@@ -373,7 +373,7 @@ The training works like this: the model generates a reasoning trace plus a final
 </div>
 
 <p>
-DeepSeek-R1 achieves performance on par with OpenAI o1 on math, code, and STEM reasoning. Notably, its reasoning patterns can be <strong>distilled</strong> to smaller models, making extended thinking accessible without full-scale RL training.
+DeepSeek-R1 achieves near-parity with OpenAI o1 on AIME and MATH benchmarks, though results are mixed on other domains (R1 trails o1-1217 on GPQA and some code benchmarks like Aider). Notably, its reasoning patterns can be <strong>distilled</strong> to smaller models, making extended thinking accessible without full-scale RL training.
 </p>
 
 <h3>4.2 Budget forcing (s1)</h3>
@@ -402,11 +402,11 @@ Instead of generating one long chain, you can search over partial reasoning chai
 </p>
 
 <p>
-This is more compute-efficient than pure best-of-N because it prunes bad reasoning paths early rather than completing them fully. <a href="https://arxiv.org/abs/2305.20050">Lightman et al. (2023)</a> showed that process supervision (step-level feedback) significantly outperforms outcome supervision (final-answer-only feedback) for math reasoning, achieving 78% on MATH with a process-supervised verifier.
+<a href="https://arxiv.org/abs/2408.03314">Snell et al. (2024)</a> showed this is more compute-efficient than pure best-of-N because it prunes bad reasoning paths early rather than completing them fully. Separately, <a href="https://arxiv.org/abs/2305.20050">Lightman et al. (2023)</a> demonstrated that process supervision (step-level feedback) significantly outperforms outcome supervision (final-answer-only feedback) for math reasoning, achieving 78% on MATH with a process-supervised verifier.
 </p>
 
 <p>
-A key development: training PRMs no longer requires human annotations. <a href="https://arxiv.org/abs/2312.08935">Math-Shepherd (Wang et al., 2024)</a> trains step-level verifiers automatically. <a href="https://arxiv.org/abs/2406.06592">OmegaPRM (Luo et al., 2024)</a> uses Monte Carlo Tree Search to identify errors in reasoning chains via binary search, generating over 1.5M annotations without human involvement.
+A key development: automated methods can now generate process supervision labels without human annotations. <a href="https://arxiv.org/abs/2312.08935">Math-Shepherd (Wang et al., 2024)</a> trains step-level verifiers automatically. <a href="https://arxiv.org/abs/2406.06592">OmegaPRM (Luo et al., 2024)</a> uses Monte Carlo Tree Search to identify errors in reasoning chains via binary search, generating over 1.5M annotations without human involvement. Whether these automated labels fully substitute for human annotations in all settings remains an open question.
 </p>
 
 <!-- ============================================================ -->
@@ -520,7 +520,7 @@ Brown et al. (2024) found that coverage follows an exponentiated power law with 
 </div>
 
 <p>
-Where $k$ is the number of samples, $a$ and $b$ are task-dependent constants. This means coverage improves log-linearly: you need exponentially more samples for each linear increment in coverage. Going from 50% to 60% might take 10x more samples than going from 30% to 40%.
+Where $k$ is the number of samples, $a$ and $b$ are task-dependent constants. Coverage often follows this pattern, though Brown et al. note exceptions. The general implication is diminishing returns: you need substantially more samples for each additional increment in coverage, with the exact rate depending on the fitted parameters for each task.
 </p>
 
 <h3>Compute-optimal allocation</h3>
@@ -536,7 +536,7 @@ Snell et al. (2024) showed that the right strategy depends on problem difficulty
 </ul>
 
 <p>
-Their compute-optimal strategy allocates test-time compute adaptively per prompt based on estimated difficulty. This achieves <strong>4x better efficiency</strong> than a uniform best-of-N approach that spends the same compute on every query.
+Their compute-optimal strategy allocates test-time compute adaptively per prompt based on estimated difficulty. This achieves <strong>4x better efficiency</strong> than a uniform best-of-N approach that spends the same compute on every query. (Caveat: their difficulty estimation uses 2,048 samples per problem, and the authors note this extra inference cost is not counted in the headline analysis.)
 </p>
 
 <div class="note">
@@ -546,7 +546,7 @@ Their compute-optimal strategy allocates test-time compute adaptively per prompt
 <h3>Provable guarantees without verifiers</h3>
 
 <p>
-<a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a> proved that you can get exponentially decaying failure probability without any external verifier. Their approach uses the LLM itself to compare pairs of candidate answers in a tournament format. Each comparison round eliminates the weaker candidate, and the failure probability decays exponentially with the number of rounds.
+<a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a> proved that failure probability can decay rapidly without any external verifier, under two assumptions: the model has a non-zero chance of generating a correct answer, and it performs better than random at pairwise comparison. Their approach uses the LLM itself to compare pairs of candidate answers in a knockout tournament. Depending on the scaling regime, failure decays exponentially or by a power law with the number of rounds.
 </p>
 
 <p>
@@ -609,7 +609,7 @@ This creates a clear economic logic. If you serve millions of queries, training 
 </p>
 
 <p>
-The s1 result is instructive: fine-tuning on 1,000 examples (negligible training cost) plus budget forcing at inference (moderate per-query cost) exceeded o1-preview on math. The total compute budget was a fraction of what it took to train o1.
+The s1 result is instructive: fine-tuning on 1,000 examples (negligible training cost) plus budget forcing at inference (moderate per-query cost) exceeded o1-preview on competition math. The SFT setup was extremely lightweight, though a direct training-compute comparison with o1 is not possible since OpenAI has not disclosed o1's total training cost.
 </p>
 
 <!-- ============================================================ -->
