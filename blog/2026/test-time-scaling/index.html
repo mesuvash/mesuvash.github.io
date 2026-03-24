@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Test-Time Scaling for LLMs</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Test-Time Scaling: Spend Compute When It Matters" />
+    <meta property="og:description" content="You can scale LLMs at inference, not just training. A guide to the two paradigms of test-time compute, the verification bottleneck, and when thinking longer actually helps." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/test-time-scaling/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Test-Time Scaling: Spend Compute When It Matters" />
+    <meta name="twitter:description" content="You can scale LLMs at inference, not just training. A guide to the two paradigms of test-time compute, the verification bottleneck, and when thinking longer actually helps." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Test-Time Scaling: Spend Compute When It Matters</h1>
+    <p class="post-meta">March 24, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F&text=Test-Time%20Scaling%3A%20Spend%20Compute%20When%20It%20Matters" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F&title=Test-Time%20Scaling%3A%20Spend%20Compute%20When%20It%20Matters" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    Training scaling has a well-known playbook: more parameters, more tokens, more compute. But there is a second scaling axis that works at inference time. You generate more, verify harder, and think longer. This post explains what that looks like, when it works, and where it breaks.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#why">Why Test-Time Scaling</a></li>
+        <li><a href="#big-picture">The Big Picture</a></li>
+        <li><a href="#parallel">Parallel Scaling: Sample and Select</a></li>
+        <li><a href="#sequential">Sequential Scaling: Think Longer</a></li>
+        <li><a href="#verification">The Verification Bottleneck</a></li>
+        <li><a href="#scaling-laws">The Scaling Laws</a></li>
+        <li><a href="#when">When to Use What</a></li>
+        <li><a href="#limits">What Test-Time Scaling Cannot Do</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="why">1. Why Test-Time Scaling</h2>
+
+<p>
+Traditional scaling invests compute at training time. You spend once, then serve the resulting model cheaply forever. The <a href="/blog/2026/scaling-laws/">scaling laws post</a> covered this: parameters, tokens, and compute form a 3-knob system with predictable power-law returns.
+</p>
+
+<p>
+But training compute has two problems. First, it is a one-time decision. Once you have trained a 70B model, every query gets the same amount of "thought," whether it is "what is 2+2" or "prove this theorem." Second, training compute is amortized: the cost is justified only if you serve enough queries.
+</p>
+
+<p>
+Test-time scaling flips this. Instead of a fixed model answering every question with the same effort, you spend more compute on harder questions and less on easy ones. The compute is per-query, applied selectively.
+</p>
+
+<p>
+The headline result from <a href="https://arxiv.org/abs/2408.03314">Snell et al. (2024)</a>: with compute-optimal test-time allocation, a small model can match a <strong>14x larger model</strong> under the same FLOP budget, on problems where the small model has non-trivial baseline accuracy.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">2. The Big Picture</h2>
+
+<p>
+There are two paradigms for spending compute at inference. They are complementary, not competing.
+</p>
+
+<div class="diagram">
+<svg width="520" height="420" viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow1">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="24" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a1a">Two paradigms of test-time scaling</text>
+
+  <!-- Input prompt box -->
+  <rect x="170" y="45" width="180" height="45" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="260" y="73" text-anchor="middle" font-size="13" fill="#333">Input prompt</text>
+
+  <!-- Split arrows -->
+  <line x1="210" y1="90" x2="120" y2="130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="310" y1="90" x2="400" y2="130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- Parallel scaling box -->
+  <rect x="15" y="135" width="220" height="140" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="125" y="162" text-anchor="middle" font-size="13" font-weight="600" fill="#1e40af">Parallel scaling</text>
+  <text x="125" y="182" text-anchor="middle" font-size="11" fill="#555">generate N independent samples</text>
+  <text x="125" y="200" text-anchor="middle" font-size="11" fill="#555">select the best one</text>
+
+  <text x="125" y="228" text-anchor="middle" font-size="10" fill="#1e40af">Best-of-N, majority voting,</text>
+  <text x="125" y="242" text-anchor="middle" font-size="10" fill="#1e40af">tournament selection</text>
+
+  <text x="125" y="265" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">bottleneck: verifier quality</text>
+
+  <!-- Sequential scaling box -->
+  <rect x="285" y="135" width="220" height="140" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="395" y="162" text-anchor="middle" font-size="13" font-weight="600" fill="#166534">Sequential scaling</text>
+  <text x="395" y="182" text-anchor="middle" font-size="11" fill="#555">generate longer reasoning</text>
+  <text x="395" y="200" text-anchor="middle" font-size="11" fill="#555">within a single attempt</text>
+
+  <text x="395" y="228" text-anchor="middle" font-size="10" fill="#166534">Chain-of-thought, RL-trained</text>
+  <text x="395" y="242" text-anchor="middle" font-size="10" fill="#166534">thinking, budget forcing</text>
+
+  <text x="395" y="265" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">bottleneck: reasoning quality</text>
+
+  <!-- Merge arrows -->
+  <line x1="125" y1="275" x2="210" y2="315" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <line x1="395" y1="275" x2="310" y2="315" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- Combined box -->
+  <rect x="130" y="320" width="260" height="50" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="260" y="343" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Can be combined:</text>
+  <text x="260" y="361" text-anchor="middle" font-size="11" fill="#555">N long-thinking attempts, then select best</text>
+
+  <!-- Annotation -->
+  <text x="260" y="400" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Both follow diminishing-returns curves with more compute</text>
+</svg>
+</div>
+
+<p>
+<strong>Parallel scaling</strong> generates many independent solutions and picks the best one. <strong>Sequential scaling</strong> generates a single, longer solution with extended reasoning. In practice, you can combine both: generate multiple long-thinking attempts, then select the best.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="parallel">3. Parallel Scaling: Sample and Select</h2>
+
+<p>
+The simplest form of test-time scaling: run the model $N$ times on the same prompt, collect $N$ candidate answers, pick the best one. This is <strong>best-of-N sampling</strong>.
+</p>
+
+<p>
+The question is how you pick. There are several strategies, ranging from cheap to expensive.
+</p>
+
+<h3>Selection strategies</h3>
+
+<table>
+    <tr><th>Strategy</th><th>How it works</th><th>Requires</th></tr>
+    <tr>
+        <td><strong>Majority voting</strong></td>
+        <td>Take the most common final answer</td>
+        <td>Nothing extra</td>
+    </tr>
+    <tr>
+        <td><strong>Outcome reward model (ORM)</strong></td>
+        <td>Score each final answer with a learned verifier</td>
+        <td>Trained reward model</td>
+    </tr>
+    <tr>
+        <td><strong>Process reward model (PRM)</strong></td>
+        <td>Score each reasoning step, select the solution with the highest step-level scores</td>
+        <td>Step-level reward model</td>
+    </tr>
+    <tr>
+        <td><strong>Tournament (pairwise)</strong></td>
+        <td>Have the LLM compare pairs of answers in rounds, like a knockout bracket</td>
+        <td>Nothing extra (just the LLM)</td>
+    </tr>
+    <tr>
+        <td><strong>Execution-based</strong></td>
+        <td>Run code against test cases, check formal proofs</td>
+        <td>External verifier (test suite, proof checker)</td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of best-of-N as hiring 10 people to solve a problem independently, then choosing the best answer. You do not need a better employee; you need a better judge. The quality of your selection method determines how much value you extract from the samples.
+</div>
+
+<h3>How coverage scales</h3>
+
+<p>
+<a href="https://arxiv.org/abs/2407.21787">Brown et al. (2024)</a> ("Large Language Monkeys") studied this systematically. They define <strong>coverage</strong> as the fraction of problems for which at least one of $k$ samples is correct. This is pass@k: the probability that you solve a problem if you get $k$ attempts and a perfect verifier.
+</p>
+
+<p>
+Their key finding: coverage follows a <strong>log-linear</strong> relationship with the number of samples, modeled as an exponentiated power law. This relationship holds across four orders of magnitude.
+</p>
+
+<div class="diagram">
+<svg width="520" height="320" viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow2">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect x="60" y="20" width="440" height="260" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shadow2)"/>
+
+  <!-- Grid lines -->
+  <g stroke="#e0e0e0" stroke-width="0.8">
+    <line x1="100" y1="60" x2="470" y2="60"/>
+    <line x1="100" y1="110" x2="470" y2="110"/>
+    <line x1="100" y1="160" x2="470" y2="160"/>
+    <line x1="100" y1="210" x2="470" y2="210"/>
+    <line x1="175" y1="40" x2="175" y2="260"/>
+    <line x1="250" y1="40" x2="250" y2="260"/>
+    <line x1="325" y1="40" x2="325" y2="260"/>
+    <line x1="400" y1="40" x2="400" y2="260"/>
+  </g>
+
+  <!-- Axes -->
+  <line x1="100" y1="260" x2="470" y2="260" stroke="#333" stroke-width="1.5"/>
+  <line x1="100" y1="40" x2="100" y2="260" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Axis labels -->
+  <text x="285" y="295" text-anchor="middle" font-size="13" fill="#555">log(number of samples k)</text>
+  <text x="30" y="155" text-anchor="middle" font-size="13" fill="#555" transform="rotate(-90 30 155)">coverage (pass@k)</text>
+
+  <!-- Tick labels -->
+  <text x="100" y="275" text-anchor="middle" font-size="10" fill="#555">1</text>
+  <text x="175" y="275" text-anchor="middle" font-size="10" fill="#555">10</text>
+  <text x="250" y="275" text-anchor="middle" font-size="10" fill="#555">100</text>
+  <text x="325" y="275" text-anchor="middle" font-size="10" fill="#555">1k</text>
+  <text x="400" y="275" text-anchor="middle" font-size="10" fill="#555">10k</text>
+
+  <!-- Coverage curve (log-linear, approaching ceiling) -->
+  <path d="M100,220 C150,190 200,150 250,120 C300,95 350,78 400,68 C430,63 460,60 470,58" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+
+  <!-- Selection method ceiling (dashed) -->
+  <path d="M100,220 C150,195 200,170 250,155 C300,148 350,145 400,144 C430,143 460,143 470,143" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6 3"/>
+
+  <!-- Labels -->
+  <text x="365" y="50" font-size="11" fill="#1e40af" font-weight="600">coverage (perfect verifier)</text>
+  <text x="365" y="138" font-size="11" fill="#991b1b" font-weight="600">pass@1 with reward model</text>
+
+  <!-- Gap annotation -->
+  <line x1="430" y1="65" x2="430" y2="143" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="425" y1="65" x2="435" y2="65" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="425" y1="143" x2="435" y2="143" stroke="#d97706" stroke-width="1.5"/>
+  <text x="455" y="100" font-size="10" fill="#92400e" font-style="italic">verification</text>
+  <text x="455" y="113" font-size="10" fill="#92400e" font-style="italic">gap</text>
+</svg>
+</div>
+
+<p>
+The concrete example is striking. On SWE-bench Lite (a coding benchmark), DeepSeek-Coder-V2-Instruct went from <strong>15.9%</strong> with a single sample to <strong>56%</strong> with 250 samples. That is a 3.5x improvement from pure repeated sampling, beating the then-best single-sample systems.
+</p>
+
+<p>
+But there is a catch: that 56% assumes a <strong>perfect verifier</strong> (you always pick the correct solution when one exists). Real selection methods, such as majority voting and reward models, plateau after several hundred samples. The gap between coverage and what you can actually extract is the <strong>verification gap</strong>.
+</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Parallel scaling is only as good as your verifier. Generating more samples always increases coverage. But identifying which sample is correct becomes the bottleneck. For code, you can run tests. For math, you can check the final answer. For open-ended generation, verification is hard and remains an open problem.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sequential">4. Sequential Scaling: Think Longer</h2>
+
+<p>
+Instead of generating many short answers, generate one long answer with extended reasoning. This is what OpenAI's o1/o3 and DeepSeek-R1 do: the model produces a chain of internal "thinking" tokens before giving its final answer.
+</p>
+
+<p>
+There are three ways to get a model to think longer.
+</p>
+
+<h3>4.1 RL-trained reasoning (DeepSeek-R1, OpenAI o1)</h3>
+
+<p>
+<a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1</a> demonstrated that pure reinforcement learning, without human-labeled reasoning trajectories, can teach a model to produce extended reasoning chains. The model learns to self-reflect, verify intermediate steps, and adapt its strategy during generation.
+</p>
+
+<p>
+The training works like this: the model generates a reasoning trace plus a final answer. A reward signal (correct/incorrect) propagates back through the trace via RL. Over time, the model discovers that longer, more careful reasoning leads to higher rewards on hard problems. Behaviors like "wait, let me check that step" and "I made an error, let me reconsider" emerge naturally.
+</p>
+
+<div class="diagram">
+<svg width="520" height="310" viewBox="0 0 520 310" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow3">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-blue3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <!-- Row 1: Prompt → Thinking → Answer -->
+  <rect x="10" y="20" width="90" height="40" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="55" y="45" text-anchor="middle" font-size="12" fill="#333">Prompt</text>
+
+  <line x1="100" y1="40" x2="118" y2="40" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <rect x="125" y="10" width="270" height="60" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="260" y="32" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">Thinking tokens</text>
+  <text x="260" y="50" text-anchor="middle" font-size="10" fill="#555">"Let me try... wait, that's wrong... actually..."</text>
+  <text x="260" y="62" text-anchor="middle" font-size="10" fill="#555" font-style="italic">variable length, hundreds to thousands of tokens</text>
+
+  <line x1="395" y1="40" x2="418" y2="40" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue3)"/>
+
+  <rect x="425" y="20" width="85" height="40" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="467" y="45" text-anchor="middle" font-size="12" font-weight="600" fill="#1e40af">Answer</text>
+
+  <!-- Row 2: RL training signal -->
+  <rect x="120" y="110" width="280" height="75" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="260" y="133" text-anchor="middle" font-size="12" font-weight="600" fill="#333">RL training signal</text>
+  <text x="260" y="153" text-anchor="middle" font-size="11" fill="#555">correct answer: reward = +1</text>
+  <text x="260" y="170" text-anchor="middle" font-size="11" fill="#555">wrong answer: reward = 0 or -1</text>
+
+  <!-- Arrow: Answer → RL training signal -->
+  <path d="M467,60 L467,85 Q467,95 457,95 L410,95 Q400,95 400,105 L400,110" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5 3" fill="none" marker-end="url(#arrow-red)"/>
+  <text x="478" y="80" font-size="10" fill="#991b1b" font-style="italic">check</text>
+
+  <!-- Row 3: Emergent behaviors -->
+  <rect x="60" y="225" width="400" height="60" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow3)"/>
+  <text x="260" y="250" text-anchor="middle" font-size="12" font-weight="600" fill="#1e40af">Emergent behaviors from RL</text>
+  <text x="260" y="270" text-anchor="middle" font-size="11" fill="#555">self-verification, error correction, backtracking, strategy switching</text>
+
+  <!-- Arrow: RL → Emergent -->
+  <line x1="260" y1="185" x2="260" y2="223" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue3)"/>
+</svg>
+</div>
+
+<p>
+DeepSeek-R1 achieves performance on par with OpenAI o1 on math, code, and STEM reasoning. Notably, its reasoning patterns can be <strong>distilled</strong> to smaller models, making extended thinking accessible without full-scale RL training.
+</p>
+
+<h3>4.2 Budget forcing (s1)</h3>
+
+<p>
+<a href="https://arxiv.org/abs/2501.19393">Muennighoff et al. (2025)</a> showed a remarkably simple approach. Take a base model (Qwen2.5-32B-Instruct), fine-tune it on just <strong>1,000 curated reasoning examples</strong> (the s1K dataset), then control thinking at inference time with two tricks:
+</p>
+
+<ul>
+    <li><strong>Truncation:</strong> forcefully stop the model's thinking when it tries to conclude too early.</li>
+    <li><strong>Extension:</strong> append the word "Wait" to the generation, forcing the model to reconsider and often double-check its answer.</li>
+</ul>
+
+<p>
+This "budget forcing" approach improved AIME24 scores from 50% to 57% and exceeded o1-preview by up to 27% on competition math. The training cost was minimal: 1,000 examples, standard supervised fine-tuning, no RL.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Budget forcing is like telling a student "you have 30 more minutes, keep checking your work." The student does not get smarter; they just catch mistakes they would have missed if they rushed. The model already has the capability; budget forcing gives it the time to use it.
+</div>
+
+<h3>4.3 Process reward models + tree search</h3>
+
+<p>
+Instead of generating one long chain, you can search over partial reasoning chains. At each step, generate several candidate continuations, score them with a <strong>process reward model (PRM)</strong>, and expand only the most promising paths.
+</p>
+
+<p>
+This is more compute-efficient than pure best-of-N because it prunes bad reasoning paths early rather than completing them fully. <a href="https://arxiv.org/abs/2305.20050">Lightman et al. (2023)</a> showed that process supervision (step-level feedback) significantly outperforms outcome supervision (final-answer-only feedback) for math reasoning, achieving 78% on MATH with a process-supervised verifier.
+</p>
+
+<p>
+A key development: training PRMs no longer requires human annotations. <a href="https://arxiv.org/abs/2312.08935">Math-Shepherd (Wang et al., 2024)</a> trains step-level verifiers automatically. <a href="https://arxiv.org/abs/2406.06592">OmegaPRM (Luo et al., 2024)</a> uses Monte Carlo Tree Search to identify errors in reasoning chains via binary search, generating over 1.5M annotations without human involvement.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="verification">5. The Verification Bottleneck</h2>
+
+<p>
+Across all the research, one theme dominates: the bottleneck is not generation, it is verification.
+</p>
+
+<p>
+Models can already solve many problems if given enough attempts. The challenge is knowing which attempt is correct. <a href="https://arxiv.org/abs/2504.00294">Balachandran et al. (2025)</a> found that with <strong>perfect verifiers</strong>, all models show dramatic gains from test-time scaling. The gap between what models achieve with real verifiers versus perfect verifiers represents the main frontier for improvement.
+</p>
+
+<div class="diagram">
+<svg width="520" height="280" viewBox="0 0 520 280" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shadow4">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow-b4" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0,0 8,3 0,6" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="22" text-anchor="middle" font-size="15" font-weight="600" fill="#1a1a1a">Verification quality determines scaling returns</text>
+
+  <!-- Three verifier levels -->
+  <rect x="10" y="45" width="160" height="90" rx="8" fill="#fff5f5" stroke="#dc2626" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="90" y="70" text-anchor="middle" font-size="12" font-weight="600" fill="#991b1b">Majority voting</text>
+  <text x="90" y="90" text-anchor="middle" font-size="10" fill="#555">no extra model needed</text>
+  <text x="90" y="106" text-anchor="middle" font-size="10" fill="#555">plateaus at ~100 samples</text>
+  <text x="90" y="125" text-anchor="middle" font-size="10" fill="#991b1b" font-style="italic">cheap but limited</text>
+
+  <rect x="180" y="45" width="160" height="90" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="260" y="70" text-anchor="middle" font-size="12" font-weight="600" fill="#1e40af">Reward model</text>
+  <text x="260" y="90" text-anchor="middle" font-size="10" fill="#555">learned verifier (ORM/PRM)</text>
+  <text x="260" y="106" text-anchor="middle" font-size="10" fill="#555">plateaus at ~200-500 samples</text>
+  <text x="260" y="125" text-anchor="middle" font-size="10" fill="#1e40af" font-style="italic">better but still bounded</text>
+
+  <rect x="350" y="45" width="160" height="90" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="430" y="70" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">Execution-based</text>
+  <text x="430" y="90" text-anchor="middle" font-size="10" fill="#555">run tests, check proofs</text>
+  <text x="430" y="106" text-anchor="middle" font-size="10" fill="#555">scales with coverage</text>
+  <text x="430" y="125" text-anchor="middle" font-size="10" fill="#166534" font-style="italic">best, but domain-limited</text>
+
+  <!-- Arrows down -->
+  <line x1="90" y1="135" x2="90" y2="170" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrow-b4)"/>
+  <line x1="260" y1="135" x2="260" y2="170" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-b4)"/>
+  <line x1="430" y1="135" x2="430" y2="170" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrow-b4)"/>
+
+  <!-- Scale bars -->
+  <rect x="30" y="175" width="120" height="30" rx="6" fill="#fff5f5" stroke="#dc2626" stroke-width="1"/>
+  <text x="90" y="195" text-anchor="middle" font-size="11" fill="#991b1b">moderate gains</text>
+
+  <rect x="190" y="175" width="140" height="30" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="260" y="195" text-anchor="middle" font-size="11" fill="#1e40af">good gains</text>
+
+  <rect x="355" y="175" width="150" height="30" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+  <text x="430" y="195" text-anchor="middle" font-size="11" fill="#166534">scales with samples</text>
+
+  <!-- Bottom note -->
+  <rect x="60" y="230" width="400" height="40" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shadow4)"/>
+  <text x="260" y="248" text-anchor="middle" font-size="11" fill="#333">Code and math have natural verifiers.</text>
+  <text x="260" y="263" text-anchor="middle" font-size="11" fill="#333">Open-ended tasks do not. This is the core asymmetry.</text>
+</svg>
+</div>
+
+<p>
+This explains why test-time scaling works spectacularly for code (run the tests) and math (check the answer), but struggles for open-ended tasks like creative writing or summarization where "correct" is hard to define.
+</p>
+
+<h3>The PRM advantage</h3>
+
+<p>
+Process reward models help close the verification gap for reasoning tasks. Instead of only checking the final answer, a PRM scores each intermediate step. This catches solutions that arrive at a correct answer through flawed reasoning (which would fool an ORM) and identifies where reasoning goes wrong (which helps with tree search).
+</p>
+
+<table>
+    <tr><th>Verifier type</th><th>What it checks</th><th>Advantage</th><th>Limitation</th></tr>
+    <tr>
+        <td><strong>ORM</strong></td>
+        <td>Final answer only</td>
+        <td>Simple to train</td>
+        <td>Reward hacking on long chains</td>
+    </tr>
+    <tr>
+        <td><strong>PRM</strong></td>
+        <td>Each reasoning step</td>
+        <td>Catches flawed reasoning, enables search</td>
+        <td>Harder to train (but automatable)</td>
+    </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="scaling-laws">6. The Scaling Laws</h2>
+
+<p>
+Like training-time scaling, test-time scaling follows predictable mathematical relationships.
+</p>
+
+<h3>Coverage: exponentiated power law</h3>
+
+<p>
+Brown et al. (2024) found that coverage follows an exponentiated power law with sample count:
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Coverage scaling (pass@k):</div>
+    $$\text{coverage}(k) \;\approx\; 1 - \exp\!\bigl(-a \cdot k^{b}\bigr)$$
+</div>
+
+<p>
+Where $k$ is the number of samples, $a$ and $b$ are task-dependent constants. This means coverage improves log-linearly: you need exponentially more samples for each linear increment in coverage. Going from 50% to 60% might take 10x more samples than going from 30% to 40%.
+</p>
+
+<h3>Compute-optimal allocation</h3>
+
+<p>
+Snell et al. (2024) showed that the right strategy depends on problem difficulty:
+</p>
+
+<ul>
+    <li><strong>Easy problems:</strong> one attempt is enough. Extra compute is wasted.</li>
+    <li><strong>Medium problems:</strong> the sweet spot. More samples or longer thinking yields large gains.</li>
+    <li><strong>Very hard problems:</strong> if the model's base accuracy is near zero, no amount of test-time compute helps. You need a better model.</li>
+</ul>
+
+<p>
+Their compute-optimal strategy allocates test-time compute adaptively per prompt based on estimated difficulty. This achieves <strong>4x better efficiency</strong> than a uniform best-of-N approach that spends the same compute on every query.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> This is like a student allocating time during an exam. You do not spend 30 minutes double-checking a trivial question, and you do not keep grinding on a problem you fundamentally do not understand. You allocate most of your review time to questions where checking will actually help.
+</div>
+
+<h3>Provable guarantees without verifiers</h3>
+
+<p>
+<a href="https://arxiv.org/abs/2411.19477">Chen et al. (2024)</a> proved that you can get exponentially decaying failure probability without any external verifier. Their approach uses the LLM itself to compare pairs of candidate answers in a tournament format. Each comparison round eliminates the weaker candidate, and the failure probability decays exponentially with the number of rounds.
+</p>
+
+<p>
+This is significant because it removes the dependency on a separate trained reward model. The LLM serves as both generator and judge.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="when">7. When to Use What</h2>
+
+<p>
+The choice between training-time and test-time scaling, and between parallel and sequential test-time scaling, depends on your constraints.
+</p>
+
+<table>
+    <tr><th>Scenario</th><th>Recommendation</th><th>Why</th></tr>
+    <tr>
+        <td>Have a strong verifier (tests, proofs)</td>
+        <td>Parallel scaling (best-of-N)</td>
+        <td>Coverage scales log-linearly; verification is reliable</td>
+    </tr>
+    <tr>
+        <td>No verifier, need reasoning</td>
+        <td>Sequential scaling (thinking models)</td>
+        <td>Self-correction within one attempt, no external verifier needed</td>
+    </tr>
+    <tr>
+        <td>High-value, rare queries</td>
+        <td>Both (many thinking attempts)</td>
+        <td>Cost per query is justified; maximize correctness</td>
+    </tr>
+    <tr>
+        <td>High-throughput, low-stakes</td>
+        <td>Bigger model, single pass</td>
+        <td>Per-query cost matters more than marginal accuracy</td>
+    </tr>
+    <tr>
+        <td>Task is trivially easy for the model</td>
+        <td>No extra compute</td>
+        <td>Already near-perfect; gains are negligible</td>
+    </tr>
+    <tr>
+        <td>Task is far beyond model capability</td>
+        <td>Bigger/better model</td>
+        <td>Test-time compute cannot create missing capabilities</td>
+    </tr>
+</table>
+
+<div class="warning">
+    <strong>Warning:</strong> Test-time scaling amplifies existing capability; it does not create new capability. If a model has near-zero accuracy on a task (the task is fundamentally beyond its training), no amount of repeated sampling or longer thinking will fix this. You need a better base model, not more inference compute.
+</div>
+
+<h3>Cost comparison</h3>
+
+<p>
+Training compute is a <strong>one-time cost</strong>, amortized over all queries. Test-time compute is a <strong>per-query cost</strong>.
+</p>
+
+<p>
+This creates a clear economic logic. If you serve millions of queries, training a larger model is cheaper per query. If you serve a few thousand high-value queries (competition math, complex code generation, medical diagnosis), spending 10-100x on inference per query is often cost-effective.
+</p>
+
+<p>
+The s1 result is instructive: fine-tuning on 1,000 examples (negligible training cost) plus budget forcing at inference (moderate per-query cost) exceeded o1-preview on math. The total compute budget was a fraction of what it took to train o1.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="limits">8. What Test-Time Scaling Cannot Do</h2>
+
+<p>
+<a href="https://arxiv.org/abs/2504.00294">Balachandran et al. (2025)</a> systematically tested test-time scaling across nine models and eight task domains. The findings are sobering and important.
+</p>
+
+<ul>
+    <li><strong>Gains are not uniform.</strong> Math, STEM, and code benefit significantly. Navigation, spatial reasoning, and planning show inconsistent improvements.</li>
+    <li><strong>Gains diminish with problem complexity.</strong> As problems get harder (within a domain), the marginal benefit of more compute shrinks faster.</li>
+    <li><strong>More tokens is not always better.</strong> Simply generating longer reasoning traces does not guarantee improvement. The quality of reasoning matters, not just the quantity.</li>
+    <li><strong>Significant gaps persist.</strong> On some tasks, even very high scaling regimes leave a large performance gap compared to what would be achievable with perfect reasoning.</li>
+</ul>
+
+<p>
+The honest assessment: test-time scaling is a powerful tool with clear domains of applicability, not a universal solution. It works best when (1) the model has some baseline competence on the task, (2) verification is possible (automated or via reward models), and (3) the task benefits from deliberate reasoning rather than pattern matching.
+</p>
+
+<h2>References</h2>
+
+<ol>
+    <li>Snell et al. (2024). <a href="https://arxiv.org/abs/2408.03314">Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters Alone</a>.</li>
+    <li>Brown et al. (2024). <a href="https://arxiv.org/abs/2407.21787">Large Language Monkeys: Scaling Inference Compute with Repeated Sampling</a>.</li>
+    <li>Chen et al. (2024). <a href="https://arxiv.org/abs/2411.19477">Simple and Provable Scaling Laws for the Test-Time Compute of LLMs</a>.</li>
+    <li>Muennighoff et al. (2025). <a href="https://arxiv.org/abs/2501.19393">s1: Simple Test-Time Scaling</a>.</li>
+    <li>DeepSeek-AI (2025). <a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a>.</li>
+    <li>Lightman et al. (2023). <a href="https://arxiv.org/abs/2305.20050">Let's Verify Step by Step</a>.</li>
+    <li>Wang et al. (2024). <a href="https://arxiv.org/abs/2312.08935">Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations</a>.</li>
+    <li>Luo et al. (2024). <a href="https://arxiv.org/abs/2406.06592">Improve Mathematical Reasoning in Language Models by Automated Process Supervision</a>.</li>
+    <li>Balachandran et al. (2025). <a href="https://arxiv.org/abs/2504.00294">Inference-Time Scaling for Complex Tasks: Where We Stand and What Lies Ahead</a>.</li>
+</ol>
+
+<div class="share-bottom">
+    <p>Found this useful? Help someone else find it too.</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F&text=Test-Time%20Scaling" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Ftest-time-scaling%2F&title=Test-Time%20Scaling" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+</div>
+
+</article></div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
