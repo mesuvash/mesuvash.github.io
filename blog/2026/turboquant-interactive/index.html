@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | TurboQuant Animated: Watch Vector Quantization Happen</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="TurboQuant Animated: Watch Vector Quantization Happen" />
+    <meta property="og:description" content="Interactive 2D and 3D animations showing every step of TurboQuant: normalize, rotate, quantize, reconstruct. Add your own points and see the compression error in real time." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/turboquant-interactive/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="TurboQuant Animated: Watch Vector Quantization Happen" />
+    <meta name="twitter:description" content="Interactive 2D and 3D animations showing every step of TurboQuant: normalize, rotate, quantize, reconstruct." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+
+    <style>
+        .anim-wrap { text-align: center; margin: 1.5em 0; }
+        .anim-wrap canvas { max-width: 100%; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+        .anim-controls { margin-top: 0.7em; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .anim-controls button {
+            font-family: Georgia, serif; font-size: 13px; padding: 5px 14px;
+            border: 1.5px solid #2563eb; background: #f0f4ff; color: #1e40af;
+            border-radius: 6px; cursor: pointer;
+        }
+        .anim-controls button:hover { background: #dbeafe; }
+        .anim-controls button.secondary { border-color: #bbb; background: #f9fafb; color: #555; }
+        .anim-controls select {
+            font-family: Georgia, serif; font-size: 13px; padding: 2px 6px;
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+        .anim-controls label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+        .dim-toggle { display: inline-flex; border: 1.5px solid #2563eb; border-radius: 6px; overflow: hidden; }
+        .dim-toggle button { border: none; border-radius: 0; border-right: 1px solid #2563eb; padding: 5px 18px; }
+        .dim-toggle button:last-child { border-right: none; }
+        .dim-toggle button.active { background: #2563eb; color: #fff; }
+        .algo-step { display: flex; gap: 14px; align-items: flex-start; }
+        .algo-num {
+            min-width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: bold; flex-shrink: 0;
+        }
+        .algo-num.encode { background: #f0f4ff; border: 1.5px solid #2563eb; color: #1e40af; }
+        .algo-num.stored { background: #f0fdf4; border: 1.5px solid #16a34a; color: #166534; font-size: 11px; }
+        .algo-num.decode { background: #fff5f5; border: 1.5px solid #dc2626; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>TurboQuant Animated: Watch Vector Quantization Happen</h1>
+    <p class="post-meta">March 24, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fturboquant-interactive%2F&text=TurboQuant%20Animated%3A%20Watch%20Vector%20Quantization%20Happen" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fturboquant-interactive%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fturboquant-interactive%2F&title=TurboQuant%20Animated%3A%20Watch%20Vector%20Quantization%20Happen" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    Interactive 2D and 3D animations showing every step of TurboQuant: normalize, rotate, quantize, reconstruct. Add your own points and see the compression error in real time.
+</p>
+
+<p>
+<a href="/blog/2026/turboquant/">TurboQuant</a> compresses vectors by rotating them into a predictable distribution, then snapping to a precomputed grid. Step through the animation below to see every stage. Hover any point for exact coordinates. On step 0, click to add or remove points.
+</p>
+
+<!-- ============================================================ -->
+<!-- Dimension toggle -->
+<!-- ============================================================ -->
+<div style="text-align:center;margin:1.2em 0;">
+    <div class="dim-toggle">
+        <button id="btn-2d" class="active" onclick="show2D()">2D</button>
+        <button id="btn-3d" onclick="show3D()">3D</button>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 2D Animation -->
+<!-- ============================================================ -->
+<div id="wrap-2d" class="anim-wrap">
+    <canvas id="c2d" width="640" height="500"></canvas>
+    <div class="anim-controls">
+        <button id="prev2d">&#x25C0; Prev</button>
+        <button id="next2d">Next &#x25B6;</button>
+        <button id="reset2d" class="secondary">New Points</button>
+        <label>Bits: <select id="bits2d"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 3D Animation -->
+<!-- ============================================================ -->
+<div id="wrap-3d" class="anim-wrap" style="display:none;">
+    <canvas id="c3d" width="640" height="540"></canvas>
+    <div class="anim-controls">
+        <button id="prev3d">&#x25C0; Prev</button>
+        <button id="next3d">Next &#x25B6;</button>
+        <button id="reset3d" class="secondary">New Points</button>
+        <label>Bits: <select id="bits3d"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label>
+    </div>
+</div>
+
+<p style="text-align:center;margin-top:-0.3em;">
+    <span style="font-size:13px;color:var(--muted);">Arrow keys or spacebar to step. Try different bit-widths to see accuracy change. In 3D, drag to orbit.</span>
+</p>
+
+
+<!-- ============================================================ -->
+<h2 id="algorithm">How TurboQuant Works</h2>
+<!-- ============================================================ -->
+
+<p>
+The goal: compress a vector (a list of numbers) using very few bits per number, then reconstruct it with minimal error. TurboQuant does this without ever looking at the data distribution.
+</p>
+
+<div style="display:flex;flex-direction:column;gap:18px;margin:1.5em 0;">
+
+    <div class="algo-step">
+        <div class="algo-num encode">1</div>
+        <div>
+            <strong style="color:#1e40af;">Save the length, normalize.</strong><br>
+            Store the vector's length (norm) as a single number. Divide the vector by its length so it sits on the unit circle (2D) or unit sphere (3D+). This separates "how long" from "which direction."
+        </div>
+    </div>
+
+    <div class="algo-step">
+        <div class="algo-num encode">2</div>
+        <div>
+            <strong style="color:#1e40af;">Apply a random rotation.</strong><br>
+            Multiply by a fixed random rotation matrix (generated once from a seed). This scrambles the coordinates so that every vector, regardless of its original shape, has the same predictable coordinate distribution. The rotation is shared between encoder and decoder, so it costs nothing to transmit.
+        </div>
+    </div>
+
+    <div class="algo-step">
+        <div class="algo-num encode">3</div>
+        <div>
+            <strong style="color:#1e40af;">Snap each coordinate to a precomputed grid.</strong><br>
+            Since we know the exact distribution of each coordinate (thanks to the rotation), we precompute the optimal grid placement for that distribution. At <em>b</em> bits, each coordinate is rounded to one of 2<sup><em>b</em></sup> values and stored as a small index. This is the only lossy step.
+        </div>
+    </div>
+
+    <div class="algo-step" style="padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
+        <div class="algo-num stored">&#x2713;</div>
+        <div>
+            <strong style="color:#166534;">Stored data:</strong><br>
+            One <em>b</em>-bit index per coordinate + one float for the norm. At 3 bits with 128 dimensions: 128 x 3 = 384 bits + 16 bits for norm = 50 bytes, down from 256 bytes (16-bit floats). A <strong>5x compression</strong>.
+        </div>
+    </div>
+
+    <div class="algo-step">
+        <div class="algo-num decode">4a</div>
+        <div>
+            <strong style="color:#991b1b;">Undo the rotation.</strong><br>
+            To reconstruct: look up the grid values from the stored indices, then multiply by the transpose of the rotation matrix (which undoes the rotation exactly). The result is an approximation of the original unit vector.
+        </div>
+    </div>
+
+    <div class="algo-step">
+        <div class="algo-num decode">4b</div>
+        <div>
+            <strong style="color:#991b1b;">Multiply by the stored norm.</strong><br>
+            Scale the unit-length approximation by the stored norm to restore the original magnitude. The result is the reconstructed vector. The only error comes from step 3 (the grid snapping).
+        </div>
+    </div>
+
+</div>
+
+<div class="note">
+    <p><strong>Intuition:</strong> The random rotation turns any input vector into one with a known, predictable coordinate distribution. This means a single precomputed grid (designed for that distribution) is near-optimal for every possible input. No training data needed, no codebook to learn. The grid is fixed and universal. The error is provably within 2.72x of the best any method could achieve, even one with perfect knowledge of the data.</p>
+</div>
+
+<p>
+For the full technical explanation with equations, proofs, and PyTorch pseudocode, see the companion post: <a href="/blog/2026/turboquant/">TurboQuant: Near-Optimal Vector Quantization Without Looking at Your Data</a>.
+</p>
+
+<p>
+Paper: <a href="https://arxiv.org/abs/2504.19874" target="_blank" rel="noopener">TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate</a> (Zandieh, Daliri, Hadian, Mirrokni, 2025).
+</p>
+
+</article>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+<script>
+// ── Toggle ──
+function show2D() {
+    document.getElementById('wrap-2d').style.display = '';
+    document.getElementById('wrap-3d').style.display = 'none';
+    document.getElementById('btn-2d').classList.add('active');
+    document.getElementById('btn-3d').classList.remove('active');
+}
+function show3D() {
+    document.getElementById('wrap-2d').style.display = 'none';
+    document.getElementById('wrap-3d').style.display = '';
+    document.getElementById('btn-3d').classList.add('active');
+    document.getElementById('btn-2d').classList.remove('active');
+    if (!window._3dInit) { init3D(); window._3dInit = true; }
+}
+
+// ================================================================
+// 2D ANIMATION
+// ================================================================
+(function() {
+    const canvas = document.getElementById('c2d');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = 640, cssH = 500;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+    ctx.scale(dpr, dpr);
+    const W = cssW, H = cssH;
+
+    let step = 0, bits = 2, hoverIdx = -1;
+    let points=[], norms=[], unit=[], rotated=[], quantized=[], decoded=[], qIndices=[];
+    let theta = 0, centroids = [], boundaries = [];
+
+    const STEPS = ['Original vectors (click to add/remove)','Step 1: Normalize to unit circle','Step 2: Random rotation','Step 3: Quantize to grid','Step 4a: Undo rotation','Step 4b: Rescale by stored norms','Compare: original vs reconstructed'];
+
+    function genPts(){points=[];for(let i=0;i<5;i++)points.push({x:0.5+(Math.random()-0.5)*0.3,y:0.6+(Math.random()-0.5)*0.25});for(let i=0;i<5;i++)points.push({x:-0.4+(Math.random()-0.5)*0.25,y:-0.3+(Math.random()-0.5)*0.3});points.push({x:-0.8,y:0.7},{x:0.9,y:-0.5});}
+    function buildCB(){const n=1<<bits;centroids=[];boundaries=[];const s=2.0/n;for(let i=0;i<=n;i++)boundaries.push(-1+i*s);for(let i=0;i<n;i++)centroids.push((boundaries[i]+boundaries[i+1])/2);}
+    function snap(v){let b=0,bd=Infinity;for(let i=0;i<centroids.length;i++){const d=Math.abs(v-centroids[i]);if(d<bd){bd=d;b=i;}}return{val:centroids[b],idx:b};}
+    function compute(){theta=0.7+Math.random()*1.5;buildCB();const c=Math.cos(theta),s=Math.sin(theta);norms=points.map(p=>Math.sqrt(p.x*p.x+p.y*p.y));unit=points.map((p,i)=>{const n=norms[i]||1e-8;return{x:p.x/n,y:p.y/n};});rotated=unit.map(p=>({x:c*p.x+s*p.y,y:-s*p.x+c*p.y}));qIndices=[];quantized=rotated.map(p=>{const qx=snap(p.x),qy=snap(p.y);qIndices.push({ix:qx.idx,iy:qy.idx});return{x:qx.val,y:qy.val};});const ic=Math.cos(-theta),is=Math.sin(-theta);const uq=quantized.map(p=>({x:ic*p.x+is*p.y,y:-is*p.x+ic*p.y}));decoded=uq.map((p,i)=>({x:p.x*norms[i],y:p.y*norms[i]}));}
+    function getUQ(){const ic=Math.cos(-theta),is=Math.sin(-theta);return quantized.map(p=>({x:ic*p.x+is*p.y,y:-is*p.x+ic*p.y}));}
+
+    const ps=390,px=(W-ps)/2,py=40,ly1=py+ps+18,ly2=py+ps+36;
+    const ccx=px+ps/2,ccy=py+ps/2,sc=(ps/2)*0.85;
+    function tc(vx,vy){return{x:ccx+vx*sc,y:ccy-vy*sc};}
+    function fc(mx,my){return{x:(mx-ccx)/sc,y:-(my-ccy)/sc};}
+    function drawAxes(){ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+8,ccy);ctx.lineTo(px+ps-8,ccy);ctx.stroke();ctx.beginPath();ctx.moveTo(ccx,py+8);ctx.lineTo(ccx,py+ps-8);ctx.stroke();}
+    function drawCirc(){ctx.strokeStyle='#2563eb';ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(ccx,ccy,sc,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+    function drawGr(){const n=1<<bits;const alpha=Math.max(0.04,0.15-bits*0.02);ctx.strokeStyle='rgba(180,100,0,'+alpha+')';ctx.lineWidth=n<=8?1:0.5;for(const b of boundaries){const p=tc(b,0);ctx.beginPath();ctx.moveTo(p.x,py+8);ctx.lineTo(p.x,py+ps-8);ctx.stroke();const q=tc(0,b);ctx.beginPath();ctx.moveTo(px+8,q.y);ctx.lineTo(px+ps-8,q.y);ctx.stroke();}if(n*n<=1024){const r=Math.max(1,3-bits*0.4);ctx.fillStyle='rgba(180,83,9,'+(n<=8?0.25:0.12)+')';for(const a of centroids)for(const b of centroids){const p=tc(a,b);ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();}}}
+    function dt(vx,vy,col,r){const p=tc(vx,vy);ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,r||5,0,Math.PI*2);ctx.fill();}
+    function ln(x1,y1,x2,y2,col,w){const a=tc(x1,y1),b=tc(x2,y2);ctx.strokeStyle=col;ctx.lineWidth=w||1;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+    function ar(x1,y1,x2,y2,col){const a=tc(x1,y1),b=tc(x2,y2);const dx=b.x-a.x,dy=b.y-a.y,l=Math.sqrt(dx*dx+dy*dy);if(l<2)return;const ux=dx/l,uy=dy/l;ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-ux*7-uy*3,b.y-uy*7+ux*3);ctx.lineTo(b.x-ux*7+uy*3,b.y-uy*7-ux*3);ctx.closePath();ctx.fill();}
+    function mse(){let s=0;for(let i=0;i<points.length;i++){const dx=points[i].x-decoded[i].x,dy=points[i].y-decoded[i].y;s+=dx*dx+dy*dy;}return s/points.length;}
+    function lDot(x,y,col,txt){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#333';ctx.font='12px Georgia,serif';ctx.textAlign='left';ctx.fillText(txt,x+10,y+4);}
+    function getDP(){const uq=getUQ();const m=(_,arr)=>points.map((__,i)=>arr(i));switch(step){case 0:return m(0,i=>[{...points[i],color:'#2563eb'}]);case 1:return m(0,i=>[{...unit[i],color:'#2563eb'},{...points[i],color:'rgba(37,99,235,0.3)',faded:true}]);case 2:return m(0,i=>[{...rotated[i],color:'#16a34a'},{...unit[i],color:'rgba(37,99,235,0.3)',faded:true}]);case 3:return m(0,i=>[{...quantized[i],color:'#b45309'},{...rotated[i],color:'rgba(22,163,74,0.3)',faded:true}]);case 4:return m(0,i=>[{...uq[i],color:'#dc2626'},{...quantized[i],color:'rgba(180,83,9,0.3)',faded:true}]);case 5:return m(0,i=>[{...decoded[i],color:'#dc2626'},{...uq[i],color:'rgba(220,38,38,0.2)',faded:true}]);case 6:return m(0,i=>[{...points[i],color:'#2563eb'},{...decoded[i],color:'#dc2626'}]);}}
+    function findH(mx,my){const dp=getDP();let bi=-1,bd=18;for(let i=0;i<dp.length;i++)for(const pt of dp[i]){if(pt.faded)continue;const cp=tc(pt.x,pt.y);const d=Math.sqrt((mx-cp.x)**2+(my-cp.y)**2);if(d<bd){bd=d;bi=i;}}return bi;}
+
+    function draw(){
+        ctx.clearRect(0,0,W,H);
+        ctx.fillStyle='#1a1a1a';ctx.font='bold 15px Georgia,serif';ctx.textAlign='center';ctx.fillText(STEPS[step],W/2,28);
+        ctx.font='12px Georgia,serif';ctx.fillStyle='#999';ctx.fillText(STEPS.map((_,i)=>i===step?'\u25CF':'\u25CB').join('  '),W/2,H-8);
+        drawAxes();const uq=getUQ();
+        if(step===0){for(let i=0;i<points.length;i++){ar(0,0,points[i].x,points[i].y,i===hoverIdx?'rgba(37,99,235,0.5)':'rgba(37,99,235,0.15)');dt(points[i].x,points[i].y,'#2563eb',i===hoverIdx?7:5);}ctx.fillStyle='#999';ctx.font='italic 12px Georgia,serif';ctx.textAlign='center';ctx.fillText('Click to add. Click existing point to remove.',W/2,ly2);}
+        else if(step===1){drawCirc();for(let i=0;i<points.length;i++){dt(points[i].x,points[i].y,'rgba(37,99,235,0.15)',3.5);ctx.setLineDash([3,3]);ln(points[i].x,points[i].y,unit[i].x,unit[i].y,'rgba(0,0,0,0.1)',1);ctx.setLineDash([]);dt(unit[i].x,unit[i].y,'#2563eb',i===hoverIdx?7:5);}}
+        else if(step===2){drawCirc();for(let i=0;i<unit.length;i++){dt(unit[i].x,unit[i].y,'rgba(37,99,235,0.15)',3.5);const aB=Math.atan2(unit[i].y,unit[i].x),aA=Math.atan2(rotated[i].y,rotated[i].x);ctx.strokeStyle=i===hoverIdx?'rgba(22,163,74,0.4)':'rgba(22,163,74,0.1)';ctx.lineWidth=i===hoverIdx?1.8:0.8;ctx.setLineDash([4,3]);ctx.beginPath();const cB=-aB,cA=-aA;let df=cA-cB;if(df>Math.PI)df-=2*Math.PI;if(df<-Math.PI)df+=2*Math.PI;ctx.arc(ccx,ccy,sc,cB,cB+df,df<0);ctx.stroke();ctx.setLineDash([]);dt(rotated[i].x,rotated[i].y,'#16a34a',i===hoverIdx?7:5);}const ri=hoverIdx>=0?hoverIdx:points.length-1;const mA=(Math.atan2(unit[ri].y,unit[ri].x)+Math.atan2(rotated[ri].y,rotated[ri].x))/2;ctx.fillStyle='#2563eb';ctx.font='italic 14px Georgia,serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('\u03B8='+( theta*180/Math.PI).toFixed(0)+'\u00B0',ccx+(sc+22)*Math.cos(mA),ccy-(sc+22)*Math.sin(mA));ctx.textBaseline='alphabetic';}
+        else if(step===3){drawCirc();drawGr();for(let i=0;i<rotated.length;i++){dt(rotated[i].x,rotated[i].y,'rgba(22,163,74,0.2)',3.5);ctx.setLineDash([2,2]);ln(rotated[i].x,rotated[i].y,quantized[i].x,quantized[i].y,'rgba(180,100,0,0.35)',1);ctx.setLineDash([]);dt(quantized[i].x,quantized[i].y,'#b45309',i===hoverIdx?7:5);}lDot(px+15,ly1,'rgba(22,163,74,0.5)','Rotated');lDot(px+105,ly1,'#b45309','Snapped to grid');const n=1<<bits;ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText(bits+'-bit: '+n+'\u00D7'+n+'='+(n*n)+' positions',px+15,ly2);}
+        else if(step===4){drawCirc();for(let i=0;i<quantized.length;i++){dt(quantized[i].x,quantized[i].y,'rgba(180,83,9,0.3)',4);ctx.setLineDash([3,3]);ln(quantized[i].x,quantized[i].y,uq[i].x,uq[i].y,i===hoverIdx?'rgba(220,38,38,0.5)':'rgba(220,38,38,0.15)',i===hoverIdx?1.5:1);ctx.setLineDash([]);dt(uq[i].x,uq[i].y,'#dc2626',i===hoverIdx?7:5);}for(const p of unit)dt(p.x,p.y,'rgba(37,99,235,0.12)',3);lDot(px+15,ly1,'#b45309','Grid pos');lDot(px+110,ly1,'#dc2626','Unrotated');lDot(px+220,ly1,'rgba(37,99,235,0.3)','True (faded)');ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText('Rotate back by -\u03B8. Still unit scale.',px+15,ly2);}
+        else if(step===5){for(let i=0;i<points.length;i++){dt(uq[i].x,uq[i].y,'rgba(220,38,38,0.2)',3.5);ctx.setLineDash([3,3]);ln(uq[i].x,uq[i].y,decoded[i].x,decoded[i].y,i===hoverIdx?'rgba(220,38,38,0.6)':'rgba(220,38,38,0.2)',i===hoverIdx?1.5:1);ctx.setLineDash([]);dt(decoded[i].x,decoded[i].y,'#dc2626',i===hoverIdx?7:5);}for(let i=0;i<points.length;i++)dt(points[i].x,points[i].y,'rgba(37,99,235,0.12)',3);drawCirc();lDot(px+15,ly1,'rgba(220,38,38,0.4)','Unit scale');lDot(px+120,ly1,'#dc2626','Rescaled (\u00D7norm)');lDot(px+280,ly1,'rgba(37,99,235,0.3)','Original (faded)');ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText('Multiply by stored norm to restore scale.',px+15,ly2);}
+        else if(step===6){for(let i=0;i<points.length;i++){ln(points[i].x,points[i].y,decoded[i].x,decoded[i].y,i===hoverIdx?'rgba(220,38,38,0.7)':'rgba(220,38,38,0.35)',i===hoverIdx?2:1.2);dt(points[i].x,points[i].y,'#2563eb',i===hoverIdx?7:5);dt(decoded[i].x,decoded[i].y,'#dc2626',i===hoverIdx?6:4.5);}lDot(px+15,ly1,'#2563eb','Original');lDot(px+105,ly1,'#dc2626','Reconstructed');ctx.fillStyle='#555';ctx.font='italic 12px Georgia,serif';ctx.textAlign='right';ctx.fillText('MSE: '+mse().toFixed(4)+' ('+bits+'-bit)',px+ps-10,ly1+4);}
+        if(hoverIdx>=0)drawTip(hoverIdx);
+    }
+    function drawTip(i){const uq=getUQ()[i];const L=[];const f=v=>v.toFixed(3);L.push({c:'#2563eb',t:'original: ('+f(points[i].x)+', '+f(points[i].y)+')'});if(step>=1)L.push({c:'#2563eb',t:'norm: '+f(norms[i])+'  unit: ('+f(unit[i].x)+', '+f(unit[i].y)+')'});if(step>=2)L.push({c:'#16a34a',t:'rotated: ('+f(rotated[i].x)+', '+f(rotated[i].y)+')'});if(step>=3)L.push({c:'#b45309',t:'quantized: ('+f(quantized[i].x)+', '+f(quantized[i].y)+') idx:['+qIndices[i].ix+','+qIndices[i].iy+']'});if(step>=4)L.push({c:'#dc2626',t:'unrotated: ('+f(uq.x)+', '+f(uq.y)+')'});if(step>=5)L.push({c:'#dc2626',t:'\u00D7norm '+f(norms[i])+' \u2192 ('+f(decoded[i].x)+', '+f(decoded[i].y)+')'});if(step>=6){const e=Math.sqrt((points[i].x-decoded[i].x)**2+(points[i].y-decoded[i].y)**2);L.push({c:'#555',t:'error: '+f(e)});}const dp=getDP()[i];const pr=dp.find(p=>!p.faded)||dp[0];const pp=tc(pr.x,pr.y);const tw=280,th=L.length*18+12;let tx=pp.x+12,ty=pp.y-th-5;if(tx+tw>W-5)tx=pp.x-tw-12;if(ty<5)ty=pp.y+15;ctx.fillStyle='rgba(255,255,255,0.95)';ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(tx,ty,tw,th,5);ctx.fill();ctx.stroke();ctx.font='11px monospace';ctx.textAlign='left';for(let j=0;j<L.length;j++){ctx.fillStyle=L[j].c;ctx.fillText(L[j].t,tx+8,ty+16+j*18);}}
+
+    const mx=STEPS.length-1;function gn(){if(step<mx){step++;draw();}}function gp(){if(step>0){step--;draw();}}
+    document.getElementById('next2d').onclick=gn;document.getElementById('prev2d').onclick=gp;
+    document.getElementById('reset2d').onclick=()=>{step=0;bits=+document.getElementById('bits2d').value;genPts();compute();draw();};
+    document.getElementById('bits2d').onchange=function(){bits=+this.value;compute();draw();};
+    function gm(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(cssW/r.width),y:(e.clientY-r.top)*(cssH/r.height)};}
+    canvas.onmousemove=e=>{const m=gm(e);const nh=findH(m.x,m.y);if(nh!==hoverIdx){hoverIdx=nh;draw();}canvas.style.cursor=step===0?(hoverIdx>=0?'pointer':'crosshair'):(hoverIdx>=0?'crosshair':'default');};
+    canvas.onmouseleave=()=>{if(hoverIdx>=0){hoverIdx=-1;draw();}};
+    canvas.onclick=e=>{if(step!==0)return;const m=gm(e);const h=findH(m.x,m.y);if(h>=0&&points.length>2){points.splice(h,1);hoverIdx=-1;compute();draw();return;}const v=fc(m.x,m.y);if(Math.abs(v.x)<=1.15&&Math.abs(v.y)<=1.15){points.push({x:v.x,y:v.y});compute();draw();}};
+    document.addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();gn();}if(e.key==='ArrowLeft'){e.preventDefault();gp();}});
+    genPts();compute();draw();
+})();
+
+// ================================================================
+// 3D ANIMATION
+// ================================================================
+function init3D() {
+    const canvas = document.getElementById('c3d');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = 640, cssH = 540;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+    ctx.scale(dpr, dpr);
+    const W = cssW, H = cssH;
+    let step=0,bits=2,hoverIdx=-1;
+    let pts=[],norms=[],unit3=[],rotated3=[],quantized3=[],decoded3=[],qIdx3=[],rotMat=null,centroids=[],boundaries=[];
+    let camPhi=0.6,camTheta=0.8,dragging=false,dragStart={x:0,y:0},dragPhiS=0,dragThetaS=0;
+    const STEPS=['Original 3D vectors (click to add)','Step 1: Normalize to unit sphere','Step 2: Random 3D rotation','Step 3: Quantize to 3D grid','Step 4a: Undo rotation','Step 4b: Rescale by stored norms','Compare: original vs reconstructed'];
+
+    function v3l(v){return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);}
+    function v3s(v,s){return[v[0]*s,v[1]*s,v[2]*s];}
+    function v3n(v){const l=v3l(v)||1e-8;return v3s(v,1/l);}
+    function mm(M,v){return[M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]];}
+    function mt(M){return[[M[0][0],M[1][0],M[2][0]],[M[0][1],M[1][1],M[2][1]],[M[0][2],M[1][2],M[2][2]]];}
+    function rrm(){function rn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}const a=[rn(),rn(),rn()],b=[rn(),rn(),rn()],c=[rn(),rn(),rn()];const e1=v3n(a);const p1=v3s(e1,e1[0]*b[0]+e1[1]*b[1]+e1[2]*b[2]);const e2=v3n([b[0]-p1[0],b[1]-p1[1],b[2]-p1[2]]);const p2a=v3s(e1,e1[0]*c[0]+e1[1]*c[1]+e1[2]*c[2]),p2b=v3s(e2,e2[0]*c[0]+e2[1]*c[1]+e2[2]*c[2]);const e3=v3n([c[0]-p2a[0]-p2b[0],c[1]-p2a[1]-p2b[1],c[2]-p2a[2]-p2b[2]]);const det=e1[0]*(e2[1]*e3[2]-e2[2]*e3[1])-e1[1]*(e2[0]*e3[2]-e2[2]*e3[0])+e1[2]*(e2[0]*e3[1]-e2[1]*e3[0]);if(det<0){e3[0]*=-1;e3[1]*=-1;e3[2]*=-1;}return[e1,e2,e3];}
+    function genP(){pts=[];for(let i=0;i<4;i++)pts.push([0.4+(Math.random()-0.5)*0.3,0.5+(Math.random()-0.5)*0.3,0.3+(Math.random()-0.5)*0.3]);for(let i=0;i<4;i++)pts.push([-0.3+(Math.random()-0.5)*0.25,-0.4+(Math.random()-0.5)*0.25,-0.2+(Math.random()-0.5)*0.3]);pts.push([-0.7,0.6,-0.5],[0.8,-0.4,0.6]);}
+    function bCB(){const n=1<<bits;centroids=[];boundaries=[];const s=2.0/n;for(let i=0;i<=n;i++)boundaries.push(-1+i*s);for(let i=0;i<n;i++)centroids.push((boundaries[i]+boundaries[i+1])/2);}
+    function sn(v){let b=0,bd=Infinity;for(let i=0;i<centroids.length;i++){const d=Math.abs(v-centroids[i]);if(d<bd){bd=d;b=i;}}return{val:centroids[b],idx:b};}
+    function comp(){rotMat=rrm();bCB();norms=pts.map(v3l);unit3=pts.map((p,i)=>{const n=norms[i]||1e-8;return[p[0]/n,p[1]/n,p[2]/n];});rotated3=unit3.map(p=>mm(rotMat,p));qIdx3=[];quantized3=rotated3.map(p=>{const qx=sn(p[0]),qy=sn(p[1]),qz=sn(p[2]);qIdx3.push([qx.idx,qy.idx,qz.idx]);return[qx.val,qy.val,qz.val];});const inv=mt(rotMat);const uq=quantized3.map(p=>mm(inv,p));decoded3=uq.map((p,i)=>v3s(p,norms[i]));}
+    function gUQ(){return quantized3.map(p=>mm(mt(rotMat),p));}
+
+    const vs=160,vcx=W/2,vcy=H/2-10;
+    function proj(v){const cp=Math.cos(camPhi),sp=Math.sin(camPhi),ct=Math.cos(camTheta),st=Math.sin(camTheta);const x1=cp*v[0]+sp*v[2],z1=-sp*v[0]+cp*v[2],y1=ct*v[1]-st*z1,z2=st*v[1]+ct*z1;const f=4,s=f/(f+z2);return{x:vcx+x1*vs*s,y:vcy-y1*vs*s,z:z2,s:s};}
+    function d3(v,col,r){const p=proj(v);ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,(r||5)*p.s,0,Math.PI*2);ctx.fill();return p;}
+    function l3(a,b,col,w){const pa=proj(a),pb=proj(b);ctx.strokeStyle=col;ctx.lineWidth=w||1;ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();}
+    function dAx(){const al=1.2,cs=['rgba(220,38,38,0.3)','rgba(22,163,74,0.3)','rgba(37,99,235,0.3)'],lb=['x','y','z'],ds=[[al,0,0],[0,al,0],[0,0,al]];for(let i=0;i<3;i++){l3([0,0,0],ds[i],cs[i],1);const p=proj(ds[i]);ctx.fillStyle=cs[i];ctx.font='italic 12px Georgia,serif';ctx.textAlign='center';ctx.fillText(lb[i],p.x+10,p.y);}}
+    function dSph(){ctx.strokeStyle='rgba(37,99,235,0.15)';ctx.lineWidth=0.8;const n=60;for(let r=0;r<3;r++){ctx.beginPath();for(let i=0;i<=n;i++){const a=(i/n)*Math.PI*2;let v;if(r===0)v=[Math.cos(a),Math.sin(a),0];else if(r===1)v=[Math.cos(a),0,Math.sin(a)];else v=[0,Math.cos(a),Math.sin(a)];const p=proj(v);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.stroke();}}
+    function dGr(){const n=1<<bits;if(n<=8){ctx.strokeStyle='rgba(180,100,0,0.08)';ctx.lineWidth=0.5;for(const b of boundaries)for(const b2 of boundaries){l3([b,b2,-1],[b,b2,1],'rgba(180,100,0,0.06)',0.5);l3([b,-1,b2],[b,1,b2],'rgba(180,100,0,0.06)',0.5);l3([-1,b,b2],[1,b,b2],'rgba(180,100,0,0.06)',0.5);}}else{const e=[[-1,-1,-1],[-1,-1,1],[-1,1,-1],[-1,1,1],[1,-1,-1],[1,-1,1],[1,1,-1],[1,1,1]],ed=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];for(const[a,b]of ed)l3(e[a],e[b],'rgba(180,100,0,0.12)',0.5);}if(n*n*n<=512){ctx.fillStyle='rgba(180,83,9,0.15)';for(const a of centroids)for(const b of centroids)for(const c of centroids){const p=proj([a,b,c]);ctx.beginPath();ctx.arc(p.x,p.y,1.5*p.s,0,Math.PI*2);ctx.fill();}}}
+    function lD(x,y,col,txt){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#333';ctx.font='12px Georgia,serif';ctx.textAlign='left';ctx.fillText(txt,x+10,y+4);}
+    const ly1=H-52,ly2=H-34;
+    function mse3(){let s=0;for(let i=0;i<pts.length;i++){const dx=pts[i][0]-decoded3[i][0],dy=pts[i][1]-decoded3[i][1],dz=pts[i][2]-decoded3[i][2];s+=dx*dx+dy*dy+dz*dz;}return s/pts.length;}
+    function fH(mx,my){const arrs=[pts,unit3,rotated3,quantized3,gUQ(),decoded3,pts];const arr=arrs[Math.min(step,6)];let bi=-1,bd=20;for(let i=0;i<arr.length;i++){const p=proj(arr[i]);const d=Math.sqrt((mx-p.x)**2+(my-p.y)**2);if(d<bd){bd=d;bi=i;}}return bi;}
+
+    function draw3(){
+        ctx.clearRect(0,0,W,H);ctx.fillStyle='#1a1a1a';ctx.font='bold 15px Georgia,serif';ctx.textAlign='center';ctx.fillText(STEPS[step],W/2,26);ctx.font='12px Georgia,serif';ctx.fillStyle='#999';ctx.fillText(STEPS.map((_,i)=>i===step?'\u25CF':'\u25CB').join('  '),W/2,H-8);
+        dAx();const uq=gUQ();
+        if(step===0){for(let i=0;i<pts.length;i++){l3([0,0,0],pts[i],i===hoverIdx?'rgba(37,99,235,0.5)':'rgba(37,99,235,0.15)',1);d3(pts[i],'#2563eb',i===hoverIdx?7:5);}ctx.fillStyle='#999';ctx.font='italic 12px Georgia,serif';ctx.textAlign='center';ctx.fillText('Drag to rotate view. Click to add points.',W/2,ly2);}
+        else if(step===1){dSph();for(let i=0;i<pts.length;i++){d3(pts[i],'rgba(37,99,235,0.12)',3);l3(pts[i],unit3[i],'rgba(0,0,0,0.08)',0.8);d3(unit3[i],'#2563eb',i===hoverIdx?7:5);}}
+        else if(step===2){dSph();for(let i=0;i<unit3.length;i++){d3(unit3[i],'rgba(37,99,235,0.12)',3);l3(unit3[i],rotated3[i],'rgba(22,163,74,0.1)',0.8);d3(rotated3[i],'#16a34a',i===hoverIdx?7:5);}lD(20,ly1,'rgba(37,99,235,0.3)','Before');lD(100,ly1,'#16a34a','After rotation');}
+        else if(step===3){dSph();dGr();for(let i=0;i<rotated3.length;i++){d3(rotated3[i],'rgba(22,163,74,0.15)',3);l3(rotated3[i],quantized3[i],'rgba(180,100,0,0.25)',0.8);d3(quantized3[i],'#b45309',i===hoverIdx?7:5);}lD(20,ly1,'rgba(22,163,74,0.5)','Rotated');lD(110,ly1,'#b45309','Snapped to grid');const n=1<<bits;ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText(bits+'-bit: '+n+'\u00B3='+(n*n*n)+' grid positions',20,ly2);}
+        else if(step===4){dSph();for(let i=0;i<quantized3.length;i++){d3(quantized3[i],'rgba(180,83,9,0.25)',3.5);l3(quantized3[i],uq[i],i===hoverIdx?'rgba(220,38,38,0.5)':'rgba(220,38,38,0.12)',i===hoverIdx?1.2:0.8);d3(uq[i],'#dc2626',i===hoverIdx?7:5);}for(const p of unit3)d3(p,'rgba(37,99,235,0.1)',2.5);lD(20,ly1,'#b45309','Grid pos');lD(110,ly1,'#dc2626','Unrotated');lD(220,ly1,'rgba(37,99,235,0.3)','True (faded)');ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText('Undo rotation. Still unit scale.',20,ly2);}
+        else if(step===5){dSph();for(let i=0;i<pts.length;i++){d3(uq[i],'rgba(220,38,38,0.15)',3);l3(uq[i],decoded3[i],i===hoverIdx?'rgba(220,38,38,0.5)':'rgba(220,38,38,0.15)',i===hoverIdx?1.2:0.8);d3(decoded3[i],'#dc2626',i===hoverIdx?7:5);}for(let i=0;i<pts.length;i++)d3(pts[i],'rgba(37,99,235,0.1)',2.5);lD(20,ly1,'rgba(220,38,38,0.4)','Unit scale');lD(120,ly1,'#dc2626','Rescaled');lD(220,ly1,'rgba(37,99,235,0.3)','Original (faded)');ctx.fillStyle='#888';ctx.font='italic 11px Georgia,serif';ctx.textAlign='left';ctx.fillText('Multiply by stored norm.',20,ly2);}
+        else if(step===6){for(let i=0;i<pts.length;i++){l3(pts[i],decoded3[i],i===hoverIdx?'rgba(220,38,38,0.6)':'rgba(220,38,38,0.25)',i===hoverIdx?1.5:1);d3(pts[i],'#2563eb',i===hoverIdx?7:5);d3(decoded3[i],'#dc2626',i===hoverIdx?6:4.5);}lD(20,ly1,'#2563eb','Original');lD(110,ly1,'#dc2626','Reconstructed');ctx.fillStyle='#555';ctx.font='italic 12px Georgia,serif';ctx.textAlign='right';ctx.fillText('MSE: '+mse3().toFixed(4)+' ('+bits+'-bit)',W-20,ly1+4);}
+        if(hoverIdx>=0)dTip(hoverIdx);
+    }
+    function dTip(i){const uq=gUQ()[i];const L=[];const f=v=>v.toFixed(2);const fv=v=>'('+f(v[0])+', '+f(v[1])+', '+f(v[2])+')';L.push({c:'#2563eb',t:'original: '+fv(pts[i])});if(step>=1)L.push({c:'#2563eb',t:'norm: '+f(norms[i])+'  unit: '+fv(unit3[i])});if(step>=2)L.push({c:'#16a34a',t:'rotated: '+fv(rotated3[i])});if(step>=3)L.push({c:'#b45309',t:'quantized: '+fv(quantized3[i])+' ['+qIdx3[i]+']'});if(step>=4)L.push({c:'#dc2626',t:'unrotated: '+fv(uq)});if(step>=5)L.push({c:'#dc2626',t:'\u00D7norm '+f(norms[i])+' \u2192 '+fv(decoded3[i])});if(step>=6){const e=v3l([pts[i][0]-decoded3[i][0],pts[i][1]-decoded3[i][1],pts[i][2]-decoded3[i][2]]);L.push({c:'#555',t:'error: '+f(e)});}const pp=proj(step>=4&&step<6?uq:pts[i]);const tw=300,th=L.length*18+12;let tx=pp.x+12,ty=pp.y-th-5;if(tx+tw>W-5)tx=pp.x-tw-12;if(ty<5)ty=pp.y+15;ctx.fillStyle='rgba(255,255,255,0.95)';ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(tx,ty,tw,th,5);ctx.fill();ctx.stroke();ctx.font='11px monospace';ctx.textAlign='left';for(let j=0;j<L.length;j++){ctx.fillStyle=L[j].c;ctx.fillText(L[j].t,tx+8,ty+16+j*18);}}
+
+    const mx3=STEPS.length-1;function gn(){if(step<mx3){step++;draw3();}}function gp(){if(step>0){step--;draw3();}}
+    document.getElementById('next3d').onclick=gn;document.getElementById('prev3d').onclick=gp;
+    document.getElementById('reset3d').onclick=()=>{step=0;bits=+document.getElementById('bits3d').value;genP();comp();draw3();};
+    document.getElementById('bits3d').onchange=function(){bits=+this.value;comp();draw3();};
+    function gm(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(cssW/r.width),y:(e.clientY-r.top)*(cssH/r.height)};}
+    canvas.onmousedown=e=>{dragging=true;const m=gm(e);dragStart=m;dragPhiS=camPhi;dragThetaS=camTheta;};
+    canvas.onmousemove=e=>{const m=gm(e);if(dragging){camPhi=dragPhiS+(m.x-dragStart.x)*0.008;camTheta=Math.max(-1.2,Math.min(1.2,dragThetaS-(m.y-dragStart.y)*0.008));draw3();canvas.style.cursor='grabbing';}else{const nh=fH(m.x,m.y);if(nh!==hoverIdx){hoverIdx=nh;draw3();}canvas.style.cursor=hoverIdx>=0?'crosshair':'grab';}};
+    canvas.onmouseup=()=>{dragging=false;canvas.style.cursor='grab';};
+    canvas.onmouseleave=()=>{dragging=false;if(hoverIdx>=0){hoverIdx=-1;draw3();}canvas.style.cursor='grab';};
+    canvas.onclick=e=>{if(step!==0||dragging)return;const m=gm(e);if(Math.abs(m.x-dragStart.x)>5||Math.abs(m.y-dragStart.y)>5)return;pts.push([(Math.random()-0.5)*1.4,(Math.random()-0.5)*1.4,(Math.random()-0.5)*1.4]);comp();draw3();};
+    genP();comp();draw3();
+}
+</script>
+</body>
+</html>
