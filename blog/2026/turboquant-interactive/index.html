@@ -165,7 +165,7 @@ The goal: compress a vector (a list of numbers) using very few bits per number, 
         <div class="algo-num encode">2</div>
         <div>
             <strong style="color:#1e40af;">Apply a random rotation.</strong><br>
-            Multiply by a fixed random rotation matrix (generated once from a seed). This scrambles the coordinates so that every vector, regardless of its original shape, has the same predictable coordinate distribution. The rotation is shared between encoder and decoder, so it costs nothing to transmit.
+            Multiply every vector by the <em>same</em> fixed random rotation matrix (generated once from a seed). Yes, every vector gets the identical rotation. This works because a random rotation applied to any unit vector produces coordinates with a known, predictable distribution. The rotation is shared between encoder and decoder, so it costs nothing to transmit.
         </div>
     </div>
 
@@ -207,9 +207,9 @@ The goal: compress a vector (a list of numbers) using very few bits per number, 
     <p><strong>Intuition:</strong> The random rotation turns any input vector into one with a known, predictable coordinate distribution. This means a single precomputed grid (designed for that distribution) is near-optimal for every possible input. No training data needed, no codebook to learn. The grid is fixed and universal. The error is provably within 2.72x of the best any method could achieve, even one with perfect knowledge of the data.</p>
 </div>
 
-<!-- <p>
-For the full technical explanation with equations, proofs, and PyTorch pseudocode, see the companion post: <a href="/blog/2026/turboquant/">TurboQuant: Near-Optimal Vector Quantization Without Looking at Your Data</a>.
-</p> -->
+<div class="warning">
+    <p><strong>About the grid:</strong> The grid is <em>not</em> uniformly spaced. Each coordinate is quantized independently using <strong>optimal centroids</strong> precomputed for the known coordinate distribution (Eq. 4 in the paper). In 2D, coordinates on the unit circle follow the arcsine distribution, which concentrates near ±1, so centroids cluster at the edges. In high dimensions (d = 128+), coordinates concentrate sharply near zero following a near-Gaussian distribution, making the grid much more efficient. The full paper also adds a second quantization step (1-bit QJL on the residual) to make inner-product estimates unbiased, which this visualization omits for clarity.</p>
+</div>
 
 <p>
 Paper: <a href="https://arxiv.org/abs/2504.19874" target="_blank" rel="noopener">TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate</a> (Zandieh, Daliri, Hadian, Mirrokni, 2025).
@@ -260,7 +260,17 @@ function show3D() {
     const STEPS = ['Original vectors (click to add/remove)','Step 1: Normalize to unit circle','Step 2: Random rotation','Step 3: Quantize to grid','Step 4a: Undo rotation','Step 4b: Rescale by stored norms','Compare: original vs reconstructed'];
 
     function genPts(){points=[];for(let i=0;i<5;i++)points.push({x:0.5+(Math.random()-0.5)*0.3,y:0.6+(Math.random()-0.5)*0.25});for(let i=0;i<5;i++)points.push({x:-0.4+(Math.random()-0.5)*0.25,y:-0.3+(Math.random()-0.5)*0.3});points.push({x:-0.8,y:0.7},{x:0.9,y:-0.5});}
-    function buildCB(){const n=1<<bits;centroids=[];boundaries=[];const s=2.0/n;for(let i=0;i<=n;i++)boundaries.push(-1+i*s);for(let i=0;i<n;i++)centroids.push((boundaries[i]+boundaries[i+1])/2);}
+    function buildCB(){
+        // d=2: coordinate distribution on unit circle is arcsine f(y)=1/(π√(1-y²))
+        // Optimal boundaries at quantiles: b_k = -cos(kπ/n)
+        // Optimal centroids (conditional means): c_k = n*(√(1-b_k²)-√(1-b_{k+1}²))/π
+        const n=1<<bits;centroids=[];boundaries=[];
+        for(let i=0;i<=n;i++) boundaries.push(-Math.cos(i*Math.PI/n));
+        for(let i=0;i<n;i++){
+            const a=boundaries[i],b=boundaries[i+1];
+            centroids.push(n*(Math.sqrt(Math.max(0,1-a*a))-Math.sqrt(Math.max(0,1-b*b)))/Math.PI);
+        }
+    }
     function snap(v){let b=0,bd=Infinity;for(let i=0;i<centroids.length;i++){const d=Math.abs(v-centroids[i]);if(d<bd){bd=d;b=i;}}return{val:centroids[b],idx:b};}
     function compute(){theta=0.7+Math.random()*1.5;buildCB();const c=Math.cos(theta),s=Math.sin(theta);norms=points.map(p=>Math.sqrt(p.x*p.x+p.y*p.y));unit=points.map((p,i)=>{const n=norms[i]||1e-8;return{x:p.x/n,y:p.y/n};});rotated=unit.map(p=>({x:c*p.x+s*p.y,y:-s*p.x+c*p.y}));qIndices=[];quantized=rotated.map(p=>{const qx=snap(p.x),qy=snap(p.y);qIndices.push({ix:qx.idx,iy:qy.idx});return{x:qx.val,y:qy.val};});const ic=Math.cos(-theta),is=Math.sin(-theta);const uq=quantized.map(p=>({x:ic*p.x+is*p.y,y:-is*p.x+ic*p.y}));decoded=uq.map((p,i)=>({x:p.x*norms[i],y:p.y*norms[i]}));}
     function getUQ(){const ic=Math.cos(-theta),is=Math.sin(-theta);return quantized.map(p=>({x:ic*p.x+is*p.y,y:-is*p.x+ic*p.y}));}
