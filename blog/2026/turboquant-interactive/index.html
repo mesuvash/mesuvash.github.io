@@ -207,9 +207,9 @@ The goal: compress a vector (a list of numbers) using very few bits per number, 
     <p><strong>Intuition:</strong> The random rotation turns any input vector into one with a known, predictable coordinate distribution. This means a single precomputed grid (designed for that distribution) is near-optimal for every possible input. No training data needed, no codebook to learn. The grid is fixed and universal. The error is provably within 2.72x of the best any method could achieve, even one with perfect knowledge of the data.</p>
 </div>
 
-<p>
+<!-- <p>
 For the full technical explanation with equations, proofs, and PyTorch pseudocode, see the companion post: <a href="/blog/2026/turboquant/">TurboQuant: Near-Optimal Vector Quantization Without Looking at Your Data</a>.
-</p>
+</p> -->
 
 <p>
 Paper: <a href="https://arxiv.org/abs/2504.19874" target="_blank" rel="noopener">TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate</a> (Zandieh, Daliri, Hadian, Mirrokni, 2025).
