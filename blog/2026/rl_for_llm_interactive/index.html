@@ -41,6 +41,16 @@
 .anim-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #2563eb; cursor: pointer; }
 .anim-value { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85em; color: #2563eb; font-weight: 600; min-width: 36px; }
 .anim-label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 0.82em; color: #555; margin-top: 6px; }
+@media (max-width: 600px) {
+  .anim-container { padding: 10px; }
+  .anim-controls { gap: 8px; }
+  .anim-btn { font-size: 0.78em; padding: 5px 10px; }
+  .anim-slider { width: 100px; }
+  .anim-slider-group { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-container canvas { transition: none; }
+}
 </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -220,7 +230,7 @@
 <button class="anim-btn" id="creditBtn">Assign Credit</button>
 <button class="anim-btn" id="creditResetBtn">Reset</button>
 </div>
-<canvas id="creditCanvas"></canvas>
+<canvas id="creditCanvas" role="img" aria-label="Animation showing per-token credit assignment: reward R=0.82 is distributed across 8 tokens with green (positive) and red (negative) advantage bars."></canvas>
 <p class="anim-label">Green = positive advantage (helped). Red = negative (hurt). Bar height = magnitude.</p>
 </div>
 </div>
@@ -586,7 +596,7 @@
 <button class="anim-btn active" id="reinforceBtn">REINFORCE (raw R)</button>
 <button class="anim-btn" id="advantageBtn">Advantage (A_t)</button>
 </div>
-<canvas id="reinforceCanvas"></canvas>
+<canvas id="reinforceCanvas" role="img" aria-label="Bar chart comparing REINFORCE (uniform weights) vs Advantage (per-token weights) for 8 tokens. Toggle between modes to see the difference."></canvas>
 </div>
 </div>
 
@@ -720,21 +730,19 @@
 </svg>
 </div>
 
-<!-- Value Function Learning interactive — hidden for now
 <div class="interactive-demo">
 <h4>Interactive: Value Function Learning</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">The blue dots start random. Click "Train" to run Bellman updates and watch them converge toward the green targets.</p>
 <div class="anim-container">
-<canvas id="valueCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <button class="anim-btn" id="valueStepBtn">Train 1 Episode</button>
 <button class="anim-btn" id="valueAutoBtn">Auto-train</button>
 <button class="anim-btn" id="valueResetBtn">Reset</button>
 <span class="anim-label" id="valueEpLabel" style="margin-top:0">Episode: 0</span>
 </div>
+<canvas id="valueCanvas" role="img" aria-label="Convergence chart showing critic V(s) estimates (blue dots) learning toward true values (green dots) over training episodes."></canvas>
 </div>
 </div>
--->
 
 <p>
     There's also <strong>$Q(s, a)$ — action value:</strong> the expected total reward if we
@@ -991,7 +999,7 @@
 </div>
 <button class="anim-btn" id="tdPlayBtn">Play &#9654;</button>
 </div>
-<canvas id="tdCanvas"></canvas>
+<canvas id="tdCanvas" role="img" aria-label="TD error visualization: step through token positions to see how each token changes the critic value estimate. V-curve on top, TD error bars below."></canvas>
 <p class="anim-label" id="tdExplainText"></p>
 </div>
 </div>
@@ -1057,7 +1065,7 @@
 </div>
 <span class="anim-label" style="margin-top:0" id="lambdaDesc">Sweet spot: mostly looks ahead, some smoothing</span>
 </div>
-<canvas id="lambdaCanvas"></canvas>
+<canvas id="lambdaCanvas" role="img" aria-label="GAE lambda spectrum: drag lambda slider to control how far ahead the advantage computation looks. Shows weights, TD errors, and contributions for each token position."></canvas>
 </div>
 </div>
 
@@ -1188,7 +1196,7 @@
 <button class="anim-btn" id="grpoSampleBtn">Sample Group</button>
 <button class="anim-btn" id="grpoResetBtn">Reset</button>
 </div>
-<canvas id="grpoCanvas"></canvas>
+<canvas id="grpoCanvas" role="img" aria-label="PPO vs GRPO comparison: PPO shows per-token advantages from a learned critic, GRPO shows uniform z-score advantages from group statistics."></canvas>
 </div>
 </div>
 
@@ -1256,6 +1264,7 @@ for (let i = 0; i < TOKENS.length; i++) {
 // Canvas utilities
 // ============================================================
 const DPR = window.devicePixelRatio || 1;
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function initCanvas(id, aspectH) {
     const canvas = document.getElementById(id);
@@ -1404,7 +1413,7 @@ const F = {
         draw();
         if (progress < 1) raf = requestAnimationFrame(animate); else running = false;
     }
-    btn.onclick = () => { if (running) return; running = true; progress = 0; animate(); };
+    btn.onclick = () => { if (running) return; if (REDUCED_MOTION) { progress = 1; draw(); return; } running = true; progress = 0; animate(); };
     resetBtn.onclick = () => { running = false; if (raf) cancelAnimationFrame(raf); progress = 0; draw(); };
     draw();
 })();
@@ -1427,6 +1436,7 @@ const F = {
         reinforceBtn.classList.toggle('active', m === 'reinforce');
         advantageBtn.classList.toggle('active', m === 'advantage');
         tgt = m === 'reinforce' ? TOKENS.map(() => REWARD) : [...ADVANTAGES];
+        if (REDUCED_MOTION) { cur = [...tgt]; draw(); return; }
         if (raf) cancelAnimationFrame(raf);
         let frame = 0;
         const start = [...cur];
@@ -1498,10 +1508,9 @@ const F = {
 })();
 
 // ============================================================
-// 3. Value Function Learning — simple convergence chart (hidden)
+// 3. Value Function Learning — simple convergence chart
 // ============================================================
 (function() {
-    if (!document.getElementById('valueCanvas')) return;
     const { ctx, W, H } = initCanvas('valueCanvas', 280);
     const stepBtn = document.getElementById('valueStepBtn');
     const autoBtn = document.getElementById('valueAutoBtn');
@@ -1517,6 +1526,7 @@ const F = {
         prev = [...est];
         est = est.map((e, i) => e + 0.12 * (TRUE_VALUES[i] + (Math.random() - 0.5) * 0.04 - e));
         animT = 0;
+        if (REDUCED_MOTION) { animT = 1; draw(); return; }
         if (raf) cancelAnimationFrame(raf);
         (function s() { animT = Math.min(1, animT + 0.04); draw(); if (animT < 1) raf = requestAnimationFrame(s); })();
     }
@@ -2100,6 +2110,7 @@ const F = {
             focusIdx: 0,
         };
         animT = 0;
+        if (REDUCED_MOTION) { animT = 1; draw(); return; }
         if (raf) cancelAnimationFrame(raf);
         (function s() { animT = Math.min(1, animT + 0.016); draw(); if (animT < 1) raf = requestAnimationFrame(s); })();
     }
