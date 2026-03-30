@@ -216,11 +216,11 @@
 <h4>Interactive: Credit Assignment</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">Click "Assign Credit" to watch the reward propagate back and reveal per-token advantages.</p>
 <div class="anim-container">
-<canvas id="creditCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <button class="anim-btn" id="creditBtn">Assign Credit</button>
 <button class="anim-btn" id="creditResetBtn">Reset</button>
 </div>
+<canvas id="creditCanvas"></canvas>
 <p class="anim-label">Green = positive advantage (helped). Red = negative (hurt). Bar height = magnitude.</p>
 </div>
 </div>
@@ -582,11 +582,11 @@
 <h4>Interactive: REINFORCE vs Advantage</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">Toggle to see the difference: REINFORCE gives every token the same weight (all positive). Advantage centers the signal.</p>
 <div class="anim-container">
-<canvas id="reinforceCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <button class="anim-btn active" id="reinforceBtn">REINFORCE (raw R)</button>
 <button class="anim-btn" id="advantageBtn">Advantage (A_t)</button>
 </div>
+<canvas id="reinforceCanvas"></canvas>
 </div>
 </div>
 
@@ -720,6 +720,7 @@
 </svg>
 </div>
 
+<!-- Value Function Learning interactive — hidden for now
 <div class="interactive-demo">
 <h4>Interactive: Value Function Learning</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">The blue dots start random. Click "Train" to run Bellman updates and watch them converge toward the green targets.</p>
@@ -733,6 +734,7 @@
 </div>
 </div>
 </div>
+-->
 
 <p>
     There's also <strong>$Q(s, a)$ — action value:</strong> the expected total reward if we
@@ -981,8 +983,7 @@
 <h4>Interactive: TD Errors</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">Step through positions to see how each token changes the critic's expectation. The bar chart shows all TD errors.</p>
 <div class="anim-container">
-<canvas id="tdCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <div class="anim-slider-group">
 <label>Position:</label>
 <input type="range" class="anim-slider" id="tdPosSlider" min="0" max="7" value="0" style="width:180px">
@@ -990,6 +991,7 @@
 </div>
 <button class="anim-btn" id="tdPlayBtn">Play &#9654;</button>
 </div>
+<canvas id="tdCanvas"></canvas>
 <p class="anim-label" id="tdExplainText"></p>
 </div>
 </div>
@@ -1047,8 +1049,7 @@
 <h4>Interactive: The Lambda Spectrum</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">Drag &#955; to see how it controls how far ahead we look when computing advantages. The table shows weight, TD error, and contribution at each position.</p>
 <div class="anim-container">
-<canvas id="lambdaCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <div class="anim-slider-group">
 <label>&#955;:</label>
 <input type="range" class="anim-slider" id="lambdaSlider" min="0" max="100" value="95">
@@ -1056,6 +1057,7 @@
 </div>
 <span class="anim-label" style="margin-top:0" id="lambdaDesc">Sweet spot: mostly looks ahead, some smoothing</span>
 </div>
+<canvas id="lambdaCanvas"></canvas>
 </div>
 </div>
 
@@ -1182,11 +1184,11 @@
 <h4>Interactive: PPO vs GRPO Advantage</h4>
 <p style="font-size:0.92em; color:#555; margin-bottom:12px;">Click "Sample Group" to see how GRPO computes z-scores from a group of responses, compared to PPO's per-token advantages.</p>
 <div class="anim-container">
-<canvas id="grpoCanvas"></canvas>
-<div class="anim-controls">
+<div class="anim-controls" style="margin-top:0; margin-bottom:12px;">
 <button class="anim-btn" id="grpoSampleBtn">Sample Group</button>
 <button class="anim-btn" id="grpoResetBtn">Reset</button>
 </div>
+<canvas id="grpoCanvas"></canvas>
 </div>
 </div>
 
@@ -1303,7 +1305,7 @@ const F = {
 // 1. Credit Assignment
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('creditCanvas', 360);
+    const { ctx, W, H } = initCanvas('creditCanvas', 330);
     const btn = document.getElementById('creditBtn');
     const resetBtn = document.getElementById('creditResetBtn');
     let progress = 0, running = false, raf = null;
@@ -1311,8 +1313,8 @@ const F = {
     function draw() {
         ctx.clearRect(0, 0, W, H);
         const n = TOKENS.length;
-        const pad = 16;
-        const tokGap = (W - pad * 2) / n;
+        const padL = 16, padR = 28;
+        const tokGap = (W - padL - padR) / n;
         const tokW = tokGap - 6;
         const tokH = 32;
         const tokY = 48;
@@ -1323,12 +1325,12 @@ const F = {
         // Reward pill top-right
         ctx.fillStyle = '#f0fdf4'; ctx.strokeStyle = C.pos; ctx.lineWidth = 1.5;
         const pillW = 80, pillH = 26;
-        rr(ctx, W - pad - pillW, 22, pillW, pillH, 13); ctx.fill(); ctx.stroke();
+        rr(ctx, W - padR - pillW, 22, pillW, pillH, 13); ctx.fill(); ctx.stroke();
         ctx.font = F.sansBold; ctx.fillStyle = '#166534'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('R = 0.82', W - pad - pillW / 2, 35);
+        ctx.fillText('R = 0.82', W - padR - pillW / 2, 35);
 
         for (let i = 0; i < n; i++) {
-            const cx = pad + i * tokGap + tokGap / 2;
+            const cx = padL + i * tokGap + tokGap / 2;
             const x = cx - tokW / 2;
             const adv = ADVANTAGES[i];
 
@@ -1369,7 +1371,7 @@ const F = {
                 ctx.textBaseline = 'top'; ctx.textAlign = 'center';
                 ctx.fillText((adv >= 0 ? '+' : '') + adv.toFixed(2), cx, tokY + tokH + 8);
                 const barTop = tokY + tokH + 28;
-                const maxBarH = 90;
+                const maxBarH = 70;
                 const barH = (Math.abs(adv) / 0.4) * maxBarH * f;
                 const barW = Math.min(24, tokW * 0.4);
                 ctx.fillStyle = adv >= 0
@@ -1380,28 +1382,10 @@ const F = {
             }
         }
 
-        if (progress > 0.05) {
-            const cp = clamp(progress / 0.5, 0, 1);
-            ctx.save();
-            ctx.setLineDash([6, 4]); ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
-            ctx.globalAlpha = Math.min(1, progress * 2);
-            const sx = W - pad - pillW / 2, sy = 48;
-            const ex = W / 2, ey = tokY + tokH + 122;
-            ctx.beginPath();
-            const steps = Math.floor(cp * 50);
-            for (let s = 0; s <= steps; s++) {
-                const t = s / 50;
-                const px = (1-t)*(1-t)*sx + 2*(1-t)*t*(sx * 0.7 + ex * 0.3) + t*t*ex;
-                const py = (1-t)*(1-t)*sy + 2*(1-t)*t*(ey + 30) + t*t*ey;
-                s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-            }
-            ctx.stroke(); ctx.restore();
-        }
-
         if (progress > 0.3) {
             ctx.globalAlpha = clamp((progress - 0.3) / 0.2, 0, 1);
             ctx.font = F.sansBold; ctx.fillStyle = C.amber; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-            ctx.fillText('credit assignment: which tokens caused R = 0.82?', W / 2, tokY + tokH + 130);
+            ctx.fillText('credit assignment: which tokens caused R = 0.82?', W / 2, tokY + tokH + 110);
             ctx.globalAlpha = 1;
         }
 
@@ -1429,7 +1413,7 @@ const F = {
 // 2. REINFORCE vs Advantage
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('reinforceCanvas', 340);
+    const { ctx, W, H } = initCanvas('reinforceCanvas', 285);
     const reinforceBtn = document.getElementById('reinforceBtn');
     const advantageBtn = document.getElementById('advantageBtn');
 
@@ -1458,7 +1442,7 @@ const F = {
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        const mL = 56, mR = 12, mT = 52, mB = 50;
+        const mL = 56, mR = 28, mT = 52, mB = 50;
         const cW = W - mL - mR, cH = H - mT - mB;
         const n = TOKENS.length, gap = cW / n, barW = gap * 0.55;
         const maxV = 1.0, minV = -0.35, range = maxV - minV;
@@ -1514,10 +1498,11 @@ const F = {
 })();
 
 // ============================================================
-// 3. Value Function Learning — simple convergence chart
+// 3. Value Function Learning — simple convergence chart (hidden)
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('valueCanvas', 300);
+    if (!document.getElementById('valueCanvas')) return;
+    const { ctx, W, H } = initCanvas('valueCanvas', 280);
     const stepBtn = document.getElementById('valueStepBtn');
     const autoBtn = document.getElementById('valueAutoBtn');
     const resetBtn = document.getElementById('valueResetBtn');
@@ -1538,9 +1523,9 @@ const F = {
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        const pad = 14;
-        const colW = (W - pad * 2) / n;
-        function tokCx(k) { return pad + k * colW + colW / 2; }
+        const padL = 14, padR = 28;
+        const colW = (W - padL - padR) / n;
+        function tokCx(k) { return padL + k * colW + colW / 2; }
 
         const chartTop = 40;
         const chartBot = H - 50;
@@ -1550,9 +1535,9 @@ const F = {
 
         // Title
         ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText('Critic V(s_t) learning: blue dots converge toward green targets', pad, 16);
+        ctx.fillText('Critic V(s_t) learning: blue dots converge toward green targets', padL, 16);
         ctx.font = F.sm; ctx.fillStyle = C.muted;
-        ctx.fillText('Each position = "given tokens so far, what reward do I expect?"', pad, 30);
+        ctx.fillText('Each position = "given tokens so far, what reward do I expect?"', padL, 30);
 
         // Y-axis
         [0.2, 0.4, 0.6, 0.8].forEach(v => {
@@ -1560,16 +1545,16 @@ const F = {
             ctx.font = F.sm; ctx.fillStyle = '#ddd'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
             ctx.fillText(v.toFixed(1), tokCx(0) - colW * 0.35, y);
             ctx.strokeStyle = '#f5f5f5'; ctx.lineWidth = 0.5;
-            ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
         });
 
         // Reward line
         const ry = toY(REWARD);
         ctx.strokeStyle = C.pos; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
-        ctx.beginPath(); ctx.moveTo(pad, ry); ctx.lineTo(W - pad, ry); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padL, ry); ctx.lineTo(W - padR, ry); ctx.stroke();
         ctx.setLineDash([]);
         ctx.font = F.smBold; ctx.fillStyle = C.pos; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-        ctx.fillText('R = 0.82', W - pad, ry - 3);
+        ctx.fillText('R = 0.82', W - padR, ry - 3);
 
         // True V curve (green dashed)
         ctx.strokeStyle = 'rgba(22,163,106,0.3)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
@@ -1623,15 +1608,15 @@ const F = {
         const avgErr = disp.reduce((s, e, i) => s + Math.abs(e - TRUE_VALUES[i]), 0) / n;
         ctx.font = F.sansBold; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.fillStyle = avgErr < 0.03 ? C.pos : (avgErr < 0.08 ? C.amber : C.neg);
-        ctx.fillText('avg error: ' + avgErr.toFixed(3), pad, H - 22);
+        ctx.fillText('avg error: ' + avgErr.toFixed(3), padL, H - 22);
         if (avgErr < 0.03) {
             ctx.font = F.sm; ctx.fillStyle = C.pos;
-            ctx.fillText(' \u2714 converged!', pad + 110, H - 22);
+            ctx.fillText(' \u2714 converged!', padL + 110, H - 22);
         }
 
         // Legend
         ctx.font = F.sm; ctx.fillStyle = C.muted; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-        ctx.fillText('\u25CF blue = estimate  \u25CF green = true V  --- = R', W - pad, H - 22);
+        ctx.fillText('\u25CF blue = estimate  \u25CF green = true V  --- = R', W - padR, H - 22);
     }
 
     stepBtn.onclick = train;
@@ -1651,7 +1636,7 @@ const F = {
 // 4. TD Errors — clean: V-curve on top, TD error bars below
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('tdCanvas', 460);
+    const { ctx, W, H } = initCanvas('tdCanvas', 310);
     const posSlider = document.getElementById('tdPosSlider');
     const posVal = document.getElementById('tdPosVal');
     const playBtn = document.getElementById('tdPlayBtn');
@@ -1714,17 +1699,17 @@ const F = {
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        const pad = 14;
+        const padL = 14, padR = 28;
         const fp = focusPos;
-        const colW = (W - pad * 2) / n;
-        function tokCx(k) { return pad + k * colW + colW / 2; }
+        const colW = (W - padL - padR) / n;
+        function tokCx(k) { return padL + k * colW + colW / 2; }
 
         // ---- SECTION 1: Token boxes ----
         const tokRowY = 32;
         const tokH = 26;
 
         ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText('TD error: how does V change after each token?', pad, 16);
+        ctx.fillText('TD error: how does V change after each token?', padL, 16);
 
         for (let k = 0; k < n; k++) {
             const cx = tokCx(k);
@@ -1757,16 +1742,16 @@ const F = {
             ctx.font = F.sm; ctx.fillStyle = '#ddd'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
             ctx.fillText(v.toFixed(1), tokCx(0) - colW * 0.35, y);
             ctx.strokeStyle = '#f5f5f5'; ctx.lineWidth = 0.5;
-            ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
         });
 
         // Reward line
         const ry = toY(REWARD);
         ctx.strokeStyle = C.pos; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
-        ctx.beginPath(); ctx.moveTo(pad, ry); ctx.lineTo(W - pad, ry); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padL, ry); ctx.lineTo(W - padR, ry); ctx.stroke();
         ctx.setLineDash([]);
         ctx.font = F.sm; ctx.fillStyle = C.pos; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-        ctx.fillText('R=0.82', W - pad, ry - 2);
+        ctx.fillText('R=0.82', W - padR, ry - 2);
 
         // V-curve line (full, faint)
         ctx.strokeStyle = 'rgba(37,99,235,0.15)'; ctx.lineWidth = 1.5;
@@ -1809,22 +1794,22 @@ const F = {
 
         // Section label
         ctx.font = F.smBold; ctx.fillStyle = '#999'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText('V(s) curve', pad, vTop - 2);
+        ctx.fillText('V(s) curve', padL, vTop - 2);
 
         // ---- SECTION 3: TD error bars ----
         const barTop = vBot + 28;
-        const barH = 100;
+        const barH = 80;
         const halfBar = barH / 2;
         const barZeroY = barTop + halfBar;
         const barW = colW * 0.50;
         const maxDelta = Math.max(0.08, ...TD_ERRORS.map(Math.abs));
 
         ctx.font = F.smBold; ctx.fillStyle = '#999'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText('TD errors (\u03B4)', pad, barTop - 14);
+        ctx.fillText('TD errors (\u03B4)', padL, barTop - 14);
 
         // Zero line
         ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(pad, barZeroY); ctx.lineTo(W - pad, barZeroY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padL, barZeroY); ctx.lineTo(W - padR, barZeroY); ctx.stroke();
 
         for (let k = 0; k < n; k++) {
             const cx = tokCx(k);
@@ -1881,17 +1866,17 @@ const F = {
 // (renumbered from 4)
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('lambdaCanvas', 600);
+    const { ctx, W, H } = initCanvas('lambdaCanvas', 410);
     const slider = document.getElementById('lambdaSlider');
     const valD = document.getElementById('lambdaVal');
     const descD = document.getElementById('lambdaDesc');
     const n = TOKENS.length;
 
     // Layout constants — label column on left, 8-column token grid on right
-    const pad = 14;
+    const padL = 14, padR = 28;
     const labelCol = 80;                    // space reserved for row labels
-    const gridL = pad + labelCol;           // token grid starts after labels
-    const colW = (W - gridL - pad) / n;    // column width
+    const gridL = padL + labelCol;          // token grid starts after labels
+    const colW = (W - gridL - padR) / n;   // column width
     function cx(k) { return gridL + k * colW + colW / 2; }  // center-x of column k
 
     function draw() {
@@ -1911,7 +1896,7 @@ const F = {
         // ---- Title ----
         y = 18;
         ctx.font = F.title; ctx.fillStyle = C.accent; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText('Computing advantage for "Gravity" (t=0): how far ahead do we look?', pad, y);
+        ctx.fillText('Computing advantage for "Gravity" (t=0): how far ahead do we look?', padL, y);
 
         // ---- Token boxes with influence glow ----
         y = 36;
@@ -1978,7 +1963,7 @@ const F = {
         function drawRow(ry, label, values, colorFn) {
             // Row background (grid area only)
             ctx.fillStyle = '#f8f8f8';
-            rr(ctx, gridL - 4, ry, W - gridL - pad + 4, rowH, 4); ctx.fill();
+            rr(ctx, gridL - 4, ry, W - gridL - padR + 4, rowH, 4); ctx.fill();
             // Label in the left margin — right-aligned to stay clear of grid
             ctx.font = F.smBold; ctx.fillStyle = '#666';
             ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
@@ -2009,7 +1994,7 @@ const F = {
         // Equals separator — line across grid, symbol in label column
         y += rowH + 2;
         ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(gridL - 4, y + 4); ctx.lineTo(W - pad, y + 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gridL - 4, y + 4); ctx.lineTo(W - padR, y + 4); ctx.stroke();
         ctx.font = F.sansBold; ctx.fillStyle = '#aaa'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         ctx.fillText('=', gridL - 10, y + 4);
         y += 10;
@@ -2021,10 +2006,10 @@ const F = {
         // ---- Contribution bars ----
         y += rowH + 24;
         ctx.font = F.sansBold; ctx.fillStyle = '#555'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText('Visual: contribution bars', pad, y);
+        ctx.fillText('Visual: contribution bars', padL, y);
         y += 14;
 
-        const barAreaH = 130;
+        const barAreaH = 100;
         const halfH = barAreaH / 2;
         const zeroY = y + halfH;
         const barW = colW * 0.50;
@@ -2032,7 +2017,7 @@ const F = {
 
         // Zero line
         ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(pad, zeroY); ctx.lineTo(W - pad, zeroY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(W - padR, zeroY); ctx.stroke();
 
         for (let k = 0; k < n; k++) {
             const x = cx(k);
@@ -2070,14 +2055,14 @@ const F = {
         ctx.fillStyle = adv >= 0 ? '#f0fdf4' : '#fef2f2';
         ctx.strokeStyle = adv >= 0 ? C.pos : C.neg;
         ctx.lineWidth = 1.5;
-        rr(ctx, pad, resultY, W - pad * 2, 38, 6); ctx.fill(); ctx.stroke();
+        rr(ctx, padL, resultY, W - padL - padR, 38, 6); ctx.fill(); ctx.stroke();
 
         ctx.font = F.sansBold; ctx.fillStyle = adv >= 0 ? C.pos : C.neg;
         ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText('A_0 = sum of contributions = ' + (adv >= 0 ? '+' : '') + adv.toFixed(4), pad + 14, resultY + 19);
+        ctx.fillText('A_0 = sum of contributions = ' + (adv >= 0 ? '+' : '') + adv.toFixed(4), padL + 14, resultY + 19);
 
         ctx.font = F.sans; ctx.fillStyle = C.muted; ctx.textAlign = 'right';
-        ctx.fillText('using ' + active + ' of ' + n + ' positions', W - pad - 14, resultY + 19);
+        ctx.fillText('using ' + active + ' of ' + n + ' positions', W - padR - 14, resultY + 19);
     }
 
     slider.oninput = draw;
@@ -2088,7 +2073,7 @@ const F = {
 // 6. PPO vs GRPO — stacked layout, show z computation
 // ============================================================
 (function() {
-    const { ctx, W, H } = initCanvas('grpoCanvas', 880);
+    const { ctx, W, H } = initCanvas('grpoCanvas', 670);
     const sampleBtn = document.getElementById('grpoSampleBtn');
     const resetBtn = document.getElementById('grpoResetBtn');
 
@@ -2157,7 +2142,7 @@ const F = {
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        const pad = 14;
+        const padL = 14, padR = 28;
         const mL = 50; // left margin for bar charts (for y-axis space)
 
         if (!data) {
@@ -2176,7 +2161,7 @@ const F = {
         ctx.globalAlpha = phase1;
 
         ctx.font = F.title; ctx.fillStyle = C.purple; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText('GRPO generates a group of responses to the same prompt:', pad, 16);
+        ctx.fillText('GRPO generates a group of responses to the same prompt:', padL, 16);
 
         const rowH = 20;
         const groupTop = 24;
@@ -2185,16 +2170,16 @@ const F = {
             const isFocus = i === focusIdx;
             if (isFocus) {
                 ctx.fillStyle = 'rgba(22,163,106,0.07)';
-                ctx.fillRect(pad, y, W - pad * 2, rowH);
+                ctx.fillRect(padL, y, W - padL - padR, rowH);
             }
             ctx.font = isFocus ? F.sansBold : F.sans;
             ctx.fillStyle = isFocus ? '#333' : '#999';
             ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            ctx.fillText((isFocus ? '\u25B6 ' : '  ') + respTexts[i], pad + 2, y + 3);
+            ctx.fillText((isFocus ? '\u25B6 ' : '  ') + respTexts[i], padL + 2, y + 3);
             ctx.font = F.monoSm;
             ctx.fillStyle = isFocus ? C.pos : '#aaa';
             ctx.textAlign = 'right';
-            ctx.fillText('R=' + rewards[i].toFixed(2), W - pad - 2, y + 4);
+            ctx.fillText('R=' + rewards[i].toFixed(2), W - padR - 2, y + 4);
         }
         ctx.globalAlpha = 1;
 
@@ -2205,26 +2190,26 @@ const F = {
         if (phase2 > 0) {
             ctx.globalAlpha = phase2;
             ctx.fillStyle = '#f8f7ff'; ctx.strokeStyle = C.purple; ctx.lineWidth = 1;
-            rr(ctx, pad, sec2Top, W - pad * 2, 58, 6); ctx.fill(); ctx.stroke();
+            rr(ctx, padL, sec2Top, W - padL - padR, 58, 6); ctx.fill(); ctx.stroke();
 
             ctx.font = F.sansBold; ctx.fillStyle = C.purple; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            ctx.fillText('Compute z-score for highlighted response:', pad + 10, sec2Top + 6);
+            ctx.fillText('Compute z-score for highlighted response:', padL + 10, sec2Top + 6);
 
             const meanStr = mean.toFixed(2), stdStr = std.toFixed(2);
             const zStr = (focusZ >= 0 ? '+' : '') + focusZ.toFixed(2);
 
             ctx.font = F.mono; ctx.fillStyle = '#555';
-            ctx.fillText('mean=' + meanStr + '  std=' + stdStr, pad + 10, sec2Top + 24);
+            ctx.fillText('mean=' + meanStr + '  std=' + stdStr, padL + 10, sec2Top + 24);
 
             ctx.font = F.mono; ctx.fillStyle = focusZ >= 0 ? C.pos : C.neg;
-            ctx.fillText('z = (0.82 \u2212 ' + meanStr + ') / ' + stdStr + ' = ' + zStr, pad + 10, sec2Top + 40);
+            ctx.fillText('z = (0.82 \u2212 ' + meanStr + ') / ' + stdStr + ' = ' + zStr, padL + 10, sec2Top + 40);
 
             ctx.globalAlpha = 1;
         }
 
         // ============ SECTION 3: PPO bar chart (stacked on top) ============
-        const sec3Top = sec2Top + 86;
-        const chartH = 150; // half above zero, half below
+        const sec3Top = sec2Top + 70;
+        const chartH = 130;
         const halfH = chartH / 2;
         const phase3 = clamp((animT - 0.45) / 0.3, 0, 1);
 
@@ -2238,13 +2223,13 @@ const F = {
 
             const ppoBarTop = sec3Top + 36;
             const ppoZeroY = ppoBarTop + halfH;
-            drawBars(mL, W - mL - pad, ppoZeroY, halfH, ppoAdv, false, 0.4);
+            drawBars(mL, W - mL - padR, ppoZeroY, halfH, ppoAdv, false, 0.4);
 
             ctx.globalAlpha = 1;
         }
 
         // ============ SECTION 4: GRPO bar chart (stacked below) ============
-        const sec4Top = sec3Top + chartH + 80;
+        const sec4Top = sec3Top + chartH + 60;
         const phase4 = clamp((animT - 0.65) / 0.3, 0, 1);
 
         if (phase4 > 0) {
@@ -2257,7 +2242,7 @@ const F = {
             ctx.fillText('(no critic \u2014 same z=' + zStr + ' for every token)', mL + 240, sec4Top + 14);
 
             // z label sits between title and bars
-            const barAreaW = W - mL - pad;
+            const barAreaW = W - mL - padR;
             ctx.font = F.mono; ctx.fillStyle = focusZ >= 0 ? C.pos : C.neg;
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             ctx.fillText('z = ' + zStr + '  (same for all 8 tokens)', mL + barAreaW / 2, sec4Top + 36);
@@ -2266,22 +2251,22 @@ const F = {
             const grpoBarTop = sec4Top + 48;
             const grpoZeroY = grpoBarTop + halfH;
             const uniformVals = Array(n).fill(focusZ);
-            drawBars(mL, W - mL - pad, grpoZeroY, halfH, uniformVals, true, 0.8);
+            drawBars(mL, W - mL - padR, grpoZeroY, halfH, uniformVals, true, 0.8);
 
             ctx.globalAlpha = 1;
         }
 
         // ============ Bottom comparison note ============
-        const noteY = sec4Top + chartH + 70;
+        const noteY = sec4Top + chartH + 86;
         const phase5 = clamp((animT - 0.85) / 0.15, 0, 1);
         if (phase5 > 0) {
             ctx.globalAlpha = phase5;
             ctx.fillStyle = '#f3f0ff'; ctx.strokeStyle = '#7c5cbf'; ctx.lineWidth = 1;
-            rr(ctx, pad, noteY, W - pad * 2, 40, 6); ctx.fill(); ctx.stroke();
+            rr(ctx, padL, noteY, W - padL - padR, 40, 6); ctx.fill(); ctx.stroke();
             ctx.font = F.sansBold; ctx.fillStyle = '#4c3a8a'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            ctx.fillText('Key difference:', pad + 10, noteY + 6);
+            ctx.fillText('Key difference:', padL + 10, noteY + 6);
             ctx.font = F.sans; ctx.fillStyle = '#333';
-            ctx.fillText('PPO uses a critic to assign different credit per token. GRPO uses group statistics instead.', pad + 10, noteY + 22);
+            ctx.fillText('PPO uses a critic to assign different credit per token. GRPO uses group statistics instead.', padL + 10, noteY + 22);
             ctx.globalAlpha = 1;
         }
     }
