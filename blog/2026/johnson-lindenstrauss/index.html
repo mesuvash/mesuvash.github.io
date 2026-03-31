@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | The Johnson-Lindenstrauss Lemma</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="The Johnson-Lindenstrauss Lemma: Why Random Projections Preserve Distance" />
+    <meta property="og:description" content="You can compress a million dimensions into a few hundred and barely distort any pairwise distance. A visual, first-principles explanation of why this works." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/johnson-lindenstrauss/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="The Johnson-Lindenstrauss Lemma: Why Random Projections Preserve Distance" />
+    <meta name="twitter:description" content="You can compress a million dimensions into a few hundred and barely distort any pairwise distance. A visual, first-principles explanation of why this works." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        /* Animation controls */
+        .anim-container {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 1.5em 0;
+        }
+        .anim-container canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 4px;
+        }
+        .anim-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .anim-controls button {
+            background: #f0f4ff;
+            border: 1.5px solid #2563eb;
+            color: #1e40af;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: -apple-system, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .anim-controls button:hover {
+            background: #dbeafe;
+        }
+        .anim-controls button.active {
+            background: #2563eb;
+            color: #fff;
+        }
+        .anim-controls label {
+            font-family: -apple-system, sans-serif;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .anim-controls input[type="range"] {
+            width: 100px;
+        }
+        .anim-stats {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 10px;
+            font-family: -apple-system, sans-serif;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .anim-stats .stat-val {
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        /* Distance histogram */
+        .hist-bar {
+            transition: height 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>The Johnson-Lindenstrauss Lemma: Why Random Projections Preserve Distance</h1>
+    <p class="post-meta">March 30, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F&text=The%20Johnson-Lindenstrauss%20Lemma%3A%20Why%20Random%20Projections%20Preserve%20Distance" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F&title=The%20Johnson-Lindenstrauss%20Lemma%3A%20Why%20Random%20Projections%20Preserve%20Distance" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+You have $n$ points in $d$-dimensional space, where $d$ might be in the millions. The Johnson-Lindenstrauss lemma says you can project them down to roughly $O(\log n / \varepsilon^2)$ dimensions and preserve all pairwise distances within a factor of $(1 \pm \varepsilon)$. The target dimension does not depend on $d$ at all. This post explains why, from first principles.
+</p>
+
+<nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+        <li><a href="#motivation">Why care about random projections?</a></li>
+        <li><a href="#statement">The lemma, stated plainly</a></li>
+        <li><a href="#animation">See it in action</a></li>
+        <li><a href="#why">Why it works: concentration of measure</a></li>
+        <li><a href="#mechanism">The projection matrix</a></li>
+        <li><a href="#target-dim">Where $O(\log n / \varepsilon^2)$ comes from</a></li>
+        <li><a href="#practical">Practical notes</a></li>
+        <li><a href="#references">References</a></li>
+    </ol>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="motivation">1. Why care about random projections?</h2>
+
+<p>
+High-dimensional data is everywhere: word embeddings (300-1536 dimensions), genomics (20,000+ genes), image features (millions of pixels). Working in high dimensions is expensive. Distance computations scale as $O(d)$, nearest-neighbor search slows down, and storage costs grow linearly with $d$.
+</p>
+
+<p>
+The standard response is dimensionality reduction. PCA finds the best low-rank approximation, but it needs to compute a covariance matrix ($O(nd^2)$ time) and is data-dependent. t-SNE and UMAP are great for visualization but don't preserve distances faithfully.
+</p>
+
+<p>
+Random projections take a different approach: just multiply your data by a random matrix. No training, no eigendecomposition, no optimization. And the Johnson-Lindenstrauss (JL) lemma guarantees this works, with a target dimension that depends only on how many points you have and how much distortion you can tolerate.
+</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="statement">2. The lemma, stated plainly</h2>
+
+<div class="eq-block">
+    <span class="eq-label">Johnson-Lindenstrauss Lemma (1984)</span>
+    $$
+    \text{For any } 0 < \varepsilon < 1 \text{ and any set } S \text{ of } n \text{ points in } \mathbb{R}^d,
+    $$
+    $$
+    \text{there exists a map } f: \mathbb{R}^d \to \mathbb{R}^k \text{ with } k = O\!\left(\frac{\log n}{\varepsilon^2}\right)
+    $$
+    $$
+    \text{such that for all } u, v \in S:
+    $$
+    $$
+    (1-\varepsilon)\|u - v\|^2 \;\leq\; \|f(u) - f(v)\|^2 \;\leq\; (1+\varepsilon)\|u - v\|^2
+    $$
+</div>
+
+<p>
+Every variable matters here:
+</p>
+
+<ul>
+    <li>$n$ is the number of points. The target dimension grows as $\log n$, so doubling your dataset adds roughly one extra dimension.</li>
+    <li>$d$ is the original dimension. It does not appear in the bound at all.</li>
+    <li>$\varepsilon$ controls distortion. Smaller $\varepsilon$ means more faithful distances but requires more dimensions ($k \propto 1/\varepsilon^2$).</li>
+    <li>$k$ is the target dimension. For $n = 1{,}000{,}000$ and $\varepsilon = 0.1$, you need roughly $k \approx 1400$ dimensions.</li>
+    <li>$f$ is a linear map: $f(x) = \frac{1}{\sqrt{k}} R x$ where $R$ is a $k \times d$ matrix with random entries.</li>
+</ul>
+
+<div class="note">
+    <strong>Intuition:</strong> Imagine 1,000 cities on a map. You want to record all pairwise distances. Instead of storing full coordinates, you project them onto a few random directions and measure distances there. The JL lemma says roughly 70 random directions suffice to keep all 499,500 pairwise distances within 10% of the originals.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="animation">3. See it in action</h2>
+
+<p>
+The histogram below generates random points in high dimensions, projects them using a random matrix, and shows the distribution of distance ratios (projected distance / original distance) across all pairs. Perfect preservation gives a ratio of 1.0. Try increasing $k$ and watch the distribution tighten. Then try changing $d$ while keeping $k$ fixed: the distribution barely changes, because JL does not depend on $d$.
+</p>
+
+<div class="anim-container">
+    <canvas id="hist-canvas" width="688" height="300"></canvas>
+    <div class="anim-controls">
+        <label>Points (n): <select id="ctrl-n">
+            <option value="8">8</option>
+            <option value="15" selected>15</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+        </select></label>
+        <label>Original dim (d): <select id="ctrl-d">
+            <option value="50">50</option>
+            <option value="200" selected>200</option>
+            <option value="1000">1,000</option>
+            <option value="5000">5,000</option>
+        </select></label>
+        <label>Target dim (k): <select id="ctrl-k">
+            <option value="2">2</option>
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="30">30</option>
+            <option value="60">60</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+            <option value="500">500</option>
+        </select></label>
+        <button id="btn-project" class="active">New Projection</button>
+    </div>
+    <div class="anim-stats">
+        <span>JL bound (ε): <span class="stat-val" id="stat-eps">-</span></span>
+        <span>Max distortion: <span class="stat-val" id="stat-max">-</span></span>
+        <span>Mean distortion: <span class="stat-val" id="stat-mean">-</span></span>
+        <span>Pairs within ε: <span class="stat-val" id="stat-within">-</span></span>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="why">4. Why it works: concentration of measure</h2>
+
+<p>
+The proof rests on a single phenomenon: in high dimensions, random projections of a fixed vector concentrate tightly around the expected value. This is not obvious, and it is the reason the lemma feels almost too good to be true.
+</p>
+
+<h3>Start with one vector</h3>
+
+<p>
+Take a single unit vector $u \in \mathbb{R}^d$ and project it with a random matrix $R \in \mathbb{R}^{k \times d}$ whose entries are i.i.d. $\mathcal{N}(0, 1)$. The projected vector is $\frac{1}{\sqrt{k}} R u$.
+</p>
+
+<p>
+The squared norm of the projection is:
+</p>
+
+<div class="eq-block">
+    <span class="eq-label">Projected norm</span>
+    $$
+    \left\|\frac{1}{\sqrt{k}} R u\right\|^2 = \frac{1}{k} \sum_{i=1}^{k} (r_i \cdot u)^2
+    $$
+</div>
+
+<p>
+Each $r_i \cdot u$ is a dot product of a random Gaussian vector with the fixed unit vector $u$. Since $u$ is unit length, $r_i \cdot u \sim \mathcal{N}(0, 1)$. So each $(r_i \cdot u)^2 \sim \chi^2(1)$, and the sum $\sum_{i=1}^k (r_i \cdot u)^2 \sim \chi^2(k)$.
+</p>
+
+<div class="note">
+<strong>What is $\chi^2$?</strong> The <strong>chi-squared distribution</strong> with $k$ degrees of freedom, written $\chi^2(k)$, is simply the distribution you get when you square $k$ independent standard normal random variables and add them up: $\chi^2(k) = Z_1^2 + Z_2^2 + \cdots + Z_k^2$ where each $Z_i \sim \mathcal{N}(0,1)$. So $\chi^2(1)$ is just a single squared Gaussian: it is always non-negative, skewed right, with mean 1 and variance 2. As $k$ grows, the sum concentrates: $\chi^2(k)$ has mean $k$ and variance $2k$, so the relative spread (standard deviation divided by mean) shrinks as $\sqrt{2/k}$.
+</div>
+
+<p>
+A $\chi^2(k)$ random variable has mean $k$ and variance $2k$. Dividing by $k$, the projected squared norm has mean 1 and variance $2/k$. As $k$ grows, the variance shrinks and the projection concentrates around the true norm.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of it as averaging $k$ independent, noisy measurements of the same quantity. Each measurement (one random direction) is unbiased but noisy. The average of $k$ measurements has $1/k$ the variance. More random directions means a more stable estimate of the true distance.
+</div>
+
+<!-- Concentration diagram (canvas) -->
+<div class="anim-container">
+    <canvas id="concentration-canvas" width="688" height="280"></canvas>
+</div>
+
+<p>
+The diagram shows the distribution of the distance ratio $\|f(u)\|^2 / \|u\|^2$ for different target dimensions. With $k=2$, the distribution is wide and distances are unreliable. With $k=200$, nearly all the probability mass falls inside the $(1 \pm \varepsilon)$ band. The JL lemma quantifies exactly how much $k$ you need for a given $\varepsilon$ and $n$.
+</p>
+
+<h3>From one vector to all pairs</h3>
+
+<p>
+The concentration bound for a single vector says:
+</p>
+
+<div class="eq-block">
+    <span class="eq-label">Single-pair failure probability</span>
+    $$
+    P\!\left[\left|\;\|f(u)\|^2 - \|u\|^2\;\right| > \varepsilon \|u\|^2\right] \;\leq\; 2\exp\!\left(-\frac{k\varepsilon^2}{4}\right)
+    $$
+</div>
+
+<p>
+This bound comes from a <strong>chi-squared tail inequality</strong> (a specific case of sub-exponential concentration; see Lemma 1 in Dasgupta and Gupta, 2003). Here is the reasoning in plain terms:
+</p>
+
+<p>
+We showed that $\|f(u)\|^2 = \frac{1}{k}\sum_{i=1}^{k} X_i$ where each $X_i = (r_i \cdot u)^2 \sim \chi^2(1)$. The projected squared norm is the average of $k$ independent copies of the same random variable, and its expected value is $\|u\|^2$. The question is: how likely is this average to deviate from its expectation by more than a factor of $\varepsilon$?
+</p>
+
+<p>
+The standard tool is a <strong>moment generating function (MGF) bound</strong>, which works like this:
+</p>
+
+<ol class="steps">
+    <li>For any $t > 0$, the event $\{Y > a\}$ is equivalent to $\{e^{tY} > e^{ta}\}$. By Markov's inequality, $P[Y > a] \leq \mathbb{E}[e^{tY}] / e^{ta}$. This is the <strong>Chernoff bound</strong> technique: convert a probability question into a bound on the MGF.</li>
+    <li>For a $\chi^2(1)$ random variable $X$, the MGF is $\mathbb{E}[e^{tX}] = (1 - 2t)^{-1/2}$ for $t < 1/2$. Since the $X_i$ are independent, the MGF of the sum $\sum X_i$ is the product of individual MGFs: $(1 - 2t)^{-k/2}$.</li>
+    <li>Optimize over $t$ to get the tightest bound. After algebraic simplification (using $\ln(1-x) \leq -x - x^2/2$ for the upper tail, and the analogous bound for the lower tail), both tails contribute at most $\exp(-k\varepsilon^2/4)$ each.</li>
+    <li>A union bound over both tails (the projected norm could be too large or too small) gives the factor of 2.</li>
+</ol>
+
+<div class="note">
+    <strong>Intuition:</strong> The Chernoff bound says that the probability of an average deviating from its mean decays <em>exponentially</em> in the number of samples $k$. With $k$ random directions, the chance of a bad projection drops as $e^{-ck\varepsilon^2}$. This is much stronger than what Chebyshev's inequality ($1/k\varepsilon^2$) gives, and it is what makes JL practical: you need $k$ proportional to $\log n$, not $n$.
+</div>
+
+<p>
+For the lemma, we need this to hold for all $\binom{n}{2}$ pairs simultaneously. Apply a union bound: the probability that <em>any</em> pair fails is at most $\binom{n}{2} \cdot 2\exp(-k\varepsilon^2/4) < n^2 \exp(-k\varepsilon^2/4)$.
+</p>
+
+<p>
+Set this less than some small $\delta$ and solve for $k$:
+</p>
+
+<div class="eq-block">
+    <span class="eq-label">Required target dimension</span>
+    $$
+    k \;\geq\; \frac{4}{\varepsilon^2}\left(2\ln n + \ln\frac{1}{\delta}\right) \;=\; O\!\left(\frac{\log n}{\varepsilon^2}\right)
+    $$
+</div>
+
+<p>
+The $\log n$ comes from the union bound over $n^2$ pairs. The $1/\varepsilon^2$ comes from the Gaussian tail. Neither term involves $d$.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Each pair needs the same fixed $k$ for concentration. The only reason $k$ grows with $n$ is that you have more pairs that could fail. But the number of pairs grows as $n^2$, and $\log(n^2) = 2\log n$, so the growth is gentle. Going from 1,000 to 1,000,000 points only doubles $k$.
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="mechanism">5. The projection matrix</h2>
+
+<p>
+The map $f(x) = \frac{1}{\sqrt{k}} R x$ uses a $k \times d$ random matrix $R$. Several distributions for the entries of $R$ work:
+</p>
+
+<table>
+    <tr><th>Distribution</th><th>Entry $R_{ij}$</th><th>Notes</th></tr>
+    <tr><td>Gaussian</td><td>$\mathcal{N}(0,1)$</td><td>Cleanest theory, dense matrix</td></tr>
+    <tr><td>Rademacher</td><td>$\pm 1$ with equal prob</td><td>Equally good, faster to generate</td></tr>
+    <tr><td>Sparse (Achlioptas)</td><td>$\{-1, 0, +1\}$ with prob $\{1/6, 2/3, 1/6\}$</td><td>2/3 of entries are zero, ~3x faster matrix multiply</td></tr>
+</table>
+
+<p>
+All three satisfy the JL guarantee. The key requirement is that each entry has mean 0, variance 1, and is independent. The Gaussian version is cleanest for proofs; the sparse version is most practical.
+</p>
+
+<!-- Projection diagram (canvas) -->
+<div class="anim-container">
+    <canvas id="projection-canvas" width="688" height="200"></canvas>
+</div>
+
+<p>
+The $\frac{1}{\sqrt{k}}$ scaling factor is important. Without it, the projected norms would grow with $k$. Dividing by $\sqrt{k}$ ensures the expected squared norm is preserved: $\mathbb{E}[\|f(x)\|^2] = \|x\|^2$.
+</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="target-dim">6. Where $O(\log n / \varepsilon^2)$ comes from</h2>
+
+<p>
+The two factors in $k = O(\log n / \varepsilon^2)$ come from different parts of the argument:
+</p>
+
+<h3>The $1/\varepsilon^2$ factor: tail width</h3>
+
+<p>
+The projected squared norm is an average of $k$ chi-squared random variables. By the central limit theorem (or more precisely, sub-exponential concentration), the probability of deviating by more than $\varepsilon$ from the mean decays as $\exp(-c k \varepsilon^2)$ for some constant $c$. To make this probability small, you need $k \geq C/\varepsilon^2$. Halving $\varepsilon$ quadruples the required $k$.
+</p>
+
+<h3>The $\log n$ factor: union bound tax</h3>
+
+<p>
+You have $\binom{n}{2} < n^2$ pairs of points. Each pair independently has a small failure probability $\delta_{\text{pair}} \leq 2\exp(-ck\varepsilon^2)$. To ensure all pairs succeed simultaneously, you need:
+</p>
+
+$$
+n^2 \cdot 2\exp(-ck\varepsilon^2) < 1 \quad \Rightarrow \quad k > \frac{2\ln n + \ln 2}{c\varepsilon^2}
+$$
+
+<p>
+The $\ln n$ comes from needing to "pay" for $n^2$ chances of failure. But since it is logarithmic, the cost is remarkably low:
+</p>
+
+<table>
+    <tr><th>Number of points ($n$)</th><th>$\log_2 n$</th><th>Approx $k$ for $\varepsilon=0.1$</th></tr>
+    <tr><td>100</td><td>7</td><td>~550</td></tr>
+    <tr><td>10,000</td><td>13</td><td>~1,100</td></tr>
+    <tr><td>1,000,000</td><td>20</td><td>~1,600</td></tr>
+    <tr><td>$10^9$</td><td>30</td><td>~2,400</td></tr>
+</table>
+
+<p>
+Going from 100 points to a billion only increases $k$ by about 4x. This is the remarkable part of JL: the target dimension grows so slowly with $n$ that it is practical for almost any dataset size.
+</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="practical">7. Practical notes</h2>
+
+<h3>When to use random projections</h3>
+
+<ul>
+    <li><strong>Approximate nearest neighbors.</strong> Project high-dimensional vectors to $O(\log n / \varepsilon^2)$ dimensions, then run exact nearest-neighbor search in the lower-dimensional space. The $\varepsilon$-distortion translates directly to retrieval quality.</li>
+    <li><strong>Preprocessing for clustering.</strong> K-means and DBSCAN are expensive in high dimensions. Project first, then cluster. Distance-based clustering algorithms are preserved by JL.</li>
+    <li><strong>Sketching and streaming.</strong> Random projections can be applied row-by-row as data arrives. No need to see the full dataset first (unlike PCA).</li>
+    <li><strong>Privacy.</strong> The random projection matrix can serve as a one-way transformation: you cannot recover the original data from the projection, but distances are preserved for downstream tasks.</li>
+</ul>
+
+<h3>When NOT to use random projections</h3>
+
+<ul>
+    <li><strong>When $d$ is already small.</strong> If your data is 50-dimensional, projecting to 40 dimensions saves almost nothing and adds noise.</li>
+    <li><strong>When you need exact distances.</strong> JL gives $(1 \pm \varepsilon)$ approximation, not exact preservation. For applications that need precise distances, this is not enough.</li>
+    <li><strong>When structure matters more than distance.</strong> PCA captures the directions of maximum variance. Random projections do not. If your data lies near a low-dimensional subspace and you want to find that subspace, use PCA.</li>
+</ul>
+
+<h3>JL vs PCA: a direct comparison</h3>
+
+<table>
+    <tr><th></th><th>Random Projection (JL)</th><th>PCA</th></tr>
+    <tr><td><strong>Computation</strong></td><td>$O(ndk)$, matrix multiply</td><td>$O(nd^2)$ or $O(ndk)$ with randomized SVD</td></tr>
+    <tr><td><strong>Data-dependent?</strong></td><td>No</td><td>Yes</td></tr>
+    <tr><td><strong>Streaming?</strong></td><td>Yes</td><td>Not easily</td></tr>
+    <tr><td><strong>Guarantee</strong></td><td>Distance preservation</td><td>Variance preservation</td></tr>
+    <tr><td><strong>Target $k$</strong></td><td>$O(\log n / \varepsilon^2)$</td><td>Depends on spectrum of data</td></tr>
+    <tr><td><strong>Best when</strong></td><td>$d$ is huge, need fast reduction</td><td>Data has low intrinsic dimension</td></tr>
+</table>
+
+<div class="warning">
+    <strong>Warning:</strong> Random projections to $k=2$ or $k=3$ for visualization will not preserve distances well. The JL bound for $\varepsilon=0.5$ and $n=1000$ gives $k \approx 110$. For visualization, use t-SNE or UMAP instead.
+</div>
+
+<h3>Implementation in Python</h3>
+
+<p>
+A minimal implementation is five lines:
+</p>
+
+<pre><code>import numpy as np
+
+def jl_project(X, k):
+    """Project n x d matrix X to n x k using Gaussian random projection."""
+    d = X.shape[1]
+    R = np.random.randn(k, d) / np.sqrt(k)
+    return X @ R.T</code></pre>
+
+<p>
+scikit-learn provides <code>sklearn.random_projection.GaussianRandomProjection</code> and <code>SparseRandomProjection</code> with automatic $k$ selection via the JL bound. For large-scale use, the sparse variant is significantly faster.
+</p>
+
+<h2 id="references">References</h2>
+
+<ol>
+    <li>Johnson, W. B. and Lindenstrauss, J. (1984). <em>Extensions of Lipschitz mappings into a Hilbert space</em>. Contemporary Mathematics, 26:189-206.</li>
+    <li>Dasgupta, S. and Gupta, A. (2003). <a href="https://cseweb.ucsd.edu/~dasgupta/papers/jl.pdf">An elementary proof of a theorem of Johnson and Lindenstrauss</a>. Random Structures and Algorithms, 22(1):60-65.</li>
+    <li>Achlioptas, D. (2003). <a href="https://www.sciencedirect.com/science/article/pii/S0022000003000254">Database-friendly random projections</a>. Journal of Computer and System Sciences, 66(4):671-687.</li>
+    <li>Vempala, S. (2005). <em>The Random Projection Method</em>. DIMACS Series in Discrete Mathematics, Vol. 65.</li>
+</ol>
+
+<div class="share-bottom">
+    <p>Found this useful? Help someone else find it too.</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F&text=The%20Johnson-Lindenstrauss%20Lemma%3A%20Why%20Random%20Projections%20Preserve%20Distance" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fjohnson-lindenstrauss%2F&title=The%20Johnson-Lindenstrauss%20Lemma%3A%20Why%20Random%20Projections%20Preserve%20Distance" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+</div>
+
+</article>
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════
+// JL Lemma Interactive Animation
+// ═══════════════════════════════════════════════════
+(function() {
+    const histCanvas = document.getElementById('hist-canvas');
+    const histCtx = histCanvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    // Hi-DPI setup
+    function setupCanvas(c, cx) {
+        const w = c.width, h = c.height;
+        c.width = w * dpr;
+        c.height = h * dpr;
+        c.style.width = w + 'px';
+        c.style.height = h + 'px';
+        cx.scale(dpr, dpr);
+        return { w, h };
+    }
+    const hist = setupCanvas(histCanvas, histCtx);
+
+    // State
+    let ratios = [];
+    let epsTheory = 0;
+    let animProgress = 0;
+    let animId = null;
+
+    function getN() { return parseInt(document.getElementById('ctrl-n').value); }
+    function getD() { return parseInt(document.getElementById('ctrl-d').value); }
+    function getK() { return parseInt(document.getElementById('ctrl-k').value); }
+
+    // Generate random points on the unit sphere in d dimensions
+    function generatePoints(n, d) {
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const p = [];
+            let norm = 0;
+            for (let j = 0; j < d; j++) {
+                const g = gaussRandom();
+                p.push(g);
+                norm += g * g;
+            }
+            norm = Math.sqrt(norm);
+            for (let j = 0; j < d; j++) p[j] = p[j] / norm * Math.sqrt(d);
+            pts.push(p);
+        }
+        return pts;
+    }
+
+    // Random projection: multiply by (1/sqrt(k)) * R where R is k x d Gaussian
+    function randomProject(pts, d, k) {
+        const n = pts.length;
+        const R = [];
+        for (let i = 0; i < k; i++) {
+            const row = [];
+            for (let j = 0; j < d; j++) row.push(gaussRandom());
+            R.push(row);
+        }
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            const proj = [];
+            for (let r = 0; r < k; r++) {
+                let dot = 0;
+                for (let j = 0; j < d; j++) dot += R[r][j] * pts[i][j];
+                proj.push(dot / Math.sqrt(k));
+            }
+            result.push(proj);
+        }
+        return result;
+    }
+
+    // Compute pairwise squared distances
+    function pairwiseDists(pts) {
+        const n = pts.length;
+        const d = pts[0].length;
+        const dists = [];
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                let dist = 0;
+                for (let k = 0; k < d; k++) {
+                    const diff = pts[i][k] - pts[j][k];
+                    dist += diff * diff;
+                }
+                dists.push(dist);
+            }
+        }
+        return dists;
+    }
+
+    function gaussRandom() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    function run() {
+        const n = getN(), d = getD(), k = getK();
+        const points = generatePoints(n, d);
+        const projectedK = randomProject(points, d, k);
+
+        const origDists = pairwiseDists(points);
+        const projDists = pairwiseDists(projectedK);
+
+        ratios = [];
+        for (let p = 0; p < origDists.length; p++) {
+            ratios.push(projDists[p] / origDists[p]);
+        }
+
+        // Theoretical JL epsilon: solve k >= 4*(2*ln(n) + ln(1/delta)) / eps^2 for eps, with delta=0.05
+        epsTheory = Math.sqrt(4 * (2 * Math.log(n) + Math.log(20)) / k);
+        const maxDist = Math.max(...ratios.map(r => Math.abs(r - 1)));
+        const meanDist = ratios.reduce((s, r) => s + Math.abs(r - 1), 0) / ratios.length;
+        const withinEps = ratios.filter(r => Math.abs(r - 1) <= epsTheory).length;
+
+        document.getElementById('stat-eps').textContent = epsTheory.toFixed(3) + ' (' + (epsTheory * 100).toFixed(1) + '%)';
+        document.getElementById('stat-max').textContent = (maxDist * 100).toFixed(1) + '%';
+        document.getElementById('stat-mean').textContent = (meanDist * 100).toFixed(1) + '%';
+        document.getElementById('stat-within').textContent = withinEps + '/' + ratios.length + ' (' + (withinEps/ratios.length*100).toFixed(0) + '%)';
+
+        // Animate
+        animProgress = 0;
+        if (animId) cancelAnimationFrame(animId);
+        animate();
+    }
+
+    function animate() {
+        animProgress = Math.min(1, animProgress + 0.03);
+        drawHistogram();
+        if (animProgress < 1) {
+            animId = requestAnimationFrame(animate);
+        }
+    }
+
+    function drawHistogram() {
+        const W = hist.w, H = hist.h;
+        histCtx.clearRect(0, 0, W, H);
+
+        if (ratios.length === 0) return;
+
+        const bins = 30;
+        const minR = 0.3, maxR = 1.7;
+        const binW = (maxR - minR) / bins;
+        const counts = new Array(bins).fill(0);
+
+        for (const r of ratios) {
+            const b = Math.floor((r - minR) / binW);
+            if (b >= 0 && b < bins) counts[b]++;
+        }
+
+        const maxCount = Math.max(...counts, 1);
+        const chartL = 50, chartR = W - 20, chartT = 20, chartB = H - 40;
+        const barW = (chartR - chartL) / bins;
+
+        // Axes
+        histCtx.strokeStyle = '#bbb';
+        histCtx.lineWidth = 1;
+        histCtx.beginPath();
+        histCtx.moveTo(chartL, chartB);
+        histCtx.lineTo(chartR, chartB);
+        histCtx.stroke();
+
+        // 1.0 line
+        const x1 = chartL + ((1.0 - minR) / (maxR - minR)) * (chartR - chartL);
+        histCtx.strokeStyle = '#2563eb';
+        histCtx.lineWidth = 1.5;
+        histCtx.setLineDash([4, 3]);
+        histCtx.beginPath();
+        histCtx.moveTo(x1, chartT);
+        histCtx.lineTo(x1, chartB);
+        histCtx.stroke();
+        histCtx.setLineDash([]);
+        histCtx.font = '11px -apple-system, sans-serif';
+        histCtx.fillStyle = '#2563eb';
+        histCtx.textAlign = 'center';
+        histCtx.fillText('1.0', x1, chartB + 14);
+
+        // Epsilon bands (using theoretical JL epsilon)
+        const eps = epsTheory;
+        const epsClamp = Math.min(eps, 0.65); // clamp so band stays visible in chart range
+        const xLo = chartL + ((1.0 - epsClamp - minR) / (maxR - minR)) * (chartR - chartL);
+        const xHi = chartL + ((1.0 + epsClamp - minR) / (maxR - minR)) * (chartR - chartL);
+        histCtx.fillStyle = 'rgba(37, 99, 235, 0.06)';
+        histCtx.fillRect(xLo, chartT, xHi - xLo, chartB - chartT);
+        histCtx.strokeStyle = 'rgba(37, 99, 235, 0.3)';
+        histCtx.lineWidth = 1;
+        histCtx.setLineDash([3, 3]);
+        histCtx.beginPath(); histCtx.moveTo(xLo, chartT); histCtx.lineTo(xLo, chartB); histCtx.stroke();
+        histCtx.beginPath(); histCtx.moveTo(xHi, chartT); histCtx.lineTo(xHi, chartB); histCtx.stroke();
+        histCtx.setLineDash([]);
+        histCtx.fillStyle = '#2563eb';
+        histCtx.font = '11px -apple-system, sans-serif';
+        histCtx.fillText('1\u2212\u03B5 (' + (1 - eps).toFixed(2) + ')', xLo, chartT - 6);
+        histCtx.fillText('1+\u03B5 (' + (1 + eps).toFixed(2) + ')', xHi, chartT - 6);
+
+        // X-axis labels
+        histCtx.fillStyle = '#888';
+        histCtx.font = '10px -apple-system, sans-serif';
+        for (let v = 0.4; v <= 1.6; v += 0.2) {
+            const x = chartL + ((v - minR) / (maxR - minR)) * (chartR - chartL);
+            histCtx.textAlign = 'center';
+            histCtx.fillText(v.toFixed(1), x, chartB + 14);
+        }
+        histCtx.fillText('distance ratio', (chartL + chartR) / 2, chartB + 32);
+
+        // Bars
+        const anim = easeOut(animProgress);
+        for (let b = 0; b < bins; b++) {
+            const x = chartL + b * barW;
+            const h = (counts[b] / maxCount) * (chartB - chartT) * anim;
+            const ratio = minR + (b + 0.5) * binW;
+            const withinEps = Math.abs(ratio - 1) <= eps;
+
+            histCtx.fillStyle = withinEps ? 'rgba(22, 163, 74, 0.5)' : 'rgba(220, 38, 38, 0.35)';
+            histCtx.strokeStyle = withinEps ? '#16a34a' : '#dc2626';
+            histCtx.lineWidth = 1;
+            histCtx.fillRect(x + 1, chartB - h, barW - 2, h);
+            histCtx.strokeRect(x + 1, chartB - h, barW - 2, h);
+        }
+
+        // Y-axis label
+        histCtx.save();
+        histCtx.translate(16, (chartT + chartB) / 2);
+        histCtx.rotate(-Math.PI / 2);
+        histCtx.fillStyle = '#888';
+        histCtx.font = '11px -apple-system, sans-serif';
+        histCtx.textAlign = 'center';
+        histCtx.fillText('count', 0, 0);
+        histCtx.restore();
+    }
+
+    function easeOut(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    // Controls
+    document.getElementById('btn-project').addEventListener('click', run);
+    document.getElementById('ctrl-n').addEventListener('change', run);
+    document.getElementById('ctrl-d').addEventListener('change', run);
+    document.getElementById('ctrl-k').addEventListener('change', run);
+
+    // Initial run
+    run();
+
+    // ═══════════════════════════════════════════════════
+    // Concentration diagram (chi-squared PDF curves)
+    // ═══════════════════════════════════════════════════
+    (function drawConcentration() {
+        const c = document.getElementById('concentration-canvas');
+        const cx = c.getContext('2d');
+        const sz = setupCanvas(c, cx);
+        const W = sz.w, H = sz.h;
+
+        const pad = { l: 50, r: 30, t: 30, b: 50 };
+        const cW = W - pad.l - pad.r;
+        const cH = H - pad.t - pad.b;
+
+        // Chi-squared(k) PDF of X/k (the distance ratio), evaluated at x
+        // If Y ~ chi2(k), then X = Y/k has PDF: k * f_chi2(k*x; k)
+        // f_chi2(z; k) = z^(k/2-1) * exp(-z/2) / (2^(k/2) * Gamma(k/2))
+        // We use log for numerical stability
+        function logGamma(z) {
+            // Stirling approx for large z, Lanczos for small
+            if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+            z -= 1;
+            const g = 7;
+            const coef = [0.99999999999980993,676.5203681218851,-1259.1392167224028,
+                771.32342877765313,-176.61502916214059,12.507343278686905,
+                -0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+            let x = coef[0];
+            for (let i = 1; i < g + 2; i++) x += coef[i] / (z + i);
+            const t = z + g + 0.5;
+            return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+        }
+
+        function chi2RatioPDF(x, k) {
+            if (x <= 0) return 0;
+            const z = k * x; // chi2 variable
+            const logP = (k / 2 - 1) * Math.log(z) - z / 2 - (k / 2) * Math.log(2) - logGamma(k / 2);
+            return Math.exp(logP) * k; // Jacobian for X = Y/k
+        }
+
+        const curves = [
+            { k: 2,   color: '#d97706', width: 2.5, dash: [6, 4], label: 'k = 2' },
+            { k: 10,  color: '#2563eb', width: 2,   dash: [],     label: 'k = 10' },
+            { k: 50,  color: '#2563eb', width: 2,   dash: [],     label: 'k = 50' },
+            { k: 200, color: '#16a34a', width: 2.5, dash: [],     label: 'k = 200' }
+        ];
+
+        const xMin = 0.2, xMax = 1.8;
+        const steps = 400;
+
+        // Find max y for scaling
+        let yMax = 0;
+        for (const curve of curves) {
+            for (let i = 0; i <= steps; i++) {
+                const x = xMin + (xMax - xMin) * i / steps;
+                yMax = Math.max(yMax, chi2RatioPDF(x, curve.k));
+            }
+        }
+        yMax *= 1.12;
+
+        function toX(v) { return pad.l + (v - xMin) / (xMax - xMin) * cW; }
+        function toY(v) { return pad.t + cH - (v / yMax) * cH; }
+
+        // Epsilon band
+        const eps = 0.2;
+        const xLo = toX(1 - eps), xHi = toX(1 + eps);
+        cx.fillStyle = 'rgba(37, 99, 235, 0.05)';
+        cx.fillRect(xLo, pad.t, xHi - xLo, cH);
+        cx.setLineDash([4, 3]);
+        cx.strokeStyle = 'rgba(37, 99, 235, 0.4)';
+        cx.lineWidth = 1;
+        cx.beginPath(); cx.moveTo(xLo, pad.t); cx.lineTo(xLo, pad.t + cH); cx.stroke();
+        cx.beginPath(); cx.moveTo(xHi, pad.t); cx.lineTo(xHi, pad.t + cH); cx.stroke();
+        cx.setLineDash([]);
+
+        // Labels for epsilon band
+        cx.font = '12px -apple-system, sans-serif';
+        cx.fillStyle = '#2563eb';
+        cx.textAlign = 'center';
+        cx.fillText('1\u2212\u03B5', xLo, pad.t - 8);
+        cx.fillText('1+\u03B5', xHi, pad.t - 8);
+
+        // X axis
+        cx.strokeStyle = '#bbb';
+        cx.lineWidth = 1;
+        cx.beginPath();
+        cx.moveTo(pad.l, pad.t + cH);
+        cx.lineTo(pad.l + cW, pad.t + cH);
+        cx.stroke();
+
+        // Tick at 1.0
+        const x1 = toX(1.0);
+        cx.strokeStyle = '#333';
+        cx.lineWidth = 1.5;
+        cx.beginPath(); cx.moveTo(x1, pad.t + cH); cx.lineTo(x1, pad.t + cH + 6); cx.stroke();
+        cx.fillStyle = '#333';
+        cx.font = '13px Georgia, serif';
+        cx.textAlign = 'center';
+        cx.fillText('1.0', x1, pad.t + cH + 20);
+        cx.font = '12px Georgia, serif';
+        cx.fillStyle = '#888';
+        cx.fillText('distance ratio', pad.l + cW / 2, pad.t + cH + 40);
+
+        // Draw curves
+        for (const curve of curves) {
+            cx.strokeStyle = curve.color;
+            cx.lineWidth = curve.width;
+            cx.setLineDash(curve.dash);
+            cx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const x = xMin + (xMax - xMin) * i / steps;
+                const y = chi2RatioPDF(x, curve.k);
+                const px = toX(x), py = toY(y);
+                if (i === 0) cx.moveTo(px, py); else cx.lineTo(px, py);
+            }
+            cx.stroke();
+            cx.setLineDash([]);
+
+            // Label: find a good position on the right side of the curve
+            const labelX = curve.k <= 2 ? 1.55 : curve.k <= 10 ? 1.3 : curve.k <= 50 ? 1.18 : 1.08;
+            const labelY = chi2RatioPDF(labelX, curve.k);
+            cx.font = 'italic 12px Georgia, serif';
+            cx.fillStyle = curve.k <= 2 ? '#92400e' : curve.k >= 200 ? '#166534' : '#1e40af';
+            cx.textAlign = 'left';
+            cx.fillText(curve.label, toX(labelX) + 4, toY(labelY) - 4);
+        }
+    })();
+
+    // ═══════════════════════════════════════════════════
+    // Projection flow diagram
+    // ═══════════════════════════════════════════════════
+    (function drawProjection() {
+        const c = document.getElementById('projection-canvas');
+        const cx = c.getContext('2d');
+        const sz = setupCanvas(c, cx);
+        const W = sz.w, H = sz.h;
+
+        function roundRect(x, y, w, h, r, fill, stroke) {
+            cx.beginPath();
+            cx.moveTo(x + r, y);
+            cx.lineTo(x + w - r, y);
+            cx.quadraticCurveTo(x + w, y, x + w, y + r);
+            cx.lineTo(x + w, y + h - r);
+            cx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            cx.lineTo(x + r, y + h);
+            cx.quadraticCurveTo(x, y + h, x, y + h - r);
+            cx.lineTo(x, y + r);
+            cx.quadraticCurveTo(x, y, x + r, y);
+            cx.closePath();
+            if (fill) { cx.fillStyle = fill; cx.fill(); }
+            if (stroke) { cx.strokeStyle = stroke; cx.lineWidth = 1.5; cx.stroke(); }
+        }
+
+        function arrow(x1, y1, x2, y2) {
+            cx.strokeStyle = '#888';
+            cx.lineWidth = 1.5;
+            cx.beginPath();
+            cx.moveTo(x1, y1);
+            cx.lineTo(x2, y2);
+            cx.stroke();
+            // Arrowhead
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const headLen = 8;
+            cx.fillStyle = '#888';
+            cx.beginPath();
+            cx.moveTo(x2, y2);
+            cx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+            cx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+            cx.closePath();
+            cx.fill();
+        }
+
+        const boxH = 50, boxR = 8;
+        const y0 = 30;
+
+        // Input box
+        const inW = 130, inX = 40;
+        roundRect(inX, y0, inW, boxH, boxR, '#f9fafb', '#bbb');
+        cx.font = '14px Georgia, serif';
+        cx.fillStyle = '#333';
+        cx.textAlign = 'center';
+        cx.fillText('x \u2208 \u211D\u1D48', inX + inW / 2, y0 + 22);
+        cx.font = '12px -apple-system, sans-serif';
+        cx.fillStyle = '#888';
+        cx.fillText('d dimensions', inX + inW / 2, y0 + 40);
+
+        // Arrow 1
+        arrow(inX + inW + 10, y0 + boxH / 2, inX + inW + 55, y0 + boxH / 2);
+
+        // Matrix box
+        const matW = 150, matX = inX + inW + 60;
+        roundRect(matX, y0 - 10, matW, boxH + 20, boxR, '#f0f4ff', '#2563eb');
+        cx.font = '14px Georgia, serif';
+        cx.fillStyle = '#1e40af';
+        cx.textAlign = 'center';
+        cx.fillText('(1/\u221Ak) \u00B7 R', matX + matW / 2, y0 + 18);
+        cx.font = '12px -apple-system, sans-serif';
+        cx.fillText('k \u00D7 d random matrix', matX + matW / 2, y0 + 42);
+
+        // Arrow 2
+        arrow(matX + matW + 10, y0 + boxH / 2, matX + matW + 55, y0 + boxH / 2);
+
+        // Output box
+        const outW = 130, outX = matX + matW + 60;
+        roundRect(outX, y0, outW, boxH, boxR, '#f0fdf4', '#16a34a');
+        cx.font = '14px Georgia, serif';
+        cx.fillStyle = '#166534';
+        cx.textAlign = 'center';
+        cx.fillText('f(x) \u2208 \u211D\u1D4F', outX + outW / 2, y0 + 22);
+        cx.font = '12px -apple-system, sans-serif';
+        cx.fillText('k dimensions', outX + outW / 2, y0 + 40);
+
+        // Size annotations
+        cx.font = 'italic 12px Georgia, serif';
+        cx.fillStyle = '#888';
+        cx.textAlign = 'center';
+        cx.fillText('e.g., d = 10,000', inX + inW / 2, y0 + boxH + 22);
+        cx.fillStyle = '#166534';
+        cx.fillText('e.g., k = 100', outX + outW / 2, y0 + boxH + 22);
+
+        // Bottom annotation box
+        const annW = 340, annH = 44;
+        const annX = (W - annW) / 2, annY = y0 + boxH + 42;
+        roundRect(annX, annY, annW, annH, boxR, '#f3f0ff', '#7c5cbf');
+        cx.font = '13px Georgia, serif';
+        cx.fillStyle = '#4c3a8a';
+        cx.textAlign = 'center';
+        cx.fillText('For all pairs u, v:', annX + annW / 2, annY + 17);
+        cx.fillText('(1\u2212\u03B5)\u2016u\u2212v\u2016\u00B2 \u2264 \u2016f(u)\u2212f(v)\u2016\u00B2 \u2264 (1+\u03B5)\u2016u\u2212v\u2016\u00B2', annX + annW / 2, annY + 35);
+    })();
+
+})();
+</script>
+
+<script src="/assets/js/plot.js"></script>
+</body>
+</html>
