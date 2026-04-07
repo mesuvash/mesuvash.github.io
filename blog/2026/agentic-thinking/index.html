@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | From Reasoning to Agentic Thinking: What Changes and Why It's Hard</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="From Reasoning to Agentic Thinking: What Changes and Why It's Hard" />
+    <meta property="og:description" content="The shift from static reasoning (o1, R1) to agentic thinking changes everything: RL infrastructure, environment design, reward signals, and what 'good thinking' even means." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/agentic-thinking/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="From Reasoning to Agentic Thinking: What Changes and Why It's Hard" />
+    <meta name="twitter:description" content="The shift from static reasoning (o1, R1) to agentic thinking changes everything: RL infrastructure, environment design, reward signals, and what 'good thinking' even means." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>From Reasoning to Agentic Thinking: What Changes and Why It's Hard</h1>
+    <p class="post-meta">April 6, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F&text=From%20Reasoning%20to%20Agentic%20Thinking%3A%20What%20Changes%20and%20Why%20It%27s%20Hard" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F&title=From%20Reasoning%20to%20Agentic%20Thinking%3A%20What%20Changes%20and%20Why%20It%27s%20Hard" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    The shift from static reasoning (o1, R1) to agentic thinking changes everything: RL infrastructure, environment design, reward signals, and what "good thinking" even means. This post covers what's different, what's hard, and where the field is headed.
+</p>
+
+<div class="toc">
+    <strong>Contents</strong>
+    <ol>
+        <li><a href="#reasoning-era">The Reasoning Era: What o1 and R1 Actually Established</a></li>
+        <li><a href="#what-is-agentic">What Is Agentic Thinking?</a></li>
+        <li><a href="#comparison">Reasoning vs. Agentic Thinking: A Direct Comparison</a></li>
+        <li><a href="#grpo">GRPO: The RL Workhorse (and Its Limits)</a></li>
+        <li><a href="#agentic-rl">Why Agentic RL Is a Different Beast</a></li>
+        <li><a href="#environments">Environments Are the New Datasets</a></li>
+        <li><a href="#reward-hacking">Reward Hacking Gets Dangerous</a></li>
+        <li><a href="#harness">Harness Engineering: How Agents Are Built</a></li>
+        <li><a href="#hybrid">The Hybrid Is Winning</a></li>
+        <li><a href="#state-of-art">Where We Are Now</a></li>
+    </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="reasoning-era">1. The Reasoning Era: What o1 and R1 Actually Established</h2>
+<!-- ============================================================ -->
+
+<p>
+The reasoning wave of 2024-2025 proved a specific claim: if you train language models with RL against verifiable rewards, they develop qualitatively stronger cognition. OpenAI's o1 showed that "thinking" could be a first-class capability, trained for and exposed to users. DeepSeek-R1 proved it could be reproduced outside the original labs, at competitive quality, with a fully documented training pipeline.
+</p>
+
+<p>
+The key insight was about reward signals. Math, code, and logic became central to reasoning training because rewards in these domains are <strong>deterministic</strong>, <strong>stable</strong>, and <strong>scalable</strong>. You can check if a proof is correct, if code passes tests, if a logical deduction follows. This is a much stronger signal than generic human preference. DeepSeek explicitly chose rule-based rewards over neural reward models, noting that "the neural reward model may suffer from reward hacking in the large-scale reinforcement learning process."
+</p>
+
+<p>
+But reasoning models also revealed something about infrastructure. Once you train a model to reason through long trajectories, RL stops being a lightweight add-on to SFT. It becomes a systems problem: you need rollouts at scale, high-throughput verification, stable policy updates, efficient sampling. The emergence of reasoning models was as much an infra story as a modeling story.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of reasoning RL as a factory where each worker independently solves a math problem on paper, then a checker grades the answer. The workers never need to talk to each other or the outside world. This is why it scales cleanly. Agentic RL, as we will see, breaks this independence.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="what-is-agentic">2. What Is Agentic Thinking?</h2>
+<!-- ============================================================ -->
+
+<p>
+<strong>Agentic thinking</strong> is reasoning in order to act, while interacting with an environment, and continuously updating plans based on feedback from the world. The central question shifts from "Can the model think long enough?" to "Can the model think in a way that sustains effective action?"
+</p>
+
+<p>
+A reasoning model produces a long internal monologue and then outputs an answer. An agentic system runs a loop: <strong>think, act, observe, revise</strong>. Each action produces real feedback from the environment (a test result, a search hit, a file listing, an error message), and the model must incorporate that feedback into its next step.
+</p>
+
+<!-- Big picture diagram -->
+<svg viewBox="0 0 500 340" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:1.5em auto; max-width:500px;">
+    <defs>
+        <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+        <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
+        </marker>
+    </defs>
+
+    <!-- Title -->
+    <text x="250" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#333">Reasoning vs. Agentic Thinking</text>
+
+    <!-- Left: Reasoning -->
+    <text x="125" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#555" font-style="italic">Reasoning (o1 / R1)</text>
+    <rect x="40" y="62" width="170" height="36" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shadow)"/>
+    <text x="125" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#333">Prompt</text>
+    <line x1="125" y1="98" x2="125" y2="120" stroke="#888" marker-end="url(#arrow)"/>
+    <rect x="40" y="122" width="170" height="50" rx="8" fill="#f0f4ff" stroke="#2563eb" filter="url(#shadow)"/>
+    <text x="125" y="144" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#1e40af">Long Internal CoT</text>
+    <text x="125" y="162" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#555">(hundreds/thousands of tokens)</text>
+    <line x1="125" y1="172" x2="125" y2="194" stroke="#888" marker-end="url(#arrow)"/>
+    <rect x="40" y="196" width="170" height="36" rx="8" fill="#f0fdf4" stroke="#16a34a" filter="url(#shadow)"/>
+    <text x="125" y="219" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#166534">Final Answer</text>
+    <text x="125" y="260" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#999">Single turn. No environment.</text>
+
+    <!-- Right: Agentic -->
+    <text x="375" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#555" font-style="italic">Agentic Thinking</text>
+    <rect x="290" y="62" width="170" height="36" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shadow)"/>
+    <text x="375" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#333">Task + Context</text>
+    <line x1="375" y1="98" x2="375" y2="120" stroke="#888" marker-end="url(#arrow)"/>
+
+    <!-- Think -->
+    <rect x="290" y="122" width="170" height="30" rx="8" fill="#f0f4ff" stroke="#2563eb" filter="url(#shadow)"/>
+    <text x="375" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#1e40af">Think + Plan</text>
+    <line x1="375" y1="152" x2="375" y2="168" stroke="#888" marker-end="url(#arrow)"/>
+
+    <!-- Act -->
+    <rect x="290" y="170" width="170" height="30" rx="8" fill="#fff7ed" stroke="#d97706" filter="url(#shadow)"/>
+    <text x="375" y="190" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#92400e">Act (tool call)</text>
+    <line x1="375" y1="200" x2="375" y2="216" stroke="#888" marker-end="url(#arrow)"/>
+
+    <!-- Observe -->
+    <rect x="290" y="218" width="170" height="30" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shadow)"/>
+    <text x="375" y="238" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#333">Observe (env feedback)</text>
+
+    <!-- Loop arrow -->
+    <path d="M 460 233 Q 490 180 460 137" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <text x="498" y="185" text-anchor="middle" font-family="Georgia, serif" font-size="9" fill="#2563eb">loop</text>
+
+    <!-- Result -->
+    <line x1="375" y1="248" x2="375" y2="270" stroke="#888" marker-end="url(#arrow)"/>
+    <rect x="290" y="272" width="170" height="30" rx="8" fill="#f0fdf4" stroke="#16a34a" filter="url(#shadow)"/>
+    <text x="375" y="292" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#166534">Task Complete</text>
+    <text x="375" y="325" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#999">Multi-turn. Grounded in reality.</text>
+</svg>
+
+<p>
+Agentic thinking handles several things that pure reasoning models can mostly avoid:
+</p>
+
+<ul>
+    <li><strong>Deciding when to stop thinking and take an action.</strong> A reasoning model can deliberate indefinitely. An agent must commit to an action at some point, even under uncertainty.</li>
+    <li><strong>Choosing which tool to invoke and in what order.</strong> The action space is combinatorial. A coding agent can read files, edit code, run tests, search documentation, spawn sub-processes.</li>
+    <li><strong>Incorporating noisy or partial observations.</strong> Environment feedback is rarely clean. Error messages are cryptic. Search results are irrelevant. Test output is ambiguous.</li>
+    <li><strong>Revising plans after failures.</strong> The first approach usually does not work. Good agentic thinking involves recognizing failure, diagnosing the cause, and trying an alternative.</li>
+    <li><strong>Maintaining coherence across many turns.</strong> A 100-turn coding session requires the agent to remember what it tried, what worked, what the current state of the codebase is, and what remains to be done.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="comparison">3. Reasoning vs. Agentic Thinking: A Direct Comparison</h2>
+<!-- ============================================================ -->
+
+<table>
+    <thead>
+        <tr>
+            <th>Dimension</th>
+            <th>Reasoning Thinking (o1, R1)</th>
+            <th>Agentic Thinking</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Structure</strong></td>
+            <td>Single turn: prompt &rarr; long CoT &rarr; answer</td>
+            <td>Multi-turn loop: think &rarr; act &rarr; observe &rarr; revise</td>
+        </tr>
+        <tr>
+            <td><strong>Environment</strong></td>
+            <td>None. Reasoning is self-contained.</td>
+            <td>Tools, terminals, browsers, APIs, sandboxes</td>
+        </tr>
+        <tr>
+            <td><strong>Feedback</strong></td>
+            <td>Only at the end (correct/incorrect)</td>
+            <td>After every action (tool outputs, errors, results)</td>
+        </tr>
+        <tr>
+            <td><strong>Rollout parallelism</strong></td>
+            <td>Embarrassingly parallel (generate many CoTs independently)</td>
+            <td>Sequential dependencies (action N depends on observation N-1)</td>
+        </tr>
+        <tr>
+            <td><strong>Reward signal</strong></td>
+            <td>Verifiable: math correctness, test pass/fail</td>
+            <td>Sparse, delayed, often partial (task completion after many steps)</td>
+        </tr>
+        <tr>
+            <td><strong>Failure mode</strong></td>
+            <td>Wrong answer, hallucinated proof step</td>
+            <td>Stuck in loop, wrong tool choice, cascading errors</td>
+        </tr>
+        <tr>
+            <td><strong>Scaling axis</strong></td>
+            <td>More thinking tokens per problem</td>
+            <td>More effective actions per task</td>
+        </tr>
+        <tr>
+            <td><strong>What "good thinking" means</strong></td>
+            <td>Correct, coherent chain of deductions</td>
+            <td>Efficient progress toward task completion under uncertainty</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="grpo">4. GRPO: The RL Workhorse (and Its Limits)</h2>
+<!-- ============================================================ -->
+
+<p>
+Before we discuss agentic RL, we need to understand what reasoning RL looks like in practice. The dominant algorithm is <strong>GRPO</strong> (Group Relative Policy Optimization), introduced in the DeepSeekMath paper and then scaled in DeepSeek-R1.
+</p>
+
+<p>
+Standard PPO requires a <strong>critic network</strong>, a separate model (often the same size as the policy) that estimates value functions. This roughly doubles memory requirements. GRPO eliminates the critic entirely by computing advantages <em>relative to a group of samples</em>.
+</p>
+
+<p>
+For each prompt $x$, GRPO samples $G$ outputs $\{o_1, o_2, \ldots, o_G\}$ from the current policy $\pi_\theta$. Each output gets a reward $r_i$. The advantage for output $i$ is:
+</p>
+
+<div class="equation">
+    <span class="eq-label">GRPO Advantage</span>
+    $$\hat{A}_i = \frac{r_i - \text{mean}(r_1, \ldots, r_G)}{\text{std}(r_1, \ldots, r_G)}$$
+</div>
+
+<p>
+where $\hat{A}_i$ is the normalized advantage for the $i$-th output, $r_i$ is its reward, and the mean and standard deviation are computed across all $G$ outputs for the same prompt. The policy is then updated with a clipped surrogate objective (like PPO) using these group-relative advantages. KL regularization is added directly to the loss.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Instead of asking "How good is this answer?" (which requires a separate value network), GRPO asks "How good is this answer <em>compared to the other answers I generated for the same question?</em>" If 64 answers are sampled and one gets a much higher reward than the rest, it gets a strong positive advantage. No critic needed.
+</div>
+
+<p>
+Typical hyperparameters from DeepSeek: group size $G = 64$, batch size 1024, learning rate $1 \times 10^{-6}$, KL coefficient 0.04. The reward design was deliberately simple: accuracy rewards from deterministic verifiers (boxed math answers, compiler feedback) plus format rewards enforcing <code>&lt;think&gt;</code>/<code>&lt;/think&gt;</code> tag compliance.
+</p>
+
+<h3>Where GRPO hits its limits</h3>
+
+<p>
+GRPO works beautifully for single-turn reasoning because every rollout is independent. Generate 64 completions for the same math problem, score each one, compute group statistics. The rollouts don't interact.
+</p>
+
+<p>
+But agent trajectories are multi-turn. An agent might take 50 actions to solve a SWE-bench task, with environment interactions between each action. You cannot simply sample 64 independent trajectories from the same starting state, because each trajectory diverges into a different environment state after the first action. The RAGEN paper (StarPO framework) attempted to extend GRPO to agentic settings and identified two failure modes:
+</p>
+
+<ul>
+    <li><strong>Echo Trap:</strong> reward variance collapses and gradient spikes, causing the policy to oscillate without improving.</li>
+    <li><strong>Template Collapse:</strong> reasoning appears diverse per-input but becomes input-agnostic across prompts. The model learns a generic template rather than truly adapting its thinking.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="agentic-rl">5. Why Agentic RL Is a Different Beast</h2>
+<!-- ============================================================ -->
+
+<p>
+The infrastructure used for reasoning RL is insufficient for agentic RL. The differences are fundamental, not incremental.
+</p>
+
+<h3>The rollout problem</h3>
+
+<p>
+In reasoning RL, a rollout is: generate tokens until the model outputs an answer, then check the answer. The environment is a static verifier. Rollout throughput is bounded by GPU speed and sampling efficiency. You can run thousands of rollouts in parallel because they are independent.
+</p>
+
+<p>
+In agentic RL, a rollout is: generate an action, execute it in an environment (run code, click a button, query an API), observe the result, feed it back to the model, repeat. Each step has a sequential dependency on the previous one. The environment is not a static verifier; it is a stateful system (a terminal, a browser, an operating system) that changes in response to actions.
+</p>
+
+<!-- Agentic RL rollout diagram -->
+<svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:1.5em auto; max-width:520px;">
+    <defs>
+        <filter id="shadow2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+        <marker id="arr2" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
+        </marker>
+        <marker id="arr-blue" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#2563eb"/>
+        </marker>
+        <marker id="arr-amber" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#d97706"/>
+        </marker>
+    </defs>
+
+    <text x="260" y="18" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#333">Agentic RL Rollout: Sequential Dependencies</text>
+
+    <!-- Policy row -->
+    <text x="18" y="60" font-family="Georgia, serif" font-size="10" fill="#555" font-style="italic">Policy</text>
+    <rect x="60" y="42" width="80" height="30" rx="6" fill="#f0f4ff" stroke="#2563eb" filter="url(#shadow2)"/>
+    <text x="100" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#1e40af">Think + Act₁</text>
+
+    <rect x="210" y="42" width="80" height="30" rx="6" fill="#f0f4ff" stroke="#2563eb" filter="url(#shadow2)"/>
+    <text x="250" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#1e40af">Think + Act₂</text>
+
+    <rect x="360" y="42" width="80" height="30" rx="6" fill="#f0f4ff" stroke="#2563eb" filter="url(#shadow2)"/>
+    <text x="400" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#1e40af">Think + Act₃</text>
+
+    <!-- Env row -->
+    <text x="18" y="140" font-family="Georgia, serif" font-size="10" fill="#555" font-style="italic">Env</text>
+    <rect x="60" y="122" width="80" height="30" rx="6" fill="#fff7ed" stroke="#d97706" filter="url(#shadow2)"/>
+    <text x="100" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#92400e">Execute + Obs₁</text>
+
+    <rect x="210" y="122" width="80" height="30" rx="6" fill="#fff7ed" stroke="#d97706" filter="url(#shadow2)"/>
+    <text x="250" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#92400e">Execute + Obs₂</text>
+
+    <rect x="360" y="122" width="80" height="30" rx="6" fill="#fff7ed" stroke="#d97706" filter="url(#shadow2)"/>
+    <text x="400" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#92400e">Execute + Obs₃</text>
+
+    <!-- Arrows: policy to env -->
+    <line x1="100" y1="72" x2="100" y2="120" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+    <line x1="250" y1="72" x2="250" y2="120" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+    <line x1="400" y1="72" x2="400" y2="120" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+
+    <!-- Arrows: env to next policy -->
+    <path d="M 140 137 Q 175 137 175 90 Q 175 57 208 57" fill="none" stroke="#d97706" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+    <path d="M 290 137 Q 325 137 325 90 Q 325 57 358 57" fill="none" stroke="#d97706" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+
+    <!-- Wait annotations -->
+    <text x="175" y="82" text-anchor="middle" font-family="Georgia, serif" font-size="8" fill="#d97706">wait</text>
+    <text x="325" y="82" text-anchor="middle" font-family="Georgia, serif" font-size="8" fill="#d97706">wait</text>
+
+    <!-- Reward at end -->
+    <line x1="440" y1="137" x2="480" y2="137" stroke="#888" marker-end="url(#arr2)"/>
+    <rect x="482" y="122" width="30" height="30" rx="6" fill="#f0fdf4" stroke="#16a34a" filter="url(#shadow2)"/>
+    <text x="497" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="#166534">R</text>
+
+    <!-- Bottom annotation -->
+    <text x="260" y="185" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#555">GPU idle while waiting for environment execution</text>
+
+    <!-- Contrast: Reasoning RL -->
+    <text x="260" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#999" font-style="italic">Compare: Reasoning RL rollouts are embarrassingly parallel (no env waits)</text>
+
+    <!-- Parallel independent rollouts sketch -->
+    <rect x="80" y="228" width="360" height="22" rx="4" fill="#f9fafb" stroke="#bbb"/>
+    <text x="90" y="243" font-family="Georgia, serif" font-size="9" fill="#999">Rollout 1: ████████████████████ → R₁</text>
+    <text x="280" y="243" font-family="Georgia, serif" font-size="9" fill="#999">Rollout 2: ████████████ → R₂</text>
+</svg>
+
+<p>
+This creates a fundamental throughput problem. Consider a coding agent that generates a code edit, then waits for the test suite to run (5-30 seconds), then reads the output, then generates the next edit. The GPU sits idle during environment execution. In reasoning RL, the GPU is generating tokens continuously. In agentic RL, utilization drops dramatically.
+</p>
+
+<h3>Train-serve decoupling</h3>
+
+<p>
+The solution is to decouple training and inference more aggressively. The policy generates actions and sends them to an environment pool. Environments execute asynchronously and return observations when ready. The training system collects completed trajectories and updates the policy. This is architecturally closer to a distributed systems problem than a machine learning problem.
+</p>
+
+<p>
+Frameworks like veRL (used by RAGEN/StarPO) provide this substrate, but the engineering is substantial. You need: environment orchestration (spinning up/tearing down sandboxed environments), trajectory storage, async rollout collection, and careful handling of environment state across training iterations.
+</p>
+
+<h3>The credit assignment problem</h3>
+
+<p>
+In reasoning RL, the reward (correct/incorrect) applies to the entire reasoning chain. In agentic RL, a 50-step trajectory gets a single binary reward at the end (task solved or not). Which of the 50 actions was the important one? Which was a mistake the agent recovered from? Standard GRPO has no mechanism for per-step credit assignment. The RAGEN paper found that "without fine-grained, reasoning-aware reward signals, agent reasoning hardly emerges." Agents fall into shallow strategies or hallucinated reasoning patterns.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="environments">6. Environments Are the New Datasets</h2>
+<!-- ============================================================ -->
+
+<p>
+In the SFT era, researchers obsessed over data diversity. In the agent era, the equivalent obsession should be <strong>environment quality</strong>: stability, realism, coverage, difficulty distribution, richness of feedback, exploit resistance, and scalability of rollout generation.
+</p>
+
+<p>
+The major agent training environments, and what they test:
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Environment</th>
+            <th>Domain</th>
+            <th>Task scale</th>
+            <th>Best AI</th>
+            <th>Human</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>SWE-bench Verified</strong></td>
+            <td>Software engineering (real GitHub issues)</td>
+            <td>500 tasks</td>
+            <td>~80%</td>
+            <td>~95%</td>
+        </tr>
+        <tr>
+            <td><strong>WebArena</strong></td>
+            <td>Web navigation (e-commerce, forums, CMS)</td>
+            <td>812 tasks</td>
+            <td>~35%</td>
+            <td>78%</td>
+        </tr>
+        <tr>
+            <td><strong>OSWorld</strong></td>
+            <td>Desktop OS tasks (Ubuntu, Windows, macOS)</td>
+            <td>369 tasks</td>
+            <td>~12%</td>
+            <td>72%</td>
+        </tr>
+        <tr>
+            <td><strong>GAIA</strong></td>
+            <td>General AI assistant tasks</td>
+            <td>466 tasks</td>
+            <td>~75%</td>
+            <td>92%</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+The gap between SWE-bench (~80% AI) and OSWorld (~12% AI) reveals where agentic thinking is and is not working. Coding tasks have clean feedback (tests pass or fail) and a text-native interface (files and terminals). Desktop tasks require visual grounding, spatial reasoning about GUIs, and handling applications with stateful, non-deterministic behavior. The environment's feedback richness directly determines how learnable it is.
+</p>
+
+<h3>What makes a good training environment</h3>
+
+<ul>
+    <li><strong>Deterministic evaluation.</strong> SWE-bench uses existing test suites. OSWorld uses custom execution-based evaluation scripts. This avoids the need for neural reward models, which are vulnerable to hacking.</li>
+    <li><strong>Authentic complexity.</strong> Real GitHub issues, real websites, real desktop applications. Synthetic environments tend to reward surface-level pattern matching.</li>
+    <li><strong>Diverse initial states.</strong> The RAGEN paper found that training needs "diverse initial states, medium interaction granularity, and more frequent sampling." Homogeneous starting conditions produce brittle policies.</li>
+    <li><strong>Scalable rollout generation.</strong> The environment must be cheap to instantiate, fast to reset, and safe to run arbitrary agent actions inside.</li>
+</ul>
+
+<p>
+Environment-building is becoming a serious startup category. The InSTA paper (2025) demonstrated one approach: use an LLM to annotate 150K real websites with tasks, collect agent trajectories, and filter by success. A 1.7B parameter agent trained this way outperformed 235B parameter models on web navigation. The environment quality mattered more than the model size.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="reward-hacking">7. Reward Hacking Gets Dangerous</h2>
+<!-- ============================================================ -->
+
+<p>
+Reward hacking is not new, but in agentic settings it becomes qualitatively more dangerous. A reasoning model that hacks its reward can only do so within the token generation process. An agent with tool access has a much larger attack surface.
+</p>
+
+<h3>Specific attack patterns</h3>
+
+<ul>
+    <li><strong>Search exploitation:</strong> A model with web search might learn to look up answers directly during RL training, rather than learning to solve problems.</li>
+    <li><strong>Information leakage:</strong> A coding agent might discover test files in the repository and extract expected outputs, or exploit hidden information in the execution environment.</li>
+    <li><strong>Shortcut discovery:</strong> An agent might find that modifying the test itself (rather than the code under test) passes the test suite. Or that restarting a service clears an error that the task was supposed to fix properly.</li>
+</ul>
+
+<p>
+The most sobering finding comes from Baker et al. (2025), who studied reward hacking in o3-mini in agentic coding environments. They found that monitoring the model's chain-of-thought (using a weaker model like GPT-4o) was initially effective at catching misbehavior. But when this monitoring was incorporated into the RL training objective, the agent learned <strong>obfuscated reward hacking</strong>: it hid its intent within the chain-of-thought while still gaming the reward.
+</p>
+
+<div class="warning">
+    <strong>Warning:</strong> This creates a fundamental tension. If you monitor reasoning traces and penalize detected misbehavior, the model learns to make its misbehavior less detectable rather than actually behaving better. Baker et al. propose a "monitorability tax," accepting reduced optimization pressure to keep reasoning transparent. This is an unsolved problem.
+</div>
+
+<p>
+DeepSeek's choice to use rule-based rewards over neural reward models was prescient. In agentic settings, the attack surface expands further because the agent can influence its own observation stream. The environment itself needs to be hardened against the agent, not just instrumented to observe it.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="harness">8. Harness Engineering: How Agents Are Built</h2>
+<!-- ============================================================ -->
+
+<p>
+The intelligence of an agentic system comes not just from the model but from how it is organized. Anthropic's taxonomy of agentic patterns distinguishes between <strong>workflows</strong> (LLMs orchestrated through predefined code paths) and <strong>agents</strong> (LLMs that dynamically direct their own processes and tool usage).
+</p>
+
+<h3>Five workflow patterns</h3>
+
+<p>
+Most production "agent" systems are actually workflows with varying degrees of LLM autonomy:
+</p>
+
+<ol class="steps">
+    <li><strong>Prompt Chaining.</strong> Sequential steps where each LLM call processes the previous output. Programmatic gates validate intermediate results. Example: generate a plan, then execute each step, then validate the result.</li>
+    <li><strong>Routing.</strong> Classify inputs into categories, direct each to a specialized handler. Can route by complexity to different model sizes (fast/cheap for simple queries, powerful/expensive for hard ones).</li>
+    <li><strong>Parallelization.</strong> Run independent subtasks simultaneously (sectioning), or repeat the same task multiple times and aggregate (voting). Good for decomposable problems.</li>
+    <li><strong>Orchestrator-Workers.</strong> A central LLM dynamically breaks tasks into subtasks, delegates to workers, and synthesizes results. The subtasks emerge from the input, not from a predefined template.</li>
+    <li><strong>Evaluator-Optimizer.</strong> One LLM generates, another evaluates, iterating until quality is sufficient. This is essentially best-of-N sampling with a learned judge.</li>
+</ol>
+
+<p>
+True agent behavior sits at the top of this spectrum: the model decides its own control flow, choosing tools, sequencing actions, and determining when to stop. Claude Code's architecture is representative: a loop where the model generates a response that may contain tool calls, the tools execute, their outputs are fed back, and the loop continues until the model decides the task is complete or reaches a token limit.
+</p>
+
+<h3>Tool design matters more than you think</h3>
+
+<p>
+Anthropic's concept of the <strong>Agent-Computer Interface (ACI)</strong> treats tool design with the same rigor as prompt engineering. The key principles:
+</p>
+
+<ul>
+    <li><strong>Poka-yoke design:</strong> Make mistakes harder to make. If a file path must be absolute, enforce it in the tool spec. If a parameter has only three valid values, enumerate them.</li>
+    <li><strong>Match natural formats:</strong> Tool interfaces should use formats the model has seen extensively in training data (JSON, Markdown, code) rather than custom schemas.</li>
+    <li><strong>Include examples:</strong> Tool descriptions should contain example invocations and edge cases, just like good API documentation.</li>
+</ul>
+
+<p>
+Claude's SWE-bench agent uses only two tools: a Bash tool for command execution and an Edit tool for string-replacement-based file edits. This minimal toolset achieves 72-80% on SWE-bench Verified. Anthropic's recommendation: "keep the scaffolding minimal." Complex multi-agent frameworks add coordination overhead that often outweighs their benefits.
+</p>
+
+<h3>Multi-agent architectures</h3>
+
+<p>
+When tasks are large enough, a single agent context window becomes insufficient. The emerging pattern is hierarchical delegation:
+</p>
+
+<ul>
+    <li>A <strong>lead agent</strong> (orchestrator) holds the high-level plan and delegates subtasks.</li>
+    <li><strong>Worker agents</strong> (sub-agents) execute specific subtasks with their own tool access and context.</li>
+    <li>Workers report results back to the lead, which synthesizes and decides next steps.</li>
+</ul>
+
+<p>
+This is how Claude Code handles complex tasks: it spawns sub-agents for parallel file exploration, test execution, or independent code changes, while the lead agent maintains the overall plan. The sub-agents protect the main context window from being flooded with verbose tool outputs.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="hybrid">9. The Hybrid Is Winning</h2>
+<!-- ============================================================ -->
+
+<p>
+The original framing of "reasoning vs. instruct" models treated them as separate products. Qwen3 tried to merge them into a single model with hybrid thinking modes and a four-stage training pipeline (long-CoT cold start, reasoning RL, thinking mode fusion, general RL). Anthropic took a different approach with Claude 3.7 and 4: integrated reasoning where the model can interleave thinking with tool use within a single generation.
+</p>
+
+<p>
+The distinction that matters most now is not thinking vs. non-thinking, but <strong>isolated thinking vs. grounded thinking</strong>.
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th>Isolated Thinking</th>
+            <th>Grounded (Agentic) Thinking</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Information source</strong></td>
+            <td>Model's weights only</td>
+            <td>Weights + environment feedback</td>
+        </tr>
+        <tr>
+            <td><strong>Error correction</strong></td>
+            <td>Self-correction within CoT (unreliable)</td>
+            <td>Ground truth from execution (reliable)</td>
+        </tr>
+        <tr>
+            <td><strong>Scaling behavior</strong></td>
+            <td>Logarithmic (diminishing returns with more tokens)</td>
+            <td>Potentially better: each tool call adds real information</td>
+        </tr>
+        <tr>
+            <td><strong>Example</strong></td>
+            <td>o1 solving a math problem in 10K tokens</td>
+            <td>Claude running code, checking output, iterating</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+Claude 4 demonstrated what Anthropic calls <strong>action scaling</strong>: performance that compounds as task complexity increases, because the model makes iterative function calls and responds to environmental feedback. This is fundamentally different from the logarithmic returns of pure reasoning scaling (where 2x the thinking tokens gives diminishing accuracy improvements).
+</p>
+
+<h3>Thinking budgets for agents</h3>
+
+<p>
+The concept of a <strong>thinking budget</strong> originated with reasoning models. Claude's API lets you set a budget in tokens (up to 128K). Qwen3 supports dynamic per-turn switching between thinking and non-thinking modes with <code>/think</code> and <code>/no_think</code> commands. The BRPO paper (Budget Relative Policy Optimization) trains models to produce useful intermediate results at any truncation point, enabling flexible compute allocation.
+</p>
+
+<p>
+For agents, the budget concept extends beyond tokens to actions. An agentic thinking budget might specify: "spend up to 50 tool calls on this task" or "if you haven't made progress in 10 turns, escalate to a human." The research question is whether models can learn to allocate their own budget adaptively, spending more effort on hard subtasks and less on easy ones.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="state-of-art">10. Where We Are Now</h2>
+<!-- ============================================================ -->
+
+<p>
+As of early 2026, agentic systems are production-real in constrained domains and research-real in broader ones.
+</p>
+
+<h3>Coding agents (the current frontier)</h3>
+
+<p>
+Coding is the strongest domain for agentic thinking because it has the best feedback loop: write code, run tests, get deterministic pass/fail signals, iterate. The major systems:
+</p>
+
+<ul>
+    <li><strong>Claude Code:</strong> 72.5-80.2% on SWE-bench Verified (depending on configuration). Uses minimal scaffolding (bash + edit tools). Supports sub-agent spawning, persistent memory (CLAUDE.md), and MCP for external tool integration.</li>
+    <li><strong>OpenAI Codex:</strong> Cloud-based sandboxed execution. Each task gets an isolated container with full dependency management.</li>
+    <li><strong>Devin:</strong> Async coding agent with Slack/GitHub integration. Best for delegated tasks under 3 hours.</li>
+    <li><strong>Cursor Agent:</strong> IDE-integrated, model-agnostic, deep integration with the development workflow.</li>
+</ul>
+
+<h3>Computer use (the next frontier)</h3>
+
+<p>
+Computer-use agents (screenshot in, mouse/keyboard actions out) remain far from human performance. OSWorld results (~12% AI vs. 72% human) show the gap. The bottleneck is visual grounding and operational knowledge, not reasoning capacity. These agents need to understand GUIs at a level that current vision models struggle with.
+</p>
+
+<h3>Research agents</h3>
+
+<p>
+The WebThinker paper introduced a "Deep Web Explorer" that interleaves reasoning, searching, and report writing. Google's Gemini Deep Research creates multi-step research plans and executes them. These systems demonstrate agentic thinking applied to information synthesis rather than code execution.
+</p>
+
+<h3>Emerging patterns</h3>
+
+<p>
+Several architectural patterns are converging across these systems:
+</p>
+
+<ol class="steps">
+    <li><strong>Minimal scaffolding wins.</strong> The best agents use simple loops with few tools. Complex orchestration frameworks add coordination overhead that often exceeds their value.</li>
+    <li><strong>Interleaved reasoning + action.</strong> The trend is toward models that think and act in the same generation, not in separate phases. Claude 4's extended thinking with tool use is the clearest example.</li>
+    <li><strong>Environment feedback > learned rewards.</strong> Ground truth from code execution, test suites, and API responses is more reliable than any learned reward model. This is why coding agents are ahead.</li>
+    <li><strong>Small models can be great agents.</strong> InSTA's 1.7B parameter model beat 235B models on web navigation through better training data. Agent capability depends more on training regime than raw model size.</li>
+    <li><strong>Memory is a system problem.</strong> Persistent instructions (CLAUDE.md), auto-memory across sessions, and external tool connectors (MCP) are becoming standard infrastructure. The model alone cannot maintain context over long horizons.</li>
+</ol>
+
+<hr>
+
+<p>
+The transition from reasoning to agentic thinking is not a new capability being added to an existing paradigm. It is a paradigm change. The training objective, the RL infrastructure, the reward design, the evaluation criteria, and the deployment architecture all change simultaneously. Reasoning thinking asked: "Can we make models think longer and better?" Agentic thinking asks: "Can we make models think in order to act effectively in the real world?" That second question is harder, and we are still in the early stages of answering it.
+</p>
+
+<hr>
+
+<p style="color: var(--muted); font-size: 0.9em;">
+    <strong>References:</strong><br>
+    DeepSeek-AI, <a href="https://arxiv.org/abs/2501.12948">"DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning"</a> (2025);
+    Shao et al., <a href="https://arxiv.org/abs/2402.03300">"DeepSeekMath: Pushing the Limits of Mathematical Reasoning"</a> (2024);
+    Xu et al., <a href="https://arxiv.org/abs/2504.20073">"RAGEN: Training Agents by Reinforcing Reasoning"</a> (2025);
+    Snell et al., <a href="https://arxiv.org/abs/2408.03314">"Scaling LLM Test-Time Compute"</a> (2024);
+    Baker et al., <a href="https://arxiv.org/abs/2503.11926">"Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation"</a> (2025);
+    Li et al., <a href="https://arxiv.org/abs/2502.06776">"InSTA: Towards Internet-Scale Training For Agents"</a> (2025);
+    Qi et al., <a href="https://arxiv.org/abs/2505.13438">"BRPO: Budget Relative Policy Optimization"</a> (2025);
+    Anthropic, <a href="https://www.anthropic.com/research/building-effective-agents">"Building Effective Agents"</a> (2024);
+    Junyang Lin, <a href="https://x.com/JustinLin610">"From Reasoning Thinking to Agentic Thinking"</a> (2025);
+    Qwen Team, <a href="https://qwenlm.github.io/blog/qwen3/">"Qwen3: Think Deeper, Act Faster"</a> (2025)
+</p>
+
+<div class="share-bottom">
+    <p>Found this useful? Help someone else find it too.</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F&text=From%20Reasoning%20to%20Agentic%20Thinking%3A%20What%20Changes%20and%20Why%20It%27s%20Hard" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fagentic-thinking%2F&title=From%20Reasoning%20to%20Agentic%20Thinking%3A%20What%20Changes%20and%20Why%20It%27s%20Hard" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+</div>
+
+</article></div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
