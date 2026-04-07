@@ -69,7 +69,7 @@
 <article class="post-content">
 
 <p class="subtitle">
-    The shift from static reasoning (o1, R1) to agentic thinking changes everything: RL infrastructure, environment design, reward signals, and what "good thinking" even means. This post covers what's different, what's hard, and where the field is headed.
+    The shift from static reasoning (o1, R1) to agentic thinking changes everything: RL infrastructure, environment design, reward signals, and what "good thinking" even means. The core claim of this post: the bottleneck shifts from internal reasoning quality to environment-coupled decision quality, and that shift breaks most of the assumptions baked into current training infrastructure. This post covers what's different, what's hard, and where the field is headed.
 </p>
 
 <div class="toc">
@@ -83,7 +83,7 @@
         <li><a href="#environments">Environments Are the New Datasets</a></li>
         <li><a href="#reward-hacking">Reward Hacking Gets Dangerous</a></li>
         <li><a href="#harness">Harness Engineering: How Agents Are Built</a></li>
-        <li><a href="#hybrid">The Hybrid Is Winning</a></li>
+        <li><a href="#hybrid">The Hybrid Approach</a></li>
         <li><a href="#state-of-art">Where We Are Now</a></li>
     </ol>
 </div>
@@ -249,7 +249,7 @@ Agentic thinking handles several things that pure reasoning models can mostly av
 <!-- ============================================================ -->
 
 <p>
-Before we discuss agentic RL, we need to understand what reasoning RL looks like in practice. The dominant algorithm is <strong>GRPO</strong> (Group Relative Policy Optimization), introduced in the DeepSeekMath paper and then scaled in DeepSeek-R1.
+GRPO is the algorithm that made reasoning RL practical by eliminating the critic network, but its assumptions break down in multi-turn agentic settings. Before we discuss agentic RL, we need to understand what reasoning RL looks like in practice. The dominant algorithm is <strong>GRPO</strong> (Group Relative Policy Optimization), introduced in the DeepSeekMath paper and then scaled in DeepSeek-R1.
 </p>
 
 <p>
@@ -311,7 +311,7 @@ In agentic RL, a rollout is: generate an action, execute it in an environment (r
 </p>
 
 <!-- Agentic RL rollout diagram -->
-<svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:1.5em auto; max-width:520px;">
+<svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:1.5em auto; max-width:520px;">
     <defs>
         <filter id="shadow2"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
         <marker id="arr2" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
@@ -371,12 +371,24 @@ In agentic RL, a rollout is: generate an action, execute it in an environment (r
     <text x="260" y="185" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#555">GPU idle while waiting for environment execution</text>
 
     <!-- Contrast: Reasoning RL -->
-    <text x="260" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#999" font-style="italic">Compare: Reasoning RL rollouts are embarrassingly parallel (no env waits)</text>
+    <text x="260" y="210" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#999" font-style="italic">Compare: Reasoning RL rollouts are embarrassingly parallel</text>
 
-    <!-- Parallel independent rollouts sketch -->
-    <rect x="80" y="228" width="360" height="22" rx="4" fill="#f9fafb" stroke="#bbb"/>
-    <text x="90" y="243" font-family="Georgia, serif" font-size="9" fill="#999">Rollout 1: ████████████████████ → R₁</text>
-    <text x="280" y="243" font-family="Georgia, serif" font-size="9" fill="#999">Rollout 2: ████████████ → R₂</text>
+    <!-- Rollout 1 -->
+    <rect x="80" y="224" width="300" height="18" rx="4" fill="#e8e8e4" stroke="#bbb"/>
+    <text x="88" y="237" font-family="Georgia, serif" font-size="9" fill="#555">Rollout 1: generate tokens continuously</text>
+    <text x="394" y="237" font-family="Georgia, serif" font-size="9" fill="#166534">→ R₁</text>
+
+    <!-- Rollout 2 -->
+    <rect x="80" y="248" width="220" height="18" rx="4" fill="#e8e8e4" stroke="#bbb"/>
+    <text x="88" y="261" font-family="Georgia, serif" font-size="9" fill="#555">Rollout 2: generate tokens continuously</text>
+    <text x="314" y="261" font-family="Georgia, serif" font-size="9" fill="#166534">→ R₂</text>
+
+    <!-- Rollout 3 -->
+    <rect x="80" y="272" width="260" height="18" rx="4" fill="#e8e8e4" stroke="#bbb"/>
+    <text x="88" y="285" font-family="Georgia, serif" font-size="9" fill="#555">Rollout 3: generate tokens continuously</text>
+    <text x="354" y="285" font-family="Georgia, serif" font-size="9" fill="#166534">→ R₃</text>
+
+    <text x="50" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="8" fill="#999" transform="rotate(-90, 50, 262)">parallel</text>
 </svg>
 
 <p>
@@ -404,7 +416,7 @@ In reasoning RL, the reward (correct/incorrect) applies to the entire reasoning 
 <!-- ============================================================ -->
 
 <p>
-In the SFT era, researchers obsessed over data diversity. In the agent era, the equivalent obsession should be <strong>environment quality</strong>: stability, realism, coverage, difficulty distribution, richness of feedback, exploit resistance, and scalability of rollout generation.
+For agentic RL, environment quality determines the ceiling on what the policy can learn, much as data quality determined the ceiling for SFT. In the SFT era, researchers obsessed over data diversity. In the agent era, the equivalent obsession should be <strong>environment quality</strong>: stability, realism, coverage, difficulty distribution, richness of feedback, exploit resistance, and scalability of rollout generation.
 </p>
 
 <p>
@@ -416,8 +428,8 @@ The major agent training environments, and what they test:
         <tr>
             <th>Environment</th>
             <th>Domain</th>
-            <th>Task scale</th>
-            <th>Best AI</th>
+            <th>Tasks</th>
+            <th>Best AI (source, date)</th>
             <th>Human</th>
         </tr>
     </thead>
@@ -425,36 +437,36 @@ The major agent training environments, and what they test:
         <tr>
             <td><strong>SWE-bench Verified</strong></td>
             <td>Software engineering (real GitHub issues)</td>
-            <td>500 tasks</td>
-            <td>~80%</td>
+            <td>500</td>
+            <td>~80% (Claude, leaderboard Q1 2026)</td>
             <td>~95%</td>
         </tr>
         <tr>
             <td><strong>WebArena</strong></td>
             <td>Web navigation (e-commerce, forums, CMS)</td>
-            <td>812 tasks</td>
-            <td>~35%</td>
+            <td>812</td>
+            <td>14% (original paper, GPT-4, 2024); 65-72% (recent agents, Q1 2026)</td>
             <td>78%</td>
         </tr>
         <tr>
             <td><strong>OSWorld</strong></td>
             <td>Desktop OS tasks (Ubuntu, Windows, macOS)</td>
-            <td>369 tasks</td>
-            <td>~12%</td>
+            <td>369</td>
+            <td>~12% (original paper, GPT-4V, 2024)</td>
             <td>72%</td>
         </tr>
         <tr>
             <td><strong>GAIA</strong></td>
             <td>General AI assistant tasks</td>
-            <td>466 tasks</td>
-            <td>~75%</td>
+            <td>466</td>
+            <td>~75% (leaderboard Q1 2026)</td>
             <td>92%</td>
         </tr>
     </tbody>
 </table>
 
 <p>
-The gap between SWE-bench (~80% AI) and OSWorld (~12% AI) reveals where agentic thinking is and is not working. Coding tasks have clean feedback (tests pass or fail) and a text-native interface (files and terminals). Desktop tasks require visual grounding, spatial reasoning about GUIs, and handling applications with stateful, non-deterministic behavior. The environment's feedback richness directly determines how learnable it is.
+The gap between SWE-bench (~80%) and OSWorld (~12%) reveals where agentic thinking is and is not working. Coding tasks have clean feedback (tests pass or fail) and a text-native interface (files and terminals). WebArena has seen dramatic improvement (from 14% in the original 2024 paper to 65-72% with recent agents), suggesting that web navigation was more tractable than initial results implied. Desktop tasks remain hard: they require visual grounding, spatial reasoning about GUIs, and handling applications with stateful, non-deterministic behavior. The environment's feedback richness directly determines how learnable it is.
 </p>
 
 <h3>What makes a good training environment</h3>
@@ -503,7 +515,7 @@ DeepSeek's choice to use rule-based rewards over neural reward models was presci
 <!-- ============================================================ -->
 
 <p>
-The intelligence of an agentic system comes not just from the model but from how it is organized. Anthropic's taxonomy of agentic patterns distinguishes between <strong>workflows</strong> (LLMs orchestrated through predefined code paths) and <strong>agents</strong> (LLMs that dynamically direct their own processes and tool usage).
+The previous sections covered how agents are trained: rollout structure, environment design, reward signals. But training produces a policy, not a product. The deployment architecture, how the policy is wrapped, what tools it can call, and how multiple calls are orchestrated, determines whether that policy translates into a useful agent. The intelligence of an agentic system comes not just from the model but from how it is organized. Anthropic's taxonomy of agentic patterns distinguishes between <strong>workflows</strong> (LLMs orchestrated through predefined code paths) and <strong>agents</strong> (LLMs that dynamically direct their own processes and tool usage).
 </p>
 
 <h3>Five workflow patterns</h3>
@@ -557,7 +569,7 @@ This is how Claude Code handles complex tasks: it spawns sub-agents for parallel
 </p>
 
 <!-- ============================================================ -->
-<h2 id="hybrid">9. The Hybrid Is Winning</h2>
+<h2 id="hybrid">9. The Hybrid Approach</h2>
 <!-- ============================================================ -->
 
 <p>
@@ -629,11 +641,15 @@ Coding is the strongest domain for agentic thinking because it has the best feed
 </p>
 
 <ul>
-    <li><strong>Claude Code:</strong> 72.5-80.2% on SWE-bench Verified (depending on configuration). Uses minimal scaffolding (bash + edit tools). Supports sub-agent spawning, persistent memory (CLAUDE.md), and MCP for external tool integration.</li>
-    <li><strong>OpenAI Codex:</strong> Cloud-based sandboxed execution. Each task gets an isolated container with full dependency management.</li>
-    <li><strong>Devin:</strong> Async coding agent with Slack/GitHub integration. Best for delegated tasks under 3 hours.</li>
-    <li><strong>Cursor Agent:</strong> IDE-integrated, model-agnostic, deep integration with the development workflow.</li>
+    <li><strong>Claude Code</strong> (as of March 2026): 72.5-80.2% on SWE-bench Verified (depending on configuration). Uses minimal scaffolding (bash + edit tools). Supports sub-agent spawning, persistent memory (CLAUDE.md), and MCP for external tool integration.</li>
+    <li><strong>OpenAI Codex</strong> (as of April 2025): Cloud-based sandboxed execution. Each task gets an isolated container with full dependency management.</li>
+    <li><strong>Devin</strong> (as of early 2025): Async coding agent with Slack/GitHub integration. Best for delegated tasks under 3 hours.</li>
+    <li><strong>Cursor Agent</strong> (as of early 2026): IDE-integrated, model-agnostic, deep integration with the development workflow.</li>
 </ul>
+
+<div class="warning">
+    <strong>Note:</strong> Capabilities and benchmark standings in this section move quickly. The descriptions here reflect the state of these systems at the dates noted and may be outdated by the time you read this.
+</div>
 
 <h3>Computer use (the next frontier)</h3>
 
@@ -654,7 +670,7 @@ Several architectural patterns are converging across these systems:
 </p>
 
 <ol class="steps">
-    <li><strong>Minimal scaffolding wins.</strong> The best agents use simple loops with few tools. Complex orchestration frameworks add coordination overhead that often exceeds their value.</li>
+    <li><strong>Minimal scaffolding has an edge so far.</strong> The best-performing agents to date use simple loops with few tools. Anthropic advocates simple, composable patterns over complex frameworks, though this may reflect the current state of tooling rather than a universal law.</li>
     <li><strong>Interleaved reasoning + action.</strong> The trend is toward models that think and act in the same generation, not in separate phases. Claude 4's extended thinking with tool use is the clearest example.</li>
     <li><strong>Environment feedback > learned rewards.</strong> Ground truth from code execution, test suites, and API responses is more reliable than any learned reward model. This is why coding agents are ahead.</li>
     <li><strong>Small models can be great agents.</strong> InSTA's 1.7B parameter model beat 235B models on web navigation through better training data. Agent capability depends more on training regime than raw model size.</li>
@@ -679,7 +695,7 @@ The transition from reasoning to agentic thinking is not a new capability being 
     Li et al., <a href="https://arxiv.org/abs/2502.06776">"InSTA: Towards Internet-Scale Training For Agents"</a> (2025);
     Qi et al., <a href="https://arxiv.org/abs/2505.13438">"BRPO: Budget Relative Policy Optimization"</a> (2025);
     Anthropic, <a href="https://www.anthropic.com/research/building-effective-agents">"Building Effective Agents"</a> (2024);
-    Junyang Lin, <a href="https://x.com/JustinLin610">"From Reasoning Thinking to Agentic Thinking"</a> (2025);
+    Anthropic, <a href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview">"Claude Code Documentation"</a> (2025);
     Qwen Team, <a href="https://qwenlm.github.io/blog/qwen3/">"Qwen3: Think Deeper, Act Faster"</a> (2025)
 </p>
 
