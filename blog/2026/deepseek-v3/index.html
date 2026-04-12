@@ -183,6 +183,137 @@
 
 <p>This post walks through each component in order: attention compression (MLA), sparse routing (MoE), sparse attention (DSA), post-training (GRPO), and conditional memory (Engram).</p>
 
+<h3>Variable Map: One Transformer Layer</h3>
+
+<p>Before diving into the details, here is a reference showing where the key variables from the equations below appear within a single transformer layer. The highlighted $h_t$ is the hidden state vector at position $t$: it is the input to MLA's projections ($c_t^{KV} = W^{DKV} h_t$), the context signal that controls Engram's gate ($\alpha_t$), and the input to the MoE router ($g_j$). Each colored annotation points to the section where that component is explained.</p>
+
+<div class="diagram-container">
+<svg viewBox="0 0 500 520" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shVR"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+    <marker id="aVR" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#aaa"/></marker>
+  </defs>
+
+  <text x="250" y="16" text-anchor="middle" font-size="11" fill="#555" font-weight="bold">Transformer Layer: Where Each Variable Lives</text>
+
+  <!-- Input -->
+  <rect x="135" y="32" width="210" height="28" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#shVR)"/>
+  <text x="240" y="50" text-anchor="middle" font-size="10" fill="#555">Input from previous layer (dim d)</text>
+
+  <!-- Residual line (left side) -->
+  <line x1="125" y1="46" x2="98" y2="46" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="98" y1="46" x2="98" y2="448" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="86" y="260" text-anchor="end" font-size="7" fill="#bbb" transform="rotate(-90, 86, 260)">residual connections</text>
+
+  <!-- Arrow to RMSNorm -->
+  <line x1="240" y1="60" x2="240" y2="74" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- RMSNorm 1 -->
+  <rect x="162" y="78" width="156" height="22" rx="6" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="93" text-anchor="middle" font-size="9" fill="#555">RMSNorm</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="100" x2="240" y2="114" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- Attention block -->
+  <rect x="115" y="118" width="250" height="56" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shVR)"/>
+  <text x="240" y="138" text-anchor="middle" font-size="11" fill="#1e40af" font-weight="bold">Multi-Head Attention</text>
+  <text x="240" y="152" text-anchor="middle" font-size="8" fill="#6b7280">q_t, k_t, v_t from h_t → Attn(q, k, v)</text>
+  <text x="240" y="165" text-anchor="middle" font-size="8" fill="#6b7280">KV cache stored here</text>
+
+  <!-- MLA annotation (right) -->
+  <rect x="380" y="118" width="110" height="28" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="435" y="132" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="bold">§2 MLA: c_t^KV</text>
+  <text x="435" y="142" text-anchor="middle" font-size="7" fill="#1e40af">compresses KV cache</text>
+  <line x1="365" y1="134" x2="380" y2="134" stroke="#2563eb" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- DSA annotation (right) -->
+  <rect x="380" y="150" width="110" height="22" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="435" y="165" text-anchor="middle" font-size="8" fill="#92400e" font-weight="bold">§4 DSA: sparse select</text>
+  <line x1="365" y1="161" x2="380" y2="161" stroke="#d97706" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Arrow from attention -->
+  <line x1="240" y1="174" x2="240" y2="186" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- Add node 1 -->
+  <circle cx="240" cy="194" r="9" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="198" text-anchor="middle" font-size="11" fill="#555">+</text>
+  <line x1="98" y1="194" x2="231" y2="194" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Arrow -->
+  <line x1="240" y1="203" x2="240" y2="217" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- h_t HIGHLIGHTED BOX -->
+  <rect x="135" y="221" width="210" height="24" rx="8" fill="#faf5ff" stroke="#7c5cbf" stroke-width="2" filter="url(#shVR)"/>
+  <text x="240" y="237" text-anchor="middle" font-size="10" fill="#4c3a8a" font-weight="bold">h_t (contextualized hidden state)</text>
+  <text x="380" y="229" font-size="8" fill="#7c5cbf" font-style="italic">← Engram gate input (α_t)</text>
+  <text x="380" y="240" font-size="8" fill="#7c5cbf" font-style="italic">← MoE router input (g_j)</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="245" x2="240" y2="259" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- Engram block -->
+  <rect x="115" y="263" width="250" height="48" rx="10" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5" filter="url(#shVR)"/>
+  <text x="240" y="282" text-anchor="middle" font-size="11" fill="#4c3a8a" font-weight="bold">Engram Memory (§6)</text>
+  <text x="240" y="296" text-anchor="middle" font-size="8" fill="#6b7280">e_t = hash(ngram),  α_t = gate(h_t, e_t),  ṽ_t = α_t · W_v e_t</text>
+  <text x="240" y="307" text-anchor="middle" font-size="7" fill="#999" font-style="italic">only at select layers (e.g., 2 and 15)</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="311" x2="240" y2="323" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- Add node 2 -->
+  <circle cx="240" cy="331" r="9" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="335" text-anchor="middle" font-size="11" fill="#555">+</text>
+  <line x1="98" y1="331" x2="231" y2="331" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Arrow -->
+  <line x1="240" y1="340" x2="240" y2="352" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- RMSNorm 2 -->
+  <rect x="162" y="356" width="156" height="22" rx="6" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="371" text-anchor="middle" font-size="9" fill="#555">RMSNorm</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="378" x2="240" y2="390" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- MoE block -->
+  <rect x="115" y="394" width="250" height="42" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shVR)"/>
+  <text x="240" y="412" text-anchor="middle" font-size="11" fill="#166534" font-weight="bold">FFN / MoE (§3)</text>
+  <text x="240" y="426" text-anchor="middle" font-size="8" fill="#6b7280">g_j = router(h_t), top-k of 256 experts activated</text>
+
+  <!-- Arrow -->
+  <line x1="240" y1="436" x2="240" y2="448" stroke="#aaa" marker-end="url(#aVR)"/>
+
+  <!-- Add node 3 -->
+  <circle cx="240" cy="456" r="9" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="460" text-anchor="middle" font-size="11" fill="#555">+</text>
+  <line x1="98" y1="448" x2="98" y2="456" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="98" y1="456" x2="231" y2="456" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Output -->
+  <line x1="240" y1="465" x2="240" y2="479" stroke="#aaa" marker-end="url(#aVR)"/>
+  <rect x="162" y="483" width="156" height="22" rx="8" fill="#f9fafb" stroke="#bbb"/>
+  <text x="240" y="498" text-anchor="middle" font-size="9" fill="#555">→ next layer</text>
+</svg>
+</div>
+
+<p>Here is a quick reference for the key variables that appear throughout the post:</p>
+
+<table>
+    <thead>
+        <tr><th>Variable</th><th>What it is</th><th>Where it lives</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>$h_t$</td><td>Hidden state at position $t$ (dim $d$). The main data flowing through the transformer.</td><td>Output of attention + residual. Input to every subsequent module.</td></tr>
+        <tr><td>$c_t^{KV}$</td><td>Compressed KV cache vector (dim $d_c \approx 512$)</td><td>Inside MLA (§2). Replaces the full $K, V$ cache.</td></tr>
+        <tr><td>$k_t^R$</td><td>Decoupled RoPE key (dim $d_R = 64$)</td><td>Inside MLA (§2). Carries positional information separately.</td></tr>
+        <tr><td>$g_j$</td><td>Router gating weight for expert $j$</td><td>Inside MoE (§3). Determines how much each expert contributes.</td></tr>
+        <tr><td>$e_t$</td><td>Retrieved memory embedding from hash lookup</td><td>Inside Engram (§6). Context-independent prior from N-gram tables.</td></tr>
+        <tr><td>$\alpha_t$</td><td>Engram gate value $\in [0, 1]$</td><td>Inside Engram (§6). Controls how much memory is used, based on $h_t$.</td></tr>
+    </tbody>
+</table>
+
 
 <!-- ============================================================ -->
 <h2 id="mla">2. Multi-head Latent Attention (MLA)</h2>
@@ -206,6 +337,115 @@
 </div>
 
 <p>$W^{UK}$ and $W^{UV}$ are up-projection matrices that reconstruct the full key and value vectors from the compressed cache. The critical insight: you only cache $c_t^{KV}$, not the full keys and values.</p>
+
+<p>The diagram below traces how a single token's hidden state $h_t$ flows through MLA. The green-outlined boxes are the only vectors cached per token; everything else is reconstructed on the fly at attention time.</p>
+
+<div class="diagram-container">
+<svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, serif">
+  <defs>
+    <filter id="shML"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+    <marker id="aML" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#aaa"/></marker>
+    <marker id="aMLg" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#16a34a"/></marker>
+  </defs>
+
+  <text x="250" y="16" text-anchor="middle" font-size="11" fill="#555" font-weight="bold">MLA: What Gets Cached vs Computed On-the-Fly</text>
+
+  <!-- h_t input -->
+  <rect x="165" y="26" width="170" height="28" rx="8" fill="#faf5ff" stroke="#7c5cbf" stroke-width="1.5" filter="url(#shML)"/>
+  <text x="250" y="44" text-anchor="middle" font-size="10" fill="#4c3a8a" font-weight="bold">h_t (dim d = 7168)</text>
+
+  <!-- Three branching arrows: straight diagonals from h_t -->
+  <line x1="210" y1="54" x2="80" y2="80" stroke="#aaa" marker-end="url(#aML)"/>
+  <line x1="250" y1="54" x2="250" y2="80" stroke="#aaa" marker-end="url(#aML)"/>
+  <line x1="290" y1="54" x2="420" y2="80" stroke="#aaa" marker-end="url(#aML)"/>
+
+  <!-- ===== TOP ROW: Three projection boxes ===== -->
+
+  <!-- Query (left) - NOT cached -->
+  <rect x="20" y="84" width="120" height="50" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shML)"/>
+  <text x="80" y="102" text-anchor="middle" font-size="9" fill="#1e40af" font-weight="bold">Query Projection</text>
+  <text x="80" y="116" text-anchor="middle" font-size="8" fill="#6b7280">q_t = W_Q · h_t</text>
+  <text x="80" y="128" text-anchor="middle" font-size="8" fill="#6b7280">dim: n_h × d_h</text>
+  <text x="80" y="146" text-anchor="middle" font-size="7" fill="#999" font-style="italic">not cached</text>
+
+  <!-- KV Compression (center) - CACHED -->
+  <rect x="190" y="84" width="120" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shML)"/>
+  <text x="250" y="102" text-anchor="middle" font-size="9" fill="#166534" font-weight="bold">KV Compression</text>
+  <text x="250" y="116" text-anchor="middle" font-size="8" fill="#6b7280">c_t^KV = W^DKV · h_t</text>
+  <text x="250" y="130" text-anchor="middle" font-size="8" fill="#166534" font-weight="bold">dim: d_c = 512</text>
+
+  <!-- RoPE Key (right) - CACHED -->
+  <rect x="360" y="84" width="120" height="50" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shML)"/>
+  <text x="420" y="102" text-anchor="middle" font-size="9" fill="#166534" font-weight="bold">RoPE Key</text>
+  <text x="420" y="116" text-anchor="middle" font-size="8" fill="#6b7280">k_t^R = RoPE(W^KR h_t)</text>
+  <text x="420" y="130" text-anchor="middle" font-size="8" fill="#166534" font-weight="bold">dim: d_R = 64</text>
+
+  <!-- CACHED label spanning center + right -->
+  <rect x="183" y="138" width="304" height="18" rx="4" fill="none" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <text x="335" y="151" text-anchor="middle" font-size="8" fill="#16a34a" font-weight="bold">CACHED per token: 512 + 64 = 576 dims (vs 32,768 standard)</text>
+
+  <!-- ===== SEPARATOR ===== -->
+  <line x1="15" y1="168" x2="485" y2="168" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="6,4"/>
+  <text x="250" y="183" text-anchor="middle" font-size="8" fill="#999" font-style="italic">at attention time: reconstruct from cache</text>
+
+  <!-- ===== BOTTOM: Reconstruction + Attention ===== -->
+
+  <!-- Arrows from c_t^KV down to two reconstruction boxes -->
+  <line x1="230" y1="190" x2="200" y2="206" stroke="#aaa" marker-end="url(#aML)"/>
+  <line x1="270" y1="190" x2="340" y2="206" stroke="#aaa" marker-end="url(#aML)"/>
+
+  <!-- Reconstruct K (left-center) -->
+  <rect x="150" y="210" width="100" height="36" rx="6" fill="#f9fafb" stroke="#bbb" filter="url(#shML)"/>
+  <text x="200" y="226" text-anchor="middle" font-size="8" fill="#555" font-weight="bold">Reconstruct K</text>
+  <text x="200" y="238" text-anchor="middle" font-size="8" fill="#6b7280">k_t^C = W^UK · c_t^KV</text>
+
+  <!-- Reconstruct V (right-center) -->
+  <rect x="290" y="210" width="100" height="36" rx="6" fill="#f9fafb" stroke="#bbb" filter="url(#shML)"/>
+  <text x="340" y="226" text-anchor="middle" font-size="8" fill="#555" font-weight="bold">Reconstruct V</text>
+  <text x="340" y="238" text-anchor="middle" font-size="8" fill="#6b7280">v_t = W^UV · c_t^KV</text>
+
+  <!-- k_t^C arrow down to concat -->
+  <line x1="200" y1="246" x2="220" y2="272" stroke="#aaa" marker-end="url(#aML)"/>
+
+  <!-- k_t^R arrow: clean L-shape from RoPE box to concat -->
+  <line x1="420" y1="134" x2="420" y2="265" stroke="#16a34a" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="420" y1="265" x2="316" y2="282" stroke="#16a34a" stroke-width="1" marker-end="url(#aMLg)"/>
+  <text x="432" y="220" font-size="7" fill="#16a34a" font-style="italic">from</text>
+  <text x="432" y="230" font-size="7" fill="#16a34a" font-style="italic">cache</text>
+
+  <!-- k_t concat box -->
+  <rect x="185" y="276" width="130" height="24" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.2" filter="url(#shML)"/>
+  <text x="250" y="292" text-anchor="middle" font-size="9" fill="#1e40af" font-weight="bold">k_t = [k_t^C ; k_t^R]</text>
+
+  <!-- ===== Three clean vertical lines into attention ===== -->
+
+  <!-- q_t: straight down from query box -->
+  <line x1="80" y1="134" x2="80" y2="330" stroke="#2563eb" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#aML)"/>
+  <text x="68" y="250" font-size="8" fill="#2563eb" font-style="italic">q_t</text>
+
+  <!-- k_t: straight down from concat box -->
+  <line x1="250" y1="300" x2="250" y2="330" stroke="#aaa" marker-end="url(#aML)"/>
+  <text x="260" y="318" font-size="8" fill="#1e40af" font-style="italic">k_t</text>
+
+  <!-- v_t: straight down from reconstruct V box -->
+  <line x1="340" y1="246" x2="340" y2="330" stroke="#aaa" stroke-dasharray="4,3" marker-end="url(#aML)"/>
+  <text x="350" y="295" font-size="8" fill="#555" font-style="italic">v_t</text>
+
+  <!-- Attention computation box (wide enough for all three inputs) -->
+  <rect x="55" y="334" width="310" height="30" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shML)"/>
+  <text x="210" y="353" text-anchor="middle" font-size="9" fill="#1e40af" font-weight="bold">Attn = softmax(q_t · k_t^T / √d) · v_t</text>
+
+  <!-- Legend -->
+  <rect x="50" y="380" width="10" height="8" rx="2" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+  <text x="66" y="387" font-size="8" fill="#555">Cached (576 dims)</text>
+  <rect x="185" y="380" width="10" height="8" rx="2" fill="#f0f4ff" stroke="#2563eb" stroke-width="1"/>
+  <text x="201" y="387" font-size="8" fill="#555">Computed at attn time</text>
+  <rect x="340" y="380" width="10" height="8" rx="2" fill="#f9fafb" stroke="#bbb" stroke-width="1"/>
+  <text x="356" y="387" font-size="8" fill="#555">Reconstructed from cache</text>
+</svg>
+</div>
 
 <div class="note">
     <p><strong>Intuition:</strong> Think of MLA as JPEG compression for the KV cache. The full keys and values have redundancy across heads. MLA exploits this by storing a compressed version and reconstructing on the fly. With $d_c + d_R = 576$ cached per token vs. the original $2 \times n_h \times d_h = 32{,}768$ for full KV, you get a ~98% reduction in per-token cache size. (The DeepSeek-V2 paper reports 93.3% KV cache reduction relative to its predecessor DeepSeek 67B, which had a different head configuration.)</p>
