@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Build a Mini Hermes Agent From Scratch</title>
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+<style>
+/* ==================== PAGE-SPECIFIC STYLES ==================== */
+
+/* Book-style header */
+.book-header {
+  text-align: center;
+  padding: 60px 0 40px;
+  border-bottom: 3px solid var(--accent);
+  margin-bottom: 50px;
+}
+
+.book-header .label {
+  display: inline-block;
+  background: #f0f4ff;
+  color: #1e40af;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.book-header h1 {
+  font-size: 42px;
+  line-height: 1.15;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.book-header .subtitle {
+  font-size: 22px;
+  color: var(--fg);
+  font-weight: bold;
+  margin-bottom: 16px;
+  font-style: normal;
+}
+
+.book-header .tagline {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Chapter numbers in headings */
+h2 .chapter-num {
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+/* Chapter intro text */
+.chapter-intro {
+  font-size: 19px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+/* TOC overrides */
+.page-content .toc {
+  border: 1px solid var(--border);
+  padding: 30px 35px;
+  margin-bottom: 50px;
+}
+
+.page-content .toc h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  margin-top: 0;
+  border: none;
+  padding: 0;
+}
+
+.toc .part-label {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.toc ol {
+  list-style: none;
+  counter-reset: toc-counter;
+}
+
+.toc li {
+  counter-increment: toc-counter;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.toc li a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.toc li a:hover { color: var(--accent); }
+
+.toc li a::before {
+  content: counter(toc-counter, decimal-leading-zero) ". ";
+  color: var(--accent);
+  font-weight: bold;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+/* Part dividers */
+.part-divider {
+  text-align: center;
+  margin: 70px 0 40px;
+  padding: 20px 0;
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.part-divider .part-name {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.part-divider h2 {
+  border: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 24px;
+}
+
+/* Key idea callout (green variant) */
+.key-idea {
+  border-left: 3px solid #16a34a;
+  background: #f0fdf4;
+  padding: 16px 20px;
+  margin: 24px 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95em;
+}
+
+.key-idea .label {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 6px;
+  color: #166534;
+}
+
+/* Note/warning label overrides for this page */
+.page-content .note .label,
+.page-content .warning .label {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.page-content .note .label { color: #4c3a8a; }
+.page-content .warning .label { color: #92400e; }
+
+/* Dark code blocks with syntax highlighting */
+.page-content pre {
+  background: #2d2d2d;
+  color: #e0e0e0;
+  border-radius: 8px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 20px 0;
+  line-height: 1.5;
+  border: none;
+}
+
+.page-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 14px;
+}
+
+/* Syntax colors */
+.kw { color: #cc99cd; }
+.fn { color: #6699cc; }
+.st { color: #99cc99; }
+.cm { color: #999; font-style: italic; }
+.nb { color: #f2777a; }
+.op { color: #e0e0e0; }
+.num { color: #f99157; }
+.dec { color: #ffcc66; }
+
+/* Numbered steps (override to use pastel blue circles) */
+.page-content .steps {
+  counter-reset: step-counter;
+  list-style: none;
+  padding: 0;
+}
+
+.page-content .steps li {
+  counter-increment: step-counter;
+  position: relative;
+  padding-left: 48px;
+  margin-bottom: 24px;
+  min-height: 36px;
+}
+
+.page-content .steps li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 32px;
+  height: 32px;
+  background: #f0f4ff;
+  color: #1e40af;
+  border: 1.5px solid #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* File tree */
+.file-tree {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 20px 0;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Hermes comparison callout */
+.hermes-compare {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 24px 0;
+}
+
+.hermes-compare .compare-header {
+  background: var(--card-bg);
+  padding: 8px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hermes-compare .compare-header::before {
+  content: "\2194";
+  font-size: 14px;
+}
+
+.hermes-compare .compare-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.hermes-compare .compare-col {
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hermes-compare .compare-col:first-child {
+  border-right: 1px solid var(--border);
+  background: white;
+}
+
+.hermes-compare .compare-col:last-child {
+  background: #fdfcfa;
+}
+
+.hermes-compare .compare-col .col-label {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.hermes-compare .compare-col:first-child .col-label { color: var(--accent); }
+.hermes-compare .compare-col:last-child .col-label { color: var(--muted); }
+
+/* Version banner */
+.version-banner {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 16px 0;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.version-banner .vb-item {
+  display: flex;
+  gap: 4px;
+}
+
+.version-banner .vb-label {
+  font-weight: 700;
+  color: var(--fg);
+}
+
+/* Chapter citation footer */
+.chapter-cite {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 30px;
+  padding-top: 10px;
+}
+
+.chapter-cite code {
+  font-size: 12px;
+}
+
+/* Table font override */
+.page-content table {
+  font-size: 15px;
+}
+
+.page-content th {
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Side navigation (chapter progress) */
+.side-nav {
+  position: fixed;
+  top: 50%;
+  left: max(calc((100vw - 720px) / 2 - 220px), 16px);
+  transform: translateY(-50%);
+  width: 180px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 12px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.side-nav .sn-part {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+  margin: 12px 0 4px;
+  padding-left: 10px;
+}
+
+.side-nav .sn-part:first-child {
+  margin-top: 0;
+}
+
+.side-nav a {
+  display: block;
+  padding: 3px 10px;
+  color: #aaa;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-nav a:hover {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.side-nav a.active {
+  color: var(--fg);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Equation block for this page */
+.equation {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.equation .eq-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Code block file label via data attribute */
+.page-content pre[data-label]::before {
+  content: attr(data-label);
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: #888;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #444;
+}
+
+/* Hide sidebar on narrow screens */
+@media (max-width: 1100px) {
+  .side-nav { display: none; }
+}
+
+@media (max-width: 600px) {
+  .book-header h1 { font-size: 28px; }
+  .book-header .subtitle { font-size: 18px; }
+  .hermes-compare .compare-body { grid-template-columns: 1fr; }
+  .hermes-compare .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/">Blog</a>
+      <a href="/projects/" class="active">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<!-- ============================================================ -->
+<!-- HEADER -->
+<!-- ============================================================ -->
+<div class="book-header">
+  <div class="label">A Build-It-Yourself Guide</div>
+  <h1>Build a Mini<br>Hermes Agent<br>From Scratch</h1>
+  <div class="subtitle">From Zero to Self-Improving AI Agent in Python</div>
+  <div class="tagline">Understand every mechanism by building each one yourself</div>
+</div>
+
+<div class="version-banner">
+  <div class="vb-item"><span class="vb-label">Inspired by:</span> <a href="https://github.com/nousresearch/hermes-agent">NousResearch/hermes-agent</a></div>
+  <div class="vb-item"><span class="vb-label">Guide version:</span> 2.0, April 2026</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS -->
+<!-- ============================================================ -->
+<div class="toc">
+  <h2>Contents</h2>
+
+  <div class="part-label">Part I: Understanding the Machine</div>
+  <ol>
+    <li><a href="#ch01">What Hermes Actually Is (And Why You Should Build One)</a></li>
+    <li><a href="#ch02">The Architecture at 10,000 Feet</a></li>
+  </ol>
+
+  <div class="part-label">Part II: The Agent Loop</div>
+  <ol start="3">
+    <li><a href="#ch03">Your First Agent Loop: Message In, Tool Call Out</a></li>
+    <li><a href="#ch04">The Tool Registry: Teaching Your Agent to Act</a></li>
+    <li><a href="#ch05">Prompt Construction: Assembling the Brain</a></li>
+    <li><a href="#ch06">Prompt Caching: Keeping Costs Under Control</a></li>
+  </ol>
+
+  <div class="part-label">Part III: Memory That Lasts</div>
+  <ol start="7">
+    <li><a href="#ch07">Session Memory: SQLite + FTS5</a></li>
+    <li><a href="#ch08">Persistent Memory: Who Is This User?</a></li>
+    <li><a href="#ch09">Cross-Session Recall: Finding the Right Memory</a></li>
+  </ol>
+
+  <div class="part-label">Part IV: Skills That Grow</div>
+  <ol start="10">
+    <li><a href="#ch10">The Skill System: Folders, Progressive Disclosure, and skill_manage</a></li>
+    <li><a href="#ch11">Autonomous Skill Creation</a></li>
+    <li><a href="#ch12">Skill Self-Improvement: The Feedback Loop</a></li>
+  </ol>
+
+  <div class="part-label">Part V: Putting It All Together</div>
+  <ol start="13">
+    <li><a href="#ch13">The Learning Loop: Nudges, Background Review, and Compression Flush</a></li>
+    <li><a href="#ch14">Context Compression: Staying Within Token Budgets</a></li>
+    <li><a href="#ch15">Building a CLI and Telegram Gateway</a></li>
+    <li><a href="#ch16">What You Built and Where to Go Next</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART I -->
+<!-- ============================================================ -->
+<div class="part-divider">
+  <div class="part-name">Part I</div>
+  <h2>Understanding the Machine</h2>
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 1 -->
+<!-- ============================================================ -->
+<h2 id="ch01"><span class="chapter-num">01</span> What Hermes Actually Is</h2>
+
+<p class="chapter-intro">Before you write a single line of code, you need to understand what makes Hermes different from every other AI wrapper.</p>
+
+<p>Most AI chat tools are stateless. You open a conversation, do some work, close it. Next time you open one, it starts from scratch. The model has no idea what you did yesterday.</p>
+
+<p>Hermes Agent, built by Nous Research, takes a fundamentally different approach. It is an <strong>autonomous, self-improving agent</strong> that runs in the background on your own server. Three properties make it distinct:</p>
+
+<ol class="steps">
+  <li><strong>It remembers across sessions.</strong> Three layers of memory (session, persistent, skill) mean it knows what happened last week, who you are, and how to do things it learned from past work.</li>
+  <li><strong>It improves itself.</strong> After completing complex tasks, it offers to save reusable procedures as Skill files (confirming with you first). Background nudges periodically review conversations for things worth remembering. When you give feedback, it updates existing Skills. The more you use it, the better it gets.</li>
+  <li><strong>It runs without you.</strong> Deploy it on a $5 VPS, connect it to Telegram, and it works 24/7. Cron jobs, scheduled tasks, background monitoring. You check in when you want to.</li>
+</ol>
+
+<p>The concept comes from <strong>Harness Engineering</strong>, a methodology coined by Mitchell Hashimoto (creator of Terraform). His insight: every time an AI makes a mistake, add a rule so it never makes the same mistake again. Over weeks, the AI accumulates enough rules to behave like a veteran team member.</p>
+
+<p>Hashimoto did this manually, editing CLAUDE.md files by hand. Hermes automates the entire process. The agent observes its own performance, curates its own memory, and writes its own rules.</p>
+
+<div class="note">
+  <span class="label">What we are building</span>
+  A <strong>minimal current Hermes</strong>: simplified code that follows the same architecture and design decisions as the real codebase. Where we simplify, each chapter's comparison box shows what the real Hermes does differently. The code compiles and runs; the architecture matches reality; the details are reduced.
+</div>
+
+<h3>What we are NOT building</h3>
+
+<p>The real Hermes has 40+ tools, MCP integration, 14 platform gateways, sub-agent delegation, and Honcho user modeling. We skip all of that. Our minimal version focuses on the <strong>four mechanisms that make Hermes interesting</strong>:</p>
+
+<table>
+  <tr><th>Mechanism</th><th>What it does</th><th>Chapter</th></tr>
+  <tr><td>Agent Loop</td><td>Take user input, call tools, return results</td><td>03-05</td></tr>
+  <tr><td>Three-Layer Memory</td><td>Remember across sessions</td><td>06-08</td></tr>
+  <tr><td>Skill System</td><td>Store and retrieve procedural knowledge</td><td>09-11</td></tr>
+  <tr><td>Learning Loop</td><td>Wire memory + skills into self-improvement</td><td>12</td></tr>
+</table>
+
+<p>By the end, you will understand every component well enough to extend it yourself.</p>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 2 -->
+<!-- ============================================================ -->
+<h2 id="ch02"><span class="chapter-num">02</span> The Architecture at 10,000 Feet</h2>
+
+<p class="chapter-intro">Five components, one data flow. This is the entire system.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 710 620" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow1">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.06"/>
+    </filter>
+    <marker id="arr-gray" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="9" markerHeight="7" orient="auto">
+      <polygon points="0 0.5, 8 3.5, 0 6.5" fill="#aaa"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="9" markerHeight="7" orient="auto">
+      <polygon points="0 0.5, 8 3.5, 0 6.5" fill="#16a34a"/>
+    </marker>
+    <marker id="arr-accent" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="9" markerHeight="7" orient="auto">
+      <polygon points="0 0.5, 8 3.5, 0 6.5" fill="#2563eb"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="9" markerHeight="7" orient="auto">
+      <polygon points="0 0.5, 8 3.5, 0 6.5" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <!-- BACKGROUND LANES -->
+  <rect x="125" y="0" width="280" height="620" rx="12" fill="#fafaf8" opacity="0.5"/>
+  <rect x="0" y="0" width="108" height="620" rx="8" fill="#f4faf4" opacity="0.4"/>
+  <rect x="422" y="0" width="258" height="620" rx="8" fill="#f0f4ff" opacity="0.4"/>
+
+  <!-- STEP 1: USER MESSAGE -->
+  <rect x="180" y="22" width="170" height="46" rx="10" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="265" y="42" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" font-weight="600" fill="#888" letter-spacing="1">INPUT</text>
+  <text x="265" y="58" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#333">User Message</text>
+
+  <line x1="265" y1="68" x2="265" y2="98" stroke="#aaa" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+
+  <!-- STEP 2: PROMPT BUILDER -->
+  <rect x="148" y="102" width="234" height="56" rx="10" fill="white" stroke="#2563eb" stroke-width="2" filter="url(#shadow1)"/>
+  <text x="265" y="126" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#1e40af">Prompt Builder</text>
+  <text x="265" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#999">identity + memory + skills + context</text>
+
+  <!-- Memory box (left) -->
+  <rect x="6" y="108" width="100" height="44" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="56" y="126" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" font-weight="600" fill="#16a34a" letter-spacing="0.5">LAYER 1-2</text>
+  <text x="56" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#166534">Memory</text>
+  <line x1="106" y1="130" x2="146" y2="130" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-green)"/>
+
+  <!-- Skills box (right) -->
+  <rect x="440" y="108" width="100" height="44" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="490" y="126" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" font-weight="600" fill="#2563eb" letter-spacing="0.5">LAYER 3</text>
+  <text x="490" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#1e40af">Skills</text>
+  <line x1="440" y1="130" x2="384" y2="130" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr-accent)"/>
+
+  <line x1="265" y1="158" x2="265" y2="196" stroke="#aaa" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+
+  <!-- STEP 3: LLM API CALL -->
+  <rect x="168" y="200" width="194" height="50" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="2" filter="url(#shadow1)"/>
+  <text x="265" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#1e40af" font-weight="bold">LLM API Call</text>
+
+  <line x1="265" y1="250" x2="265" y2="285" stroke="#aaa" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+
+  <!-- STEP 4: DECISION DIAMOND -->
+  <polygon points="265,288 320,322 265,356 210,322" fill="#fffbeb" stroke="#d97706" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="265" y="318" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="bold" fill="#92400e">tool</text>
+  <text x="265" y="332" text-anchor="middle" font-family="Georgia, serif" font-size="12" font-weight="bold" fill="#92400e">call?</text>
+
+  <!-- "yes" label -->
+  <text x="334" y="316" font-family="Georgia, serif" font-size="11" fill="#92400e" font-style="italic">yes</text>
+  <!-- "no" label -->
+  <text x="250" y="374" font-family="Georgia, serif" font-size="11" fill="#92400e" font-style="italic" text-anchor="end">no</text>
+
+  <!-- YES BRANCH: EXECUTE TOOL -->
+  <line x1="320" y1="322" x2="434" y2="322" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+  <rect x="438" y="298" width="140" height="48" rx="8" fill="white" stroke="#7c3aed" stroke-width="1.5" filter="url(#shadow1)"/>
+  <text x="508" y="320" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#7c3aed">Execute Tool</text>
+  <text x="508" y="337" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" fill="#a78bfa" letter-spacing="0.3">dispatch + return</text>
+
+  <!-- Loop back: tool result -> LLM -->
+  <path d="M 578 322 L 630 322 L 630 225 L 366 225" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arr-blue)"/>
+  <!-- Result label -->
+  <rect x="606" y="263" width="48" height="18" rx="4" fill="white"/>
+  <text x="630" y="276" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#7c3aed" font-style="italic">result</text>
+
+  <!-- NO BRANCH: RESPONSE -->
+  <line x1="265" y1="356" x2="265" y2="402" stroke="#aaa" stroke-width="1.5" marker-end="url(#arr-gray)"/>
+
+  <rect x="178" y="406" width="174" height="46" rx="10" fill="#f9fafb" stroke="#bbb" stroke-width="1" filter="url(#shadow1)"/>
+  <text x="265" y="426" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="10" font-weight="600" fill="#888" letter-spacing="1">OUTPUT</text>
+  <text x="265" y="443" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#333">Response to User</text>
+
+  <!-- Arrow down to retrospective -->
+  <line x1="265" y1="452" x2="265" y2="498" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arr-green)"/>
+  <text x="280" y="480" font-family="Georgia, serif" font-size="10" fill="#16a34a" font-style="italic">after task</text>
+
+  <!-- RETROSPECTIVE -->
+  <rect x="150" y="502" width="230" height="52" rx="10" fill="white" stroke="#16a34a" stroke-width="2" filter="url(#shadow1)"/>
+  <text x="265" y="524" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#166534">Background Review</text>
+  <text x="265" y="543" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#777">nudge-triggered, separate thread</text>
+
+  <!-- FEEDBACK LOOPS -->
+  <!-- Left loop: Review -> Memory -->
+  <path d="M 150 528 L 56 528 L 56 156" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr-green)"/>
+  <rect x="16" y="330" width="80" height="22" rx="4" fill="#f0fdf4"/>
+  <text x="56" y="345" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#166534">save facts</text>
+
+  <!-- Right loop: Review -> Skills -->
+  <path d="M 380 528 L 660 528 L 660 130 L 542 130" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr-accent)"/>
+  <rect x="620" y="424" width="80" height="22" rx="4" fill="#f0f4ff"/>
+  <text x="660" y="439" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#1e40af">create/patch</text>
+
+  <!-- STEP NUMBERS -->
+  <circle cx="164" cy="45" r="12" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="164" y="49" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">1</text>
+
+  <circle cx="136" cy="130" r="12" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="136" y="134" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">2</text>
+
+  <circle cx="154" cy="225" r="12" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="154" y="229" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">3</text>
+
+  <circle cx="198" cy="322" r="12" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="198" y="326" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">4</text>
+
+  <circle cx="163" cy="429" r="12" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="163" y="433" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#1e40af">5</text>
+
+  <circle cx="138" cy="528" r="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="138" y="532" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#166534">6</text>
+
+  <!-- LEGEND -->
+  <line x1="148" y1="590" x2="178" y2="590" stroke="#aaa" stroke-width="1.5"/>
+  <text x="184" y="594" font-family="Georgia, serif" font-size="10" fill="#999">main flow</text>
+  <line x1="258" y1="590" x2="288" y2="590" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="294" y="594" font-family="Georgia, serif" font-size="10" fill="#999">tool loop</text>
+  <line x1="368" y1="590" x2="398" y2="590" stroke="#16a34a" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="404" y="594" font-family="Georgia, serif" font-size="10" fill="#999">learning feedback</text>
+</svg>
+</div>
+
+<p>The diagram shows the complete data flow of a single turn. Here is what happens at each stage:</p>
+
+<ol class="steps">
+  <li><strong>User sends a message.</strong> Text comes in from CLI, Telegram, or any other interface.</li>
+  <li><strong>Prompt Builder assembles the system prompt.</strong> It pulls in the agent's identity, relevant memories from the database, matching skill files, and any context files. This assembled prompt is what the LLM actually sees.</li>
+  <li><strong>LLM generates a response.</strong> The response is either a text message (done) or one or more tool calls (continue looping).</li>
+  <li><strong>Tools execute and results feed back.</strong> The tool result is appended to the conversation, and the LLM is called again. This loop repeats until the model produces a final text response.</li>
+  <li><strong>Retrospective fires.</strong> After the task completes, the system evaluates the conversation. Should anything be remembered? Should a new Skill be created? Should an existing Skill be updated? This is the Learning Loop that makes the agent self-improving.</li>
+</ol>
+
+<p>The dashed lines at the bottom are what make Hermes different from a normal chatbot. Those feedback paths close the loop, turning a stateless conversation into a system that accumulates knowledge.</p>
+
+<h3>Directory structure of our minimal agent</h3>
+
+<div class="file-tree">mini-hermes/
+&#9500;&#9472;&#9472; agent.py              <span style="color: var(--muted)"># Main agent loop</span>
+&#9500;&#9472;&#9472; prompt_builder.py     <span style="color: var(--muted)"># System prompt assembly</span>
+&#9500;&#9472;&#9472; tool_registry.py      <span style="color: var(--muted)"># Tool registration + dispatch</span>
+&#9500;&#9472;&#9472; tools/
+&#9474;   &#9500;&#9472;&#9472; terminal.py       <span style="color: var(--muted)"># Shell command execution</span>
+&#9474;   &#9500;&#9472;&#9472; file_tools.py     <span style="color: var(--muted)"># Read/write files</span>
+&#9474;   &#9492;&#9472;&#9472; memory_tool.py    <span style="color: var(--muted)"># Save/search memory</span>
+&#9500;&#9472;&#9472; memory/
+&#9474;   &#9500;&#9472;&#9472; session_db.py     <span style="color: var(--muted)"># SQLite + FTS5 session storage</span>
+&#9474;   &#9500;&#9472;&#9472; persistent.py     <span style="color: var(--muted)"># MEMORY.md / USER.md management</span>
+&#9474;   &#9492;&#9472;&#9472; recall.py         <span style="color: var(--muted)"># Cross-session search + summarize</span>
+&#9500;&#9472;&#9472; skills/
+&#9474;   &#9500;&#9472;&#9472; loader.py         <span style="color: var(--muted)"># Discover + parse skill files</span>
+&#9474;   &#9500;&#9472;&#9472; manager.py        <span style="color: var(--muted)"># Create / patch / delete skills</span>
+&#9474;   &#9492;&#9472;&#9472; retrospective.py  <span style="color: var(--muted)"># Post-task analysis + skill extraction</span>
+&#9500;&#9472;&#9472; compression.py        <span style="color: var(--muted)"># Context window management</span>
+&#9500;&#9472;&#9472; cli.py                <span style="color: var(--muted)"># Terminal interface</span>
+&#9500;&#9472;&#9472; config.yaml           <span style="color: var(--muted)"># Model + API key + settings</span>
+&#9492;&#9472;&#9472; data/
+    &#9500;&#9472;&#9472; state.db          <span style="color: var(--muted)"># SQLite database</span>
+    &#9500;&#9472;&#9472; MEMORY.md         <span style="color: var(--muted)"># Persistent facts</span>
+    &#9500;&#9472;&#9472; USER.md           <span style="color: var(--muted)"># User profile</span>
+    &#9492;&#9472;&#9472; skills/           <span style="color: var(--muted)"># Skill markdown files</span></div>
+
+<p>Everything lives under one directory. Memory, skills, config, database. When you want to migrate, back up this folder. When you want to start fresh, delete it.</p>
+
+<!-- ============================================================ -->
+<!-- PART II -->
+<!-- ============================================================ -->
+<div class="part-divider">
+  <div class="part-name">Part II</div>
+  <h2>The Agent Loop</h2>
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 3 -->
+<!-- ============================================================ -->
+<h2 id="ch03"><span class="chapter-num">03</span> Your First Agent Loop</h2>
+
+<p class="chapter-intro">A complete agent in under 100 lines. The loop is simple; what you feed into it is what makes it smart.</p>
+
+<p>The core of any LLM agent is the <strong>conversation loop</strong>. You send messages to an LLM API, the model responds with either text or tool calls, you execute the tools and feed results back, and repeat until the model emits a final text response.</p>
+
+<p>Here is the minimal loop, stripped to its essence:</p>
+
+<pre data-label="agent.py"><code><span class="kw">import</span> json
+<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+<span class="kw">from</span> tool_calling <span class="kw">import</span> strategy_for_model
+
+<span class="kw">class</span> <span class="fn">Agent</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, client, model, system_prompt, tools, tool_handlers):
+        self.client = client
+        self.model = model
+        self.tools = tools                <span class="cm"># OpenAI tool schemas</span>
+        self.tool_handlers = tool_handlers  <span class="cm"># name -> callable</span>
+        self._strategy = strategy_for_model(model)  <span class="cm"># structured or text</span>
+        self.messages = [
+            {<span class="st">"role"</span>: <span class="st">"system"</span>, <span class="st">"content"</span>: system_prompt}
+        ]
+
+    <span class="kw">def</span> <span class="fn">run</span>(self, user_input: <span class="nb">str</span>) -> <span class="nb">str</span>:
+        <span class="st">"""Send user message, loop through tool calls, return final text."""</span>
+        self.messages.append({<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: user_input})
+
+        max_iterations = <span class="num">15</span>
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="nb">range</span>(max_iterations):
+            response = self._call_llm()
+
+            msg = response.choices[<span class="num">0</span>].message
+
+            <span class="cm"># Strategy parses the response uniformly</span>
+            content, tool_calls = self._strategy.parse_response(msg)
+
+            <span class="cm"># Build and append assistant message</span>
+            assistant_msg = self._strategy.build_assistant_msg(content, tool_calls)
+            self.messages.append(assistant_msg)
+
+            <span class="cm"># If no tool calls, we're done</span>
+            <span class="kw">if not</span> tool_calls:
+                <span class="kw">return</span> content
+
+            <span class="cm"># Execute each tool call</span>
+            <span class="kw">for</span> tc <span class="kw">in</span> tool_calls:
+                result = self._execute_tool(tc.name, tc.arguments)
+
+                <span class="cm"># Strategy builds the right result message format</span>
+                result_msg = self._strategy.build_tool_result_msg(tc, result)
+                self.messages.append(result_msg)
+
+        <span class="kw">return</span> <span class="st">"[Max iterations reached]"</span>
+
+    <span class="kw">def</span> <span class="fn">_call_llm</span>(self):
+        <span class="cm"># Strategy decides whether to pass tools as API param</span>
+        <span class="cm"># or inject them into the system prompt</span>
+        kwargs = {<span class="st">"model"</span>: self.model, <span class="st">"messages"</span>: self.messages, <span class="st">"max_tokens"</span>: <span class="num">400</span>}
+        kwargs = self._strategy.prepare_kwargs(kwargs, self.tools)
+        <span class="kw">return</span> self.client.chat.completions.create(**kwargs)
+
+    <span class="kw">def</span> <span class="fn">_execute_tool</span>(self, name: <span class="nb">str</span>, args: <span class="nb">dict</span>) -> <span class="nb">str</span>:
+        handler = self.tool_handlers.get(name)
+        <span class="kw">if not</span> handler:
+            <span class="kw">return</span> <span class="st">f"Error: unknown tool '{name}'"</span>
+        <span class="kw">try</span>:
+            result = handler(**args)
+            <span class="kw">return</span> <span class="nb">str</span>(result)[:<span class="num">50000</span>]  <span class="cm"># Truncate large outputs</span>
+        <span class="kw">except</span> <span class="nb">Exception</span> <span class="kw">as</span> e:
+            <span class="kw">return</span> <span class="st">f"Error executing {name}: {e}"</span></code></pre>
+
+<p>That is the entire agent loop. Every LLM agent, from Claude Code to Hermes to OpenAI's Codex, is fundamentally this same pattern: <strong>call LLM, parse tool calls, execute tools, loop</strong>. Notice the loop never touches tool-call formats directly; the <code>_strategy</code> object handles all the format-specific logic. This means the same loop works with both structured (OpenAI-style) and text-based (Gemma, LLaMA) tool calling.</p>
+
+<div class="note">
+  <span class="label">Intuition</span>
+  Think of the agent loop like a chef following a recipe. The LLM is the chef's brain deciding what to do next. Tools are the kitchen equipment. The message list is the chef's working memory of everything done so far. Each "turn" is the chef doing one action (chop onions, check the oven, plate the dish). The loop continues until the chef says "done."
+</div>
+
+<h3>The message list is everything</h3>
+
+<p>The <code>self.messages</code> list is the most important data structure in the system. It is the agent's entire working memory for the current session. Every user message, every assistant response, every tool call and result gets appended here.</p>
+
+<p>The OpenAI-compatible message format looks like this:</p>
+
+<table>
+  <tr><th>Role</th><th>Purpose</th><th>Key Fields</th></tr>
+  <tr><td><code>system</code></td><td>Agent identity and instructions</td><td><code>content</code></td></tr>
+  <tr><td><code>user</code></td><td>Human input</td><td><code>content</code></td></tr>
+  <tr><td><code>assistant</code></td><td>Model response</td><td><code>content</code>, <code>tool_calls</code></td></tr>
+  <tr><td><code>tool</code></td><td>Result of a tool call</td><td><code>tool_call_id</code>, <code>content</code></td></tr>
+</table>
+
+<p>This format is a de facto standard. It works with OpenAI, Anthropic (via OpenRouter), DeepSeek, and most open-source model APIs. Our minimal agent uses it throughout.</p>
+
+<h3>Why max_iterations matters</h3>
+
+<p>Without a cap, a confused model could loop forever, burning tokens. Hermes uses a budget system: each turn costs an iteration, and the agent stops when the budget is exhausted. Our minimal version uses a simple counter of 20, which is enough for most tasks.</p>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Simple iteration counter. Synchronous tool execution. Single-model API calls.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      <code>IterationBudget</code> class with token tracking. Parallel tool batch detection via <code>_should_parallelize_tool_batch()</code>. Multi-provider support (OpenAI, Anthropic, Codex Responses API). Prompt caching. Reasoning field preservation.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>run_agent.py</code> lines 7506-8600 (<code>run_conversation()</code>)</div>
+
+<h3>Tool-calling strategies: structured vs. text</h3>
+
+<p>The loop above assumes the model returns structured <code>tool_calls</code> objects via the API. But many open models (Gemma, LLaMA, Phi) emit tool calls as <strong>text in the response body</strong> instead. Rather than a brittle fallback parser, we solve this with a <strong>strategy pattern</strong>: the agent delegates three decisions to a swappable strategy object:</p>
+
+<table>
+  <tr><th>Decision</th><th>StructuredStrategy</th><th>TextStrategy</th></tr>
+  <tr><td>How tools are presented</td><td>Pass <code>tools</code> API parameter</td><td>Inject tool descriptions into system prompt</td></tr>
+  <tr><td>How tool calls are parsed</td><td>Read <code>msg.tool_calls</code></td><td>Regex-parse text content</td></tr>
+  <tr><td>How results are fed back</td><td><code>role: "tool"</code> with <code>tool_call_id</code></td><td><code>role: "user"</code> with <code>[Tool Result: name]</code> prefix</td></tr>
+</table>
+
+<p>The strategy is selected automatically based on the model name:</p>
+
+<pre data-label="agent.py"><code><span class="kw">from</span> tool_calling <span class="kw">import</span> ToolCallingStrategy, strategy_for_model
+
+<span class="kw">class</span> <span class="fn">Agent</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, client, model, ...):
+        self._strategy = strategy_for_model(model)  <span class="cm"># picks based on model name</span>
+
+    <span class="kw">def</span> <span class="fn">run</span>(self, user_input):
+        ...
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="nb">range</span>(max_iterations):
+            response = self._call_llm()
+            msg = response.choices[<span class="num">0</span>].message
+
+            <span class="cm"># Strategy handles parsing uniformly</span>
+            content, tool_calls = self._strategy.parse_response(msg)
+            assistant_msg = self._strategy.build_assistant_msg(content, tool_calls)
+            self.messages.append(assistant_msg)
+
+            <span class="kw">if not</span> tool_calls:
+                <span class="kw">return</span> content
+
+            <span class="kw">for</span> tc <span class="kw">in</span> tool_calls:
+                result = self._execute_tool(tc.name, tc.arguments)
+                <span class="cm"># Strategy builds the right message format</span>
+                result_msg = self._strategy.build_tool_result_msg(tc, result)
+                self.messages.append(result_msg)</code></pre>
+
+<p>The text strategy parses several common formats that local models produce:</p>
+
+<pre data-label="Tool call formats (text mode)"><code><span class="cm"># Format 1: XML-style tags (Gemma, ChatML)</span>
+&lt;tool_call&gt;{<span class="st">"name"</span>: <span class="st">"terminal"</span>, <span class="st">"arguments"</span>: {<span class="st">"command"</span>: <span class="st">"ls"</span>}}&lt;/tool_call&gt;
+
+<span class="cm"># Format 2: call:name{json} (some Gemma variants)</span>
+call:terminal{command: <span class="st">"ls -la"</span>}
+
+<span class="cm"># Format 3: Fenced JSON blocks</span>
+```json
+{<span class="st">"name"</span>: <span class="st">"file_write"</span>, <span class="st">"arguments"</span>: {<span class="st">"path"</span>: <span class="st">"out.txt"</span>, <span class="st">"content"</span>: <span class="st">"hello"</span>}}
+```</code></pre>
+
+<p>When you switch models via <code>/model</code> in the CLI, the strategy updates automatically. This means you can chat with a structured model like Qwen, switch to Gemma mid-session, and tool calling keeps working.</p>
+
+<div class="note">
+  <span class="label">Key design point</span>
+  The strategy pattern keeps the agent loop itself clean: it never has to know <em>how</em> tool calls arrive. Adding support for a new model format means adding a regex pattern to <code>TextStrategy</code>, not touching the agent loop.
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 4 -->
+<!-- ============================================================ -->
+<h2 id="ch04"><span class="chapter-num">04</span> The Tool Registry</h2>
+
+<p class="chapter-intro">Tools turn your agent from a chatbot into something that can actually do things.</p>
+
+<p>An agent without tools is just a chatbot. The tool registry is the mechanism that lets you define what actions the agent can take, expose them to the LLM in the right format, and dispatch calls to the right handler.</p>
+
+<h3>The registry pattern</h3>
+
+<pre data-label="tool_registry.py"><code><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Callable, Any
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="fn">ToolEntry</span>:
+    name: <span class="nb">str</span>
+    description: <span class="nb">str</span>
+    parameters: <span class="nb">dict</span>        <span class="cm"># JSON Schema for the function args</span>
+    handler: Callable
+    category: <span class="nb">str</span> = <span class="st">"general"</span>
+
+<span class="kw">class</span> <span class="fn">ToolRegistry</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self._tools: <span class="nb">dict</span>[<span class="nb">str</span>, ToolEntry] = {}
+
+    <span class="kw">def</span> <span class="fn">register</span>(self, name, description, parameters, handler, category=<span class="st">"general"</span>):
+        self._tools[name] = ToolEntry(
+            name=name,
+            description=description,
+            parameters=parameters,
+            handler=handler,
+            category=category,
+        )
+
+    <span class="kw">def</span> <span class="fn">get_schemas</span>(self, categories=<span class="nb">None</span>) -> <span class="nb">list</span>[<span class="nb">dict</span>]:
+        <span class="st">"""Return OpenAI-compatible tool schemas."""</span>
+        tools = self._tools.values()
+        <span class="kw">if</span> categories:
+            tools = [t <span class="kw">for</span> t <span class="kw">in</span> tools <span class="kw">if</span> t.category <span class="kw">in</span> categories]
+        <span class="kw">return</span> [
+            {
+                <span class="st">"type"</span>: <span class="st">"function"</span>,
+                <span class="st">"function"</span>: {
+                    <span class="st">"name"</span>: t.name,
+                    <span class="st">"description"</span>: t.description,
+                    <span class="st">"parameters"</span>: t.parameters,
+                },
+            }
+            <span class="kw">for</span> t <span class="kw">in</span> tools
+        ]
+
+    <span class="kw">def</span> <span class="fn">execute</span>(self, name: <span class="nb">str</span>, args: <span class="nb">dict</span>) -> <span class="nb">str</span>:
+        entry = self._tools.get(name)
+        <span class="kw">if not</span> entry:
+            <span class="kw">raise</span> <span class="nb">ValueError</span>(<span class="st">f"Unknown tool: {name}"</span>)
+        <span class="kw">return</span> <span class="nb">str</span>(entry.handler(**args))
+
+<span class="cm"># Global registry instance</span>
+registry = ToolRegistry()</code></pre>
+
+<h3>Registering tools</h3>
+
+<p>Each tool is a Python function with a JSON Schema describing its parameters. Here is a minimal terminal tool:</p>
+
+<pre data-label="tools/terminal.py"><code><span class="kw">import</span> subprocess
+<span class="kw">from</span> tool_registry <span class="kw">import</span> registry
+
+<span class="kw">def</span> <span class="fn">run_terminal</span>(command: <span class="nb">str</span>, timeout: <span class="nb">int</span> = <span class="num">30</span>) -> <span class="nb">str</span>:
+    <span class="st">"""Execute a shell command and return stdout + stderr."""</span>
+    <span class="kw">try</span>:
+        result = subprocess.run(
+            command, shell=<span class="nb">True</span>, capture_output=<span class="nb">True</span>,
+            text=<span class="nb">True</span>, timeout=timeout
+        )
+        output = result.stdout + result.stderr
+        <span class="kw">return</span> output.strip() <span class="kw">or</span> <span class="st">"(no output)"</span>
+    <span class="kw">except</span> subprocess.TimeoutExpired:
+        <span class="kw">return</span> <span class="st">"Error: command timed out"</span>
+
+registry.register(
+    name=<span class="st">"terminal"</span>,
+    description=<span class="st">"Run a shell command. Use for git, file ops, builds, etc."</span>,
+    parameters={
+        <span class="st">"type"</span>: <span class="st">"object"</span>,
+        <span class="st">"properties"</span>: {
+            <span class="st">"command"</span>: {<span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"description"</span>: <span class="st">"Shell command to execute"</span>},
+            <span class="st">"timeout"</span>: {<span class="st">"type"</span>: <span class="st">"integer"</span>, <span class="st">"description"</span>: <span class="st">"Timeout in seconds"</span>, <span class="st">"default"</span>: <span class="num">30</span>},
+        },
+        <span class="st">"required"</span>: [<span class="st">"command"</span>],
+    },
+    handler=run_terminal,
+    category=<span class="st">"execution"</span>,
+)</code></pre>
+
+<div class="warning">
+  <span class="label">Security</span>
+  Running shell commands from an LLM is dangerous. The real Hermes has a Docker-based sandbox with a read-only filesystem, dropped Linux capabilities, and namespace isolation. For our minimal version, be careful what you let the agent do. Consider restricting commands to a safelist for production use.
+</div>
+
+<h3>Toolsets: controlling what the agent can access</h3>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Dict-based registry. Flat category strings. Manual tool discovery.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      <code>ToolRegistry</code> singleton with lazy module imports, <code>check_fn</code> for availability gates, <code>max_result_size</code> truncation, and composable toolsets that can include other toolsets. MCP tools auto-discovered at startup. 40+ built-in tools across 5 categories.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>tools/registry.py</code>, <code>model_tools.py</code>, <code>toolsets.py</code></div>
+
+<p>Hermes groups tools into <strong>toolsets</strong> (categories like "web", "terminal", "file", "memory"). You enable or disable entire toolsets in the config. This matters for two reasons:</p>
+
+<p><strong>Fewer tools = better decisions.</strong> An LLM with 100 tools available makes worse tool-selection choices than one with 10. Only expose what the task needs.</p>
+
+<p><strong>Toolsets are security boundaries.</strong> A research sub-agent should have web access but not terminal access. A coding sub-agent needs terminal but not web. The category field on each tool entry makes this filtering trivial.</p>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 5 -->
+<!-- ============================================================ -->
+<h2 id="ch05"><span class="chapter-num">05</span> Prompt Construction</h2>
+
+<p class="chapter-intro">The system prompt is the single biggest lever you have. It determines what kind of agent you get.</p>
+
+<p>In Hermes, the system prompt is <strong>built once per session</strong> and then frozen. It is not reassembled on every turn. This frozen snapshot is reused across all API calls in the session, which is critical for prompt caching (Chapter 6). The prompt is only rebuilt after context compression events.</p>
+
+<pre data-label="prompt_builder.py"><code><span class="kw">class</span> <span class="fn">PromptBuilder</span>:
+    <span class="kw">def</span> <span class="fn">build</span>(self, memory_block: <span class="nb">str</span>, skills_index: <span class="nb">str</span>, user_context: <span class="nb">str</span>) -> <span class="nb">str</span>:
+        sections = []
+
+        <span class="cm"># 1. Core identity</span>
+        sections.append(self.IDENTITY)
+
+        <span class="cm"># 2. Persistent memory (who is this user, what do I know)</span>
+        <span class="kw">if</span> memory_block:
+            sections.append(<span class="st">f"## What I Remember\n{memory_block}"</span>)
+
+        <span class="cm"># 3. Available skills (what procedures do I know)</span>
+        <span class="kw">if</span> skills_index:
+            sections.append(<span class="st">f"## Available Skills\n{skills_index}"</span>)
+
+        <span class="cm"># 4. User context files (project-specific info)</span>
+        <span class="kw">if</span> user_context:
+            sections.append(<span class="st">f"## Project Context\n{user_context}"</span>)
+
+        <span class="cm"># 5. Behavioral guidance</span>
+        sections.append(self.MEMORY_GUIDANCE)
+        sections.append(self.SKILLS_GUIDANCE)
+        sections.append(self.TOOL_USE_GUIDANCE)
+
+        <span class="kw">return</span> <span class="st">"\n\n"</span>.join(sections)
+
+    IDENTITY = <span class="st">"""You are a helpful AI assistant with persistent memory \
+and self-improving skills. You remember past conversations and learn \
+from experience. Use your tools to accomplish tasks."""</span>
+
+    MEMORY_GUIDANCE = <span class="st">"""## Memory Instructions
+After completing tasks, actively decide what's worth remembering:
+- User preferences and habits
+- Project context and architecture decisions
+- Solutions to problems that might recur
+Use the memory tool to persist important observations."""</span>
+
+    SKILLS_GUIDANCE = <span class="st">"""## Skill Instructions
+After difficult or iterative tasks, offer to save as a skill. \
+Confirm with the user before creating or deleting. Use the \
+skill_manage tool with action="create" for new skills, \
+action="patch" (old_string/new_string) to fix existing ones.
+Skip for simple one-offs."""</span>
+
+    TOOL_USE_GUIDANCE = <span class="st">"""## Tool Use
+Take action. Don't just describe what you would do - actually do it. \
+If the user asks you to write code, write the file. If they ask you \
+to run something, run it. Prefer action over explanation."""</span></code></pre>
+
+<p>The real Hermes has extensive prompt sections. The three guidance blocks above are the critical ones that drive the self-improvement behavior:</p>
+
+<table>
+  <tr><th>Guidance</th><th>What it steers</th></tr>
+  <tr><td>MEMORY_GUIDANCE</td><td>Tells the agent when and what to save to persistent memory</td></tr>
+  <tr><td>SKILLS_GUIDANCE</td><td>Tells the agent to offer saving reusable procedures, confirm before creating</td></tr>
+  <tr><td>TOOL_USE_GUIDANCE</td><td>Prevents the agent from just planning without acting</td></tr>
+</table>
+
+<div class="key-idea">
+  <span class="label">Key insight</span>
+  The self-improvement behavior is not magic. It is steered by prompt instructions and background nudges. The agent offers to save skills (and confirms with the user), and the nudge system periodically reviews conversations in the background. The LLM's instruction-following capability does the rest.
+</div>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Frozen snapshot: build once at session start from identity + memory + skills index + guidance. Not rebuilt per turn.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Frozen per session, only rebuilt after compression. Cached on <code>_cached_system_prompt</code>. Continuing sessions load the stored prompt from session DB instead of rebuilding (preserves Anthropic prefix cache). Whitespace normalization for KV-cache consistency. Skill body injection. Tool-use enforcement guidance.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>agent/prompt_builder.py</code></div>
+
+<h3>Frozen snapshot vs. per-turn injection</h3>
+
+<p>There are two paths for memory to reach the LLM:</p>
+
+<table>
+  <tr><th>Source</th><th>Where it goes</th><th>When it updates</th></tr>
+  <tr><td>Built-in memory (MEMORY.md, USER.md)</td><td>System prompt (frozen snapshot)</td><td>Once per session; only rebuilt after compression</td></tr>
+  <tr><td>External memory providers (Honcho, etc.)</td><td>Injected into user message per turn</td><td>Every turn via <code>prefetch_all()</code></td></tr>
+</table>
+
+<p>The built-in memory is a <strong>frozen snapshot</strong>: it is read from disk when the session starts and baked into the system prompt. Even if the agent writes new observations during the session (via the <code>memory</code> tool), those writes go to disk but do not appear in the system prompt until the next session (or after compression rebuilds it). This is a deliberate choice for prompt caching stability.</p>
+
+<p>External memory providers can inject per-turn context into the user message, but this is optional and only applies if a provider like Honcho is configured.</p>
+
+<p>For our minimal build, the simple approach works: load MEMORY.md at session start, bake it into the system prompt, do not touch it again until the session ends.</p>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 6: PROMPT CACHING -->
+<!-- ============================================================ -->
+<h2 id="ch06"><span class="chapter-num">06</span> Prompt Caching</h2>
+
+<p class="chapter-intro">Every token you re-send costs money. Prompt caching is how Hermes keeps multi-turn conversations affordable.</p>
+
+<p>In a 20-turn conversation, the system prompt (identity + memory + skills) is sent with every API call. Without caching, you pay for those tokens 20 times. Anthropic's prompt caching lets you mark message boundaries as <strong>cache breakpoints</strong>. Cached prefixes cost ~90% less on subsequent requests.</p>
+
+<p>Hermes implements a strategy called <strong>system_and_3</strong>: it places cache breakpoints on the system prompt (stable across all turns) plus the last 3 non-system messages (a rolling window). Anthropic allows a maximum of 4 breakpoints, so this uses all of them.</p>
+
+<pre data-label="prompt_caching.py"><code><span class="kw">import</span> copy
+
+<span class="kw">def</span> <span class="fn">apply_prompt_caching</span>(messages, cache_ttl=<span class="st">"5m"</span>):
+    <span class="st">"""Apply system_and_3 caching: system prompt + last 3 messages."""</span>
+    messages = copy.deepcopy(messages)
+    marker = {<span class="st">"type"</span>: <span class="st">"ephemeral"</span>}
+
+    breakpoints_used = <span class="num">0</span>
+
+    <span class="cm"># 1. Cache the system prompt (stable across all turns)</span>
+    <span class="kw">if</span> messages[<span class="num">0</span>].get(<span class="st">"role"</span>) == <span class="st">"system"</span>:
+        _mark_message(messages[<span class="num">0</span>], marker)
+        breakpoints_used += <span class="num">1</span>
+
+    <span class="cm"># 2-4. Cache the last 3 non-system messages (rolling window)</span>
+    remaining = <span class="num">4</span> - breakpoints_used
+    non_sys = [i <span class="kw">for</span> i <span class="kw">in</span> <span class="nb">range</span>(<span class="nb">len</span>(messages))
+               <span class="kw">if</span> messages[i].get(<span class="st">"role"</span>) != <span class="st">"system"</span>]
+    <span class="kw">for</span> idx <span class="kw">in</span> non_sys[-remaining:]:
+        _mark_message(messages[idx], marker)
+
+    <span class="kw">return</span> messages
+
+<span class="kw">def</span> <span class="fn">_mark_message</span>(msg, marker):
+    <span class="st">"""Add cache_control to a message, handling string and list content."""</span>
+    content = msg.get(<span class="st">"content"</span>)
+    <span class="kw">if</span> <span class="nb">isinstance</span>(content, <span class="nb">str</span>):
+        <span class="cm"># Convert to content block format for cache_control</span>
+        msg[<span class="st">"content"</span>] = [
+            {<span class="st">"type"</span>: <span class="st">"text"</span>, <span class="st">"text"</span>: content, <span class="st">"cache_control"</span>: marker}
+        ]
+    <span class="kw">elif</span> <span class="nb">isinstance</span>(content, <span class="nb">list</span>) <span class="kw">and</span> content:
+        content[-<span class="num">1</span>][<span class="st">"cache_control"</span>] = marker
+    <span class="kw">else</span>:
+        msg[<span class="st">"cache_control"</span>] = marker</code></pre>
+
+<h3>Why this constrains the architecture</h3>
+
+<p>Prompt caching is not just an optimization. It constrains how you build the system prompt:</p>
+
+<table>
+  <tr><th>Design constraint</th><th>Why it matters for caching</th></tr>
+  <tr><td>System prompt must be stable</td><td>If it changes every turn, the cache is invalidated and you pay full price. Memory and skills content must stay constant within a session.</td></tr>
+  <tr><td>Whitespace must be normalized</td><td>Even a trailing space change invalidates the cache. Hermes normalizes whitespace before every API call for KV-cache consistency.</td></tr>
+  <tr><td>Ephemeral context goes in user messages</td><td>Prefetched memories are injected into the user message, not the system prompt, because user messages rotate out of the cache window naturally.</td></tr>
+  <tr><td>Deep copy before marking</td><td>Cache markers modify the message structure (string to content-block array). The original messages must be preserved for session persistence.</td></tr>
+</table>
+
+<div class="note">
+  <span class="label">Intuition</span>
+  Think of it like a restaurant menu. The menu (system prompt) stays the same for every customer. The order (user messages) changes. You print the menu once and reuse it; you write each order fresh. If you changed the menu every meal, you would waste time reprinting it. Same with tokens: keep the stable parts stable, and only pay to transmit what changes.
+</div>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Basic <code>system_and_3</code> strategy. Single TTL. Works with OpenRouter Anthropic models.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Supports both <code>5m</code> and <code>1h</code> TTL. Native Anthropic adapter for direct API calls (different <code>cache_control</code> placement). Provider detection to skip caching for non-Anthropic models. Applied in <code>_prepare_api_messages()</code> just before the API call.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>agent/prompt_caching.py</code>, <code>agent/anthropic_adapter.py</code></div>
+
+<!-- ============================================================ -->
+<!-- PART III -->
+<!-- ============================================================ -->
+<div class="part-divider">
+  <div class="part-name">Part III</div>
+  <h2>Memory That Lasts</h2>
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 7 -->
+<!-- ============================================================ -->
+<h2 id="ch07"><span class="chapter-num">07</span> Session Memory: SQLite + FTS5</h2>
+
+<p class="chapter-intro">Every conversation gets recorded with full-text search. This is the agent's episodic memory.</p>
+
+<p>Session memory answers the question: <strong>what happened?</strong> It records every conversation turn in a SQLite database with FTS5 full-text indexing. Think of it as the agent's conversation diary.</p>
+
+<h3>Why SQLite + FTS5</h3>
+
+<p>Most AI tools either forget everything (stateless) or dump everything into the context window (expensive and slow). Hermes uses on-demand retrieval: store everything, search when needed, inject only what is relevant.</p>
+
+<table>
+  <tr><th>Approach</th><th>Load Everything</th><th>On-Demand (Hermes)</th></tr>
+  <tr><td>Context usage</td><td>Grows linearly</td><td>Essentially constant</td></tr>
+  <tr><td>Precision</td><td>Everything is there but nothing is findable</td><td>Keyword matching, precise</td></tr>
+  <tr><td>Long-term viability</td><td>Breaks after a few days</td><td>Works for months</td></tr>
+  <tr><td>Response speed</td><td>Slows over time</td><td>Stays the same</td></tr>
+</table>
+
+<p>FTS5 is SQLite's built-in full-text search extension. No extra database to install. All data lives in a local file. No network dependency, no privacy concerns.</p>
+
+<h3>The schema</h3>
+
+<pre data-label="memory/session_db.py"><code><span class="kw">import</span> sqlite3
+<span class="kw">import</span> uuid
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+<span class="kw">class</span> <span class="fn">SessionDB</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, db_path: <span class="nb">str</span>):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(db_path)
+        self.conn.execute(<span class="st">"PRAGMA journal_mode=WAL"</span>)  <span class="cm"># Concurrent reads</span>
+        self._create_tables()
+
+    <span class="kw">def</span> <span class="fn">_create_tables</span>(self):
+        self.conn.executescript(<span class="st">"""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                source TEXT DEFAULT 'cli',
+                started_at REAL,
+                ended_at REAL,
+                message_count INTEGER DEFAULT 0,
+                summary TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT REFERENCES sessions(id),
+                role TEXT NOT NULL,
+                content TEXT,
+                tool_name TEXT,
+                tool_call_id TEXT,
+                timestamp REAL
+            );
+
+            CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
+            USING fts5(content, content_rowid='id');
+        """</span>)
+        self.conn.commit()
+
+    <span class="kw">def</span> <span class="fn">create_session</span>(self, source=<span class="st">"cli"</span>) -> <span class="nb">str</span>:
+        session_id = <span class="nb">str</span>(uuid.uuid4())
+        self.conn.execute(
+            <span class="st">"INSERT INTO sessions (id, source, started_at) VALUES (?, ?, ?)"</span>,
+            (session_id, source, datetime.now().timestamp())
+        )
+        self.conn.commit()
+        <span class="kw">return</span> session_id
+
+    <span class="kw">def</span> <span class="fn">append_message</span>(self, session_id, role, content,
+                        tool_name=<span class="nb">None</span>, tool_call_id=<span class="nb">None</span>):
+        cursor = self.conn.execute(
+            <span class="st">"""INSERT INTO messages
+               (session_id, role, content, tool_name, tool_call_id, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?)"""</span>,
+            (session_id, role, content, tool_name, tool_call_id,
+             datetime.now().timestamp())
+        )
+        <span class="cm"># Index in FTS5 (only user and assistant messages)</span>
+        <span class="kw">if</span> role <span class="kw">in</span> (<span class="st">"user"</span>, <span class="st">"assistant"</span>) <span class="kw">and</span> content:
+            self.conn.execute(
+                <span class="st">"INSERT INTO messages_fts (rowid, content) VALUES (?, ?)"</span>,
+                (cursor.lastrowid, content)
+            )
+        self.conn.commit()
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, query: <span class="nb">str</span>, limit: <span class="nb">int</span> = <span class="num">20</span>) -> <span class="nb">list</span>[<span class="nb">dict</span>]:
+        <span class="st">"""Full-text search across all sessions."""</span>
+        sanitized = self._sanitize_fts_query(query)
+        rows = self.conn.execute(<span class="st">"""
+            SELECT m.session_id, m.role,
+                   snippet(messages_fts, 0, '>>>', '<<<', '...', 40) as snippet,
+                   s.source, s.started_at
+            FROM messages_fts
+            JOIN messages m ON m.id = messages_fts.rowid
+            JOIN sessions s ON s.id = m.session_id
+            WHERE messages_fts MATCH ?
+            ORDER BY rank
+            LIMIT ?
+        """</span>, (sanitized, limit)).fetchall()
+        <span class="kw">return</span> [
+            {<span class="st">"session_id"</span>: r[<span class="num">0</span>], <span class="st">"role"</span>: r[<span class="num">1</span>], <span class="st">"snippet"</span>: r[<span class="num">2</span>],
+             <span class="st">"source"</span>: r[<span class="num">3</span>], <span class="st">"date"</span>: datetime.fromtimestamp(r[<span class="num">4</span>]).isoformat()}
+            <span class="kw">for</span> r <span class="kw">in</span> rows
+        ]
+
+    <span class="kw">def</span> <span class="fn">_sanitize_fts_query</span>(self, query: <span class="nb">str</span>) -> <span class="nb">str</span>:
+        <span class="st">"""Clean user input for FTS5 safety."""</span>
+        <span class="cm"># Remove special FTS5 operators that could cause errors</span>
+        <span class="kw">for</span> char <span class="kw">in</span> [<span class="st">'"'</span>, <span class="st">'*'</span>, <span class="st">'+'</span>, <span class="st">'-'</span>, <span class="st">'('</span>, <span class="st">')'</span>, <span class="st">':'</span>]:
+            query = query.replace(char, <span class="st">' '</span>)
+        <span class="cm"># Split into words, wrap each as a prefix match</span>
+        words = [w.strip() <span class="kw">for</span> w <span class="kw">in</span> query.split() <span class="kw">if</span> w.strip()]
+        <span class="kw">return</span> <span class="st">' '</span>.join(words) <span class="kw">if</span> words <span class="kw">else</span> <span class="st">'""'</span></code></pre>
+
+<p>Two important implementation details:</p>
+
+<p><strong>WAL mode</strong> (<code>PRAGMA journal_mode=WAL</code>) enables concurrent readers with a single writer. This matters when the gateway process is handling messages from multiple platforms while the agent is also writing to the database.</p>
+
+<p><strong>FTS5 query sanitization</strong> is essential. User queries can contain special characters that break FTS5 syntax. The sanitizer strips operators and treats input as plain keyword search.</p>
+
+<div class="note">
+  <span class="label">Intuition</span>
+  Session memory is like a diary with an index. You write everything down, but you do not re-read the entire diary every morning. You look up specific entries when you need them. The FTS5 index is that lookup mechanism.
+</div>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Single-threaded writes. Basic FTS5 MATCH queries. Inline search function.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      WAL mode with application-level jitter retry (20-150ms) for write contention via <code>_execute_write()</code>. Stores tool_calls, reasoning fields, and Codex reasoning items. Session metadata tracks token counts, estimated cost, and parent session IDs for sub-agent continuations.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>hermes_state.py</code> (SessionDB class, ~1239 lines)</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 8 -->
+<!-- ============================================================ -->
+<h2 id="ch08"><span class="chapter-num">08</span> Persistent Memory</h2>
+
+<p class="chapter-intro">Session memory records what happened. Persistent memory records who you are and what matters.</p>
+
+<p>Persistent memory answers the question: <strong>who is this user?</strong> It stores durable facts distilled from conversations: coding preferences, commonly used tools, project context, work habits. These persist across sessions and are loaded at startup.</p>
+
+<p>In Hermes, this is implemented as two simple markdown files:</p>
+
+<ul style="margin: 16px 0; padding-left: 24px;">
+  <li><code>MEMORY.md</code>: Durable facts and observations (default limit: 2,200 characters)</li>
+  <li><code>USER.md</code>: User profile and preferences (default limit: 1,375 characters)</li>
+</ul>
+
+<p>Both files are loaded as a <strong>frozen snapshot</strong> when a session starts and baked into the system prompt. Writes during the session go to disk but do not update the running prompt until the next session or after context compression rebuilds it. This is critical for prompt caching (see Chapter 6).</p>
+
+<pre data-label="memory/persistent.py"><code><span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="kw">class</span> <span class="fn">PersistentMemory</span>:
+    MEMORY_LIMIT = <span class="num">2200</span>   <span class="cm"># Hermes default for observations</span>
+    USER_LIMIT = <span class="num">1375</span>     <span class="cm"># Hermes default for user profile</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, data_dir: Path):
+        self.memory_path = data_dir / <span class="st">"MEMORY.md"</span>
+        self.user_path = data_dir / <span class="st">"USER.md"</span>
+        <span class="cm"># Create files if they don't exist</span>
+        self.memory_path.touch(exist_ok=<span class="nb">True</span>)
+        self.user_path.touch(exist_ok=<span class="nb">True</span>)
+
+    <span class="kw">def</span> <span class="fn">load</span>(self) -> <span class="nb">str</span>:
+        <span class="st">"""Load both files as a combined context block."""</span>
+        parts = []
+        memory = self.memory_path.read_text().strip()
+        user = self.user_path.read_text().strip()
+        <span class="kw">if</span> user:
+            parts.append(<span class="st">f"### User Profile\n{user}"</span>)
+        <span class="kw">if</span> memory:
+            parts.append(<span class="st">f"### Observations\n{memory}"</span>)
+        <span class="kw">return</span> <span class="st">"\n\n"</span>.join(parts)
+
+    <span class="kw">def</span> <span class="fn">save_observation</span>(self, text: <span class="nb">str</span>):
+        <span class="st">"""Append an observation, respecting the size limit."""</span>
+        current = self.memory_path.read_text()
+        new_entry = <span class="st">f"\n- {text}"</span>
+        <span class="kw">if</span> <span class="nb">len</span>(current) + <span class="nb">len</span>(new_entry) > self.MEMORY_LIMIT:
+            lines = current.strip().split(<span class="st">"\n"</span>)
+            <span class="kw">while</span> lines <span class="kw">and</span> <span class="nb">len</span>(<span class="st">"\n"</span>.join(lines)) + <span class="nb">len</span>(new_entry) > self.MEMORY_LIMIT:
+                lines.pop(<span class="num">0</span>)
+            current = <span class="st">"\n"</span>.join(lines)
+        self.memory_path.write_text(current + new_entry)
+
+    <span class="kw">def</span> <span class="fn">update_user_profile</span>(self, text: <span class="nb">str</span>):
+        <span class="st">"""Replace the user profile."""</span>
+        self.user_path.write_text(text[:self.USER_LIMIT])</code></pre>
+
+<p>The size limits (2,200 for memory, 1,375 for user profile) are deliberate. This content is frozen into the system prompt at session start, so it consumes tokens on every API call. The combined ~3,575 characters keeps the overhead predictable while still being useful.</p>
+
+<h3>What belongs in persistent memory</h3>
+
+<table>
+  <tr><th>Save</th><th>Do NOT save</th></tr>
+  <tr><td>User preferences (code style, editor, OS)</td><td>One-off task details</td></tr>
+  <tr><td>Project context (tech stack, architecture decisions)</td><td>Outdated API version numbers</td></tr>
+  <tr><td>Recurring patterns (preferred error handling approach)</td><td>Sensitive data (passwords, keys)</td></tr>
+  <tr><td>Validated solutions (what worked)</td><td>Wrong inferences (should be corrected, not stored)</td></tr>
+</table>
+
+<div class="warning">
+  <span class="label">Memory pollution</span>
+  Hermes has no automatic expiration mechanism. If the agent saves an incorrect observation early on (e.g., "user prefers Python 2"), that error will persist and affect future behavior. Periodic manual review of the MEMORY.md file is important. This is a known limitation.
+</div>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Two flat files: MEMORY.md (2,200 chars) + USER.md (1,375 chars). Frozen snapshot loaded at session start. Simple append with oldest-first eviction.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Same built-in provider (MEMORY.md + USER.md), plus a pluggable <code>MemoryProvider</code> architecture. External providers (Honcho, Mem0, Hindsight) can be swapped in. Only one external provider active at a time. Hooks: <code>on_session_end()</code>, <code>on_pre_compress()</code>, <code>on_delegation()</code>, <code>on_memory_write()</code>.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>agent/memory_manager.py</code>, <code>agent/memory_provider.py</code></div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 9 -->
+<!-- ============================================================ -->
+<h2 id="ch09"><span class="chapter-num">09</span> Cross-Session Recall</h2>
+
+<p class="chapter-intro">The trick is not remembering everything. It is finding the right piece at the right time.</p>
+
+<p>Cross-session recall connects the session database (Chapter 7) to the current conversation. When the agent needs to remember something from a past session, it searches the FTS5 index, retrieves the most relevant fragments, and summarizes them for injection into the current context.</p>
+
+<pre data-label="memory/recall.py"><code><span class="kw">class</span> <span class="fn">SessionRecall</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, session_db, llm_client, model):
+        self.db = session_db
+        self.client = llm_client
+        self.model = model
+
+    <span class="kw">def</span> <span class="fn">recall</span>(self, query: <span class="nb">str</span>, max_sessions: <span class="nb">int</span> = <span class="num">3</span>) -> <span class="nb">str</span>:
+        <span class="st">"""Search past sessions and return summarized context."""</span>
+        <span class="cm"># Step 1: FTS5 search</span>
+        results = self.db.search(query, limit=<span class="num">30</span>)
+        <span class="kw">if not</span> results:
+            <span class="kw">return</span> <span class="st">""</span>
+
+        <span class="cm"># Step 2: Group by session, take top N unique sessions</span>
+        seen_sessions = {}
+        <span class="kw">for</span> r <span class="kw">in</span> results:
+            sid = r[<span class="st">"session_id"</span>]
+            <span class="kw">if</span> sid <span class="kw">not in</span> seen_sessions:
+                seen_sessions[sid] = r
+            <span class="kw">if</span> <span class="nb">len</span>(seen_sessions) >= max_sessions:
+                <span class="kw">break</span>
+
+        <span class="cm"># Step 3: For each session, load conversation around matches</span>
+        summaries = []
+        <span class="kw">for</span> sid, meta <span class="kw">in</span> seen_sessions.items():
+            messages = self.db.get_session_messages(sid, limit=<span class="num">30</span>)
+            transcript = self._format_transcript(messages)
+
+            <span class="cm"># Step 4: Summarize via cheap/fast LLM</span>
+            summary = self._summarize(query, transcript, meta[<span class="st">"date"</span>])
+            summaries.append(summary)
+
+        <span class="kw">return</span> <span class="st">"\n\n---\n\n"</span>.join(summaries)
+
+    <span class="kw">def</span> <span class="fn">_summarize</span>(self, topic, transcript, date) -> <span class="nb">str</span>:
+        resp = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {<span class="st">"role"</span>: <span class="st">"system"</span>, <span class="st">"content"</span>:
+                 <span class="st">"Summarize this past conversation, focusing on information "
+                 "relevant to the given topic. Be concise. 200 words max."</span>},
+                {<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>:
+                 <span class="st">f"Topic: {topic}\nDate: {date}\n\nTRANSCRIPT:\n{transcript}"</span>}
+            ],
+            max_tokens=self.max_tokens,  <span class="cm"># default 300</span>
+        )
+        <span class="kw">return</span> resp.choices[<span class="num">0</span>].message.content</code></pre>
+
+<p>The four-step flow:</p>
+
+<ol class="steps">
+  <li><strong>FTS5 search.</strong> Find messages matching the query across all sessions.</li>
+  <li><strong>Group by session.</strong> Take the top 3 unique sessions (not individual messages).</li>
+  <li><strong>Load conversation context.</strong> For each session, pull surrounding messages to preserve conversational flow.</li>
+  <li><strong>Summarize via LLM.</strong> Use a cheap, fast model to condense each session's transcript into a focused summary. This is where the real token savings happen.</li>
+</ol>
+
+<div class="key-idea">
+  <span class="label">Why summarize instead of injecting raw transcripts</span>
+  A past session might be 10,000 tokens. You might recall 3 sessions. That is 30,000 tokens of raw context for every query. Summarization compresses each to ~200 words, keeping the total under 2,000 tokens. The cost of one cheap LLM call is far less than the cost of stuffing 30K extra tokens into every subsequent API call.
+</div>
+
+<h3>Making it a tool</h3>
+
+<p>Cross-session recall is exposed to the agent as a tool called <code>session_search</code>. The agent decides when to search its own history:</p>
+
+<pre data-label="tools/memory_tool.py"><code>registry.register(
+    name=<span class="st">"session_search"</span>,
+    description=<span class="st">"Search past conversations for relevant context. "
+                 "Use when you need to recall what was discussed previously."</span>,
+    parameters={
+        <span class="st">"type"</span>: <span class="st">"object"</span>,
+        <span class="st">"properties"</span>: {
+            <span class="st">"query"</span>: {<span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"description"</span>: <span class="st">"Search topic"</span>},
+        },
+        <span class="st">"required"</span>: [<span class="st">"query"</span>],
+    },
+    handler=recall.recall,
+    category=<span class="st">"memory"</span>,
+)</code></pre>
+
+<p>This is elegant. The agent is not force-fed history. It actively searches when it recognizes that past context would be useful. "That approach we discussed last week" triggers a search. "Write a hello world script" does not.</p>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Synchronous search + summarize. Top 3 sessions. Single summarization model.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Async summarization via <code>_summarize_session()</code>. Session truncation around match locations (<code>_truncate_around_matches()</code>, 100K char limit). Groups by session with deduplication. Uses auxiliary LLM (cheap/fast, e.g. Gemini Flash) for summaries (up to 10K tokens per session).
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>tools/session_search_tool.py</code>, <code>hermes_state.py</code> (<code>search_messages()</code>)</div>
+
+<!-- ============================================================ -->
+<!-- PART IV -->
+<!-- ============================================================ -->
+<div class="part-divider">
+  <div class="part-name">Part IV</div>
+  <h2>Skills That Grow</h2>
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 10 -->
+<!-- ============================================================ -->
+<h2 id="ch10"><span class="chapter-num">10</span> The Skill System</h2>
+
+<p class="chapter-intro">Skills are folders containing a SKILL.md file, supporting references, and templates. The agent discovers, loads, and manages them through three dedicated tools.</p>
+
+<p>If session memory is "what happened" and persistent memory is "who you are," then skills are <strong>"how to do things."</strong> Each Skill is a directory under <code>~/.hermes/skills/</code> containing a <code>SKILL.md</code> file and optional supporting files.</p>
+
+<h3>Skill directory structure</h3>
+
+<div class="file-tree">~/.hermes/skills/
+&#9500;&#9472;&#9472; git-commit-style/
+&#9474;   &#9492;&#9472;&#9472; SKILL.md              <span style="color: var(--muted)"># Required: instructions</span>
+&#9500;&#9472;&#9472; code-review/
+&#9474;   &#9500;&#9472;&#9472; SKILL.md
+&#9474;   &#9500;&#9472;&#9472; references/           <span style="color: var(--muted)"># Supporting documentation</span>
+&#9474;   &#9474;   &#9492;&#9472;&#9472; style-guide.md
+&#9474;   &#9500;&#9472;&#9472; templates/            <span style="color: var(--muted)"># Output templates</span>
+&#9474;   &#9474;   &#9492;&#9472;&#9472; review-format.md
+&#9474;   &#9500;&#9472;&#9472; scripts/              <span style="color: var(--muted)"># Helper scripts</span>
+&#9474;   &#9492;&#9472;&#9472; assets/               <span style="color: var(--muted)"># Supplementary files</span>
+&#9492;&#9472;&#9472; mlops/                        <span style="color: var(--muted)"># Category folder</span>
+    &#9492;&#9472;&#9472; training/
+        &#9492;&#9472;&#9472; SKILL.md</div>
+
+<p>This is the <strong>agentskills.io standard</strong>, supported by Claude Code, Cursor, Codex CLI, Gemini CLI, and others. Skills are portable across tools.</p>
+
+<h3>Anatomy of a SKILL.md file</h3>
+
+<pre data-label="~/.hermes/skills/git-commit-style/SKILL.md"><code><span class="cm">---
+name: git-commit-style
+description: Enforce a consistent Git commit message format
+version: "1.0.0"
+platforms: [macos, linux]    # Optional: restrict to OS
+metadata:
+  hermes:
+    tags: [git, workflow]
+    requires_toolsets: [terminal]
+---</span>
+
+# Git Commit Style
+
+## Trigger
+Activate when the user asks me to commit code, write a commit
+message, or review commit history.
+
+## Rules
+### Commit Message Format
+- First line: type(scope): summary (50 chars max)
+- Blank line
+- Body: explain WHY, not WHAT
+
+## Example
+feat(auth): add QR code login
+
+Previously users could only log in with a phone number.
+Now they scan a QR code and they're in.</code></pre>
+
+<h3>Three tools, three tiers of progressive disclosure</h3>
+
+<p>Hermes uses a <strong>progressive disclosure</strong> pattern to keep token costs flat as the skill library grows. The agent sees skill names cheaply and loads full content only when needed:</p>
+
+<table>
+  <tr><th>Tool</th><th>What it returns</th><th>Token cost</th></tr>
+  <tr><td><code>skills_list</code></td><td>Name + description for all skills (max 64 + 1024 chars each)</td><td>Low: metadata only</td></tr>
+  <tr><td><code>skill_view</code></td><td>Full SKILL.md body, or a specific file within the skill directory</td><td>Medium: one skill at a time</td></tr>
+  <tr><td><code>skill_manage</code></td><td>Create / edit / patch / delete / write_file / remove_file</td><td>Varies by action</td></tr>
+</table>
+
+<pre data-label="skills/loader.py"><code><span class="cm"># The three skill tools</span>
+
+<span class="kw">def</span> <span class="fn">skills_list</span>(category=<span class="nb">None</span>) -> <span class="nb">str</span>:
+    <span class="st">"""List all skills with metadata. Progressive disclosure tier 1."""</span>
+    skills = []
+    <span class="kw">for</span> skill_md <span class="kw">in</span> skills_dir.rglob(<span class="st">"SKILL.md"</span>):
+        meta, _ = parse_frontmatter(skill_md.read_text())
+        <span class="kw">if not</span> meta <span class="kw">or not</span> skill_matches_platform(meta):
+            <span class="kw">continue</span>
+        skills.append({
+            <span class="st">"name"</span>: meta.get(<span class="st">"name"</span>, skill_md.parent.name),
+            <span class="st">"description"</span>: meta.get(<span class="st">"description"</span>, <span class="st">""</span>)[:1024],
+        })
+    <span class="kw">return</span> json.dumps(skills, indent=<span class="num">2</span>)
+
+<span class="kw">def</span> <span class="fn">skill_view</span>(name: <span class="nb">str</span>, file_path: <span class="nb">str</span> = <span class="nb">None</span>) -> <span class="nb">str</span>:
+    <span class="st">"""Load full skill content. Progressive disclosure tier 2-3."""</span>
+    skill_dir = find_skill(name)
+    <span class="kw">if</span> file_path:
+        <span class="cm"># Tier 3: load a specific reference/template file</span>
+        <span class="kw">return</span> (skill_dir / file_path).read_text()
+    <span class="cm"># Tier 2: load the main SKILL.md</span>
+    <span class="kw">return</span> (skill_dir / <span class="st">"SKILL.md"</span>).read_text()
+
+<span class="kw">def</span> <span class="fn">skill_manage</span>(action, name, content=<span class="nb">None</span>, category=<span class="nb">None</span>,
+                  file_path=<span class="nb">None</span>, file_content=<span class="nb">None</span>) -> <span class="nb">str</span>:
+    <span class="st">"""Create, edit, patch, or delete skills."""</span>
+    <span class="kw">if</span> action == <span class="st">"create"</span>:
+        <span class="cm"># Creates skill_dir/SKILL.md with validated frontmatter</span>
+        skill_dir = skills_dir / (category <span class="kw">or</span> <span class="st">""</span>) / name
+        skill_dir.mkdir(parents=<span class="nb">True</span>)
+        (skill_dir / <span class="st">"SKILL.md"</span>).write_text(content)
+    <span class="kw">elif</span> action == <span class="st">"patch"</span>:
+        <span class="cm"># Find-and-replace within SKILL.md or a supporting file</span>
+        <span class="cm"># Uses exact string matching -- precise, token-efficient</span>
+        ...
+    <span class="kw">elif</span> action == <span class="st">"edit"</span>:
+        <span class="cm"># Full rewrite of SKILL.md</span>
+        ...
+    <span class="kw">elif</span> action == <span class="st">"write_file"</span>:
+        <span class="cm"># Add/overwrite a supporting file (references/, templates/, etc.)</span>
+        ...
+    <span class="kw">elif</span> action == <span class="st">"delete"</span>:
+        <span class="cm"># Remove entire skill directory</span>
+        ...</code></pre>
+
+<div class="warning">
+  <span class="label">Security</span>
+  Hermes runs a security scan (<code>skills_guard.py</code>) on every agent-created skill. It checks for shell injection, credential exposure, and path traversal. The <code>skill_manage</code> tool validates that file paths stay within <code>ALLOWED_SUBDIRS</code> (references, templates, scripts, assets) and rejects path traversal attempts.
+</div>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Three functions: <code>skills_list</code>, <code>skill_view</code>, <code>skill_manage</code>. Basic YAML frontmatter parsing. Folder discovery via <code>rglob("SKILL.md")</code>.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Platform filtering (<code>platforms: [macos]</code>). Environment variable prerequisites with interactive secret collection. Atomic writes via <code>tempfile</code> + <code>os.replace()</code>. Security scanning on create. External skill directories. Skills Hub integration for community skills. 100K character size limit per SKILL.md.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>tools/skills_tool.py</code> (<code>skills_list</code>, <code>skill_view</code>), <code>tools/skill_manager_tool.py</code> (<code>skill_manage</code>), <code>agent/skill_utils.py</code></div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 11 -->
+<!-- ============================================================ -->
+<h2 id="ch11"><span class="chapter-num">11</span> Autonomous Skill Creation</h2>
+
+<p class="chapter-intro">After finishing a complex task, the agent asks itself: "Would this solution be useful again?" If yes, it writes a Skill.</p>
+
+<p>This is the mechanism that turns one-time problem solving into reusable knowledge. The agent does not silently create a Skill for every task. Per the <code>skill_manage</code> tool description, the agent <strong>offers to save as a skill and confirms with the user before creating or deleting</strong>. The background nudge system (Chapter 13) can also trigger skill review, but the confirmation flow is the designed behavior for interactive sessions.</p>
+
+<h3>When to create a Skill</h3>
+
+<p>The real Hermes triggers Skill creation when a task had:</p>
+
+<ul style="margin: 16px 0; padding-left: 24px;">
+  <li>5+ tool calls (non-trivial workflow)</li>
+  <li>Error recovery (the agent hit an error and fixed it)</li>
+  <li>User corrections (the agent learned from feedback)</li>
+  <li>Non-obvious workflow (the solution was not straightforward)</li>
+</ul>
+
+<h3>The retrospective prompt</h3>
+
+<p>Skill creation is driven by a prompt, not by code heuristics. After the task completes, the agent receives a retrospective prompt that asks it to evaluate its own work:</p>
+
+<pre data-label="skills/retrospective.py"><code><span class="kw">class</span> <span class="fn">Retrospective</span>:
+    PROMPT = <span class="st">"""Review the conversation that just finished.
+
+1. MEMORY: Are there facts worth remembering long-term?
+   - User preferences discovered
+   - Project context learned
+   - Solutions that worked (or didn't)
+   If yes, call the memory tool to save each observation.
+
+2. SKILL CREATION: Was this task complex enough to warrant a reusable Skill?
+   Criteria: 5+ tool calls, error recovery, non-obvious workflow.
+   If yes, call skill_manage with action="create" and:
+   - A descriptive name
+   - Trigger conditions (when should this Skill activate)
+   - Step-by-step procedure
+   - Constraints and gotchas discovered
+
+3. SKILL UPDATE: Was an existing Skill used? Did it work well?
+   If not, call skill_manage with action="patch" (old_string/new_string).
+
+Be selective. Not every task deserves a Skill. Not every fact deserves
+to be remembered. Only save what will genuinely help in the future."""</span>
+
+    <span class="kw">def</span> <span class="fn">run</span>(self, agent, conversation_messages):
+        <span class="st">"""Run retrospective analysis on the completed conversation."""</span>
+        <span class="cm"># Build a summary of what just happened</span>
+        summary = self._summarize_conversation(conversation_messages)
+
+        <span class="cm"># Ask the agent to evaluate</span>
+        agent.run(
+            <span class="st">f"[RETROSPECTIVE]\n\n"</span>
+            <span class="st">f"Conversation summary:\n{summary}\n\n"</span>
+            <span class="st">f"{self.PROMPT}"</span>
+        )</code></pre>
+
+<div class="key-idea">
+  <span class="label">The key insight</span>
+  Skill creation is <em>not</em> a separate code path with if/else logic. It is the same agent loop, given a different prompt. The LLM's judgment determines what is worth saving. This is what makes the system flexible: you do not need to anticipate every scenario in code. You write a prompt that teaches the agent <em>how to think</em> about what is worth keeping.
+</div>
+
+<h3>How the agent creates a skill</h3>
+
+<p>The agent calls <code>skill_manage</code> with <code>action="create"</code>. It provides the full SKILL.md content including frontmatter:</p>
+
+<pre data-label="Example: agent tool call"><code><span class="cm"># The agent generates this tool call:</span>
+skill_manage(
+    action=<span class="st">"create"</span>,
+    name=<span class="st">"csv-to-database"</span>,
+    category=<span class="st">"data"</span>,  <span class="cm"># optional subfolder</span>
+    content=<span class="st">"""---
+name: csv-to-database
+description: Clean CSV data and import into a database
+version: "1.0.0"
+---
+
+# CSV to Database Import
+
+## Trigger
+Activate when the user asks to import CSV, clean data, or load
+data into a database.
+
+## Steps
+1. Read the CSV and detect column types
+2. Clean: strip whitespace, handle nulls, validate dates
+3. Create table with appropriate column types
+4. Bulk insert with error logging
+
+## User Preferences
+- Connection method: psycopg2 (user prefers this over SQLAlchemy)
+- Always check if table exists first
+"""</span>
+)</code></pre>
+
+<p>This creates <code>~/.hermes/skills/data/csv-to-database/SKILL.md</code>. The skill is immediately available for the next conversation.</p>
+
+<div class="chapter-cite">Source: <code>tools/skill_manager_tool.py</code> (<code>skill_manage</code> function, actions: create/edit/patch/delete/write_file/remove_file)</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 12 -->
+<!-- ============================================================ -->
+<h2 id="ch12"><span class="chapter-num">12</span> Skill Self-Improvement</h2>
+
+<p class="chapter-intro">Creating a Skill is step one. Updating it based on real-world feedback is what makes it "self-improving."</p>
+
+<p>Traditional Skills are static: you write them, and they stay the same until someone manually edits them. Hermes Skills are alive. Every time a Skill is used and the user provides feedback, the agent can update the Skill file to incorporate what it learned.</p>
+
+<h3>The improvement cycle</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 500 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow2">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow2" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#999"/>
+    </marker>
+  </defs>
+
+  <!-- Step 1: Execute -->
+  <rect x="0" y="30" width="105" height="50" rx="8" fill="white" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="52" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#1e40af">1. Execute</text>
+  <text x="52" y="68" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#777">Follow the Skill</text>
+
+  <line x1="105" y1="55" x2="130" y2="55" stroke="#999" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <!-- Step 2: Feedback -->
+  <rect x="130" y="30" width="105" height="50" rx="8" fill="white" stroke="#d97706" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="182" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#92400e">2. Feedback</text>
+  <text x="182" y="68" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#777">User corrects</text>
+
+  <line x1="235" y1="55" x2="260" y2="55" stroke="#999" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <!-- Step 3: Patch -->
+  <rect x="260" y="30" width="105" height="50" rx="8" fill="white" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="312" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#166534">3. Patch</text>
+  <text x="312" y="68" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#777">Update Skill file</text>
+
+  <line x1="365" y1="55" x2="390" y2="55" stroke="#999" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <!-- Step 4: Next use -->
+  <rect x="390" y="30" width="105" height="50" rx="8" fill="white" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow2)"/>
+  <text x="442" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="11" font-weight="bold" fill="#1e40af">4. Next Use</text>
+  <text x="442" y="68" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#777">Improved version</text>
+
+  <!-- Loop arrow back -->
+  <path d="M 442 80 L 442 110 L 52 110 L 52 80" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow2)"/>
+  <text x="247" y="125" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#999" font-style="italic">cycle repeats with each use</text>
+</svg>
+</div>
+
+<h3>The patch action</h3>
+
+<p>Hermes prefers <strong>patching</strong> over rewriting. The <code>skill_manage</code> tool's <code>patch</code> action does <strong>exact string find-and-replace</strong> within a SKILL.md or supporting file. This is important for two reasons: it preserves parts that work, and it uses far fewer tokens than a full rewrite.</p>
+
+<pre data-label="Example: agent tool call"><code><span class="cm"># The agent generates this tool call:</span>
+skill_manage(
+    action=<span class="st">"patch"</span>,
+    name=<span class="st">"github-daily-digest"</span>,
+    old_string=<span class="st">"3. Group by type (PR / Issue)"</span>,
+    new_string=<span class="st">"3. Group by type (PR / Issue / Discussion)"</span>,
+)
+<span class="cm"># Exact find-and-replace within SKILL.md.
+# old_string must be unique unless replace_all=True.
+# Include enough surrounding context to ensure uniqueness.
+# Use file_path="references/api.md" to patch a supporting file.
+# Use action="edit" for full rewrites when patches are too numerous.</span></code></pre>
+
+<p>A concrete example of how this works in practice:</p>
+
+<ol class="steps">
+  <li>You ask Hermes to sort through GitHub notifications. It follows its "GitHub Daily Digest" Skill, returning only PRs and Issues.</li>
+  <li>You say: "Include Discussions too." Hermes adds Discussions to this response.</li>
+  <li>Hermes recognizes this is a correction to the Skill. It calls <code>skill_manage(action="patch", old_string="...", new_string="...")</code> to update the Skill's steps.</li>
+  <li>Next time you say "check GitHub," the Skill already includes Discussions. You never have to mention it again.</li>
+</ol>
+
+<div class="note">
+  <span class="label">Intuition</span>
+  This is the automation of Mitchell Hashimoto's "add a rule to CLAUDE.md every time the AI makes a mistake" approach. The difference is that the agent adds the rule itself, without human effort. The trade-off is less precision (the agent might misunderstand the feedback) in exchange for zero maintenance burden.
+</div>
+
+<!-- ============================================================ -->
+<!-- PART V -->
+<!-- ============================================================ -->
+<div class="part-divider">
+  <div class="part-name">Part V</div>
+  <h2>Putting It All Together</h2>
+</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 13 -->
+<!-- ============================================================ -->
+<h2 id="ch13"><span class="chapter-num">13</span> The Learning Loop: Nudges, Background Review, and Compression Flush</h2>
+
+<p class="chapter-intro">The Learning Loop is not a single post-task retrospective. It is three distinct trigger mechanisms that fire at different times, all running in the background.</p>
+
+<p>None of the components we have built are individually novel. Memory, skills, retrieval, user profiling: the AI field has seen all of these before. What Hermes does differently is wire them into a <strong>causal chain</strong> where each component feeds the next. But the "how" matters as much as the "what."</p>
+
+<p>The book's earlier chapters presented a simplified model of a single retrospective that fires after each task. The real Hermes is more nuanced. Learning is triggered by <strong>three independent mechanisms</strong>:</p>
+
+<table>
+  <tr><th>Trigger</th><th>When it fires</th><th>What it does</th></tr>
+  <tr><td>Memory nudge</td><td>Every N user turns (default: 10)</td><td>Background review of conversation for facts worth persisting</td></tr>
+  <tr><td>Skill nudge</td><td>Every N tool-calling iterations (default: 10)</td><td>Background review for reusable procedures to create or update</td></tr>
+  <tr><td>Compression flush</td><td>When context window hits 50% capacity</td><td>Extract memories before old messages are summarized and discarded</td></tr>
+</table>
+
+<h3>Nudge counters</h3>
+
+<p>Hermes maintains two counters that tick up during normal operation:</p>
+
+<pre data-label="agent.py"><code><span class="kw">class</span> <span class="fn">Agent</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        <span class="cm"># Nudge configuration (from config.yaml)</span>
+        self._memory_nudge_interval = <span class="num">5</span>    <span class="cm"># turns between memory reviews</span>
+        self._skill_nudge_interval = <span class="num">8</span>    <span class="cm"># tool iterations between skill reviews</span>
+        self._turns_since_memory = <span class="num">0</span>
+        self._iters_since_skill = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">run_turn</span>(self, user_input):
+        <span class="cm"># Before the agent loop: check memory nudge</span>
+        self._turns_since_memory += <span class="num">1</span>
+        should_review_memory = (
+            self._turns_since_memory >= self._memory_nudge_interval
+        )
+        <span class="kw">if</span> should_review_memory:
+            self._turns_since_memory = <span class="num">0</span>
+
+        <span class="cm"># Run normal agent loop...</span>
+        response = self._agent_loop(user_input)
+
+        <span class="cm"># After the agent loop: check skill nudge</span>
+        should_review_skills = (
+            self._iters_since_skill >= self._skill_nudge_interval
+        )
+        <span class="kw">if</span> should_review_skills:
+            self._iters_since_skill = <span class="num">0</span>
+
+        <span class="cm"># Counters reset when the agent actually uses the tool</span>
+        <span class="cm"># (not just when the nudge fires)</span>
+
+        <span class="cm"># Spawn background review if either trigger fired</span>
+        <span class="kw">if</span> should_review_memory <span class="kw">or</span> should_review_skills:
+            self._spawn_background_review(
+                review_memory=should_review_memory,
+                review_skills=should_review_skills,
+            )
+
+        <span class="kw">return</span> response</code></pre>
+
+<p>The counters also reset when the agent voluntarily uses the <code>memory</code> or <code>skill_manage</code> tool during normal conversation. If the agent is already saving memories on its own, the nudge does not need to fire.</p>
+
+<h3>Background review: a forked agent on a separate thread</h3>
+
+<p>When a nudge fires, Hermes does not inject a "please review your work" message into the user-facing conversation. Instead, it <strong>forks a new agent instance on a background thread</strong> with a snapshot of the conversation:</p>
+
+<pre data-label="agent.py"><code><span class="kw">def</span> <span class="fn">_spawn_background_review</span>(self, review_memory, review_skills):
+    <span class="kw">import</span> threading
+
+    <span class="cm"># Pick the right prompt</span>
+    <span class="kw">if</span> review_memory <span class="kw">and</span> review_skills:
+        prompt = COMBINED_REVIEW_PROMPT
+    <span class="kw">elif</span> review_memory:
+        prompt = MEMORY_REVIEW_PROMPT
+    <span class="kw">else</span>:
+        prompt = SKILL_REVIEW_PROMPT
+
+    messages_snapshot = <span class="nb">list</span>(self.messages)
+
+    <span class="kw">def</span> <span class="fn">_run</span>():
+        <span class="cm"># Create a new agent with same model and tools</span>
+        review_agent = Agent(model=self.model, max_iterations=<span class="num">6</span>)
+        <span class="cm"># Share the memory/skill stores (thread-safe writes)</span>
+        review_agent.memory_store = self.memory_store
+        <span class="cm"># Disable nudges on the review agent (no infinite recursion)</span>
+        review_agent._memory_nudge_interval = <span class="num">0</span>
+        review_agent._skill_nudge_interval = <span class="num">0</span>
+        <span class="cm"># Run with the conversation snapshot + review prompt</span>
+        review_agent.run(messages_snapshot, prompt)
+
+    threading.Thread(target=_run, daemon=<span class="nb">True</span>).start()</code></pre>
+
+<p>This is a critical design choice: the review <strong>never competes with the user's task for model attention</strong>. The user sees their response immediately. The learning happens silently in the background.</p>
+
+<h3>Compression flush: the third trigger</h3>
+
+<p>When the context window hits 50% capacity, compression kicks in. But before old messages are summarized and discarded, Hermes gives the agent one final chance to save anything important:</p>
+
+<pre data-label="agent.py"><code><span class="kw">def</span> <span class="fn">compress_context</span>(self, messages):
+    <span class="cm"># Step 1: Memory flush -- let the model save memories before they're lost</span>
+    self.flush_memories(messages, min_turns=<span class="num">0</span>)
+
+    <span class="cm"># Step 2: Notify external memory providers</span>
+    <span class="kw">if</span> self.memory_manager:
+        self.memory_manager.on_pre_compress(messages)
+
+    <span class="cm"># Step 3: Now compress (summarize middle, keep head + tail)</span>
+    compressed = self.compressor.compress(messages)</code></pre>
+
+<p><code>flush_memories()</code> appends a <strong>user-role sentinel</strong> containing <code>[System: The session is being compressed. Save anything worth remembering...]</code>. It is a user message, not a system message, so it fits naturally into the conversation flow. The agent gets one API call with the <code>memory</code> tool available. After any saves, all flush artifacts (the sentinel and any tool calls) are stripped from the message list. The user never sees this exchange.</p>
+
+<p>The <code>on_pre_compress()</code> hook notifies external memory providers (like Honcho) so they can also extract insights from the about-to-be-discarded messages.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 520 350" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow3">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arr-fw" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="260" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#555">The Flywheel</text>
+
+  <!-- Elliptical arc arrows -->
+  <path d="M 340 78 A 195 120 0 0 1 420 130" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-fw)"/>
+  <path d="M 450 166 A 195 120 0 0 1 402 264" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-fw)"/>
+  <path d="M 302 300 A 195 120 0 0 1 218 300" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-fw)"/>
+  <path d="M 118 264 A 195 120 0 0 1 88 166" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-fw)"/>
+  <path d="M 100 130 A 195 120 0 0 1 185 78" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr-fw)"/>
+
+  <!-- Annotation labels -->
+  <text x="405" y="90" font-family="Georgia, serif" font-size="9" fill="#94a3b8" font-style="italic">feeds raw material</text>
+  <text x="455" y="218" font-family="Georgia, serif" font-size="9" fill="#94a3b8" font-style="italic">triggers</text>
+  <text x="260" y="332" text-anchor="middle" font-family="Georgia, serif" font-size="9" fill="#94a3b8" font-style="italic">enables precise recall</text>
+  <text x="38" y="218" font-family="Georgia, serif" font-size="9" fill="#94a3b8" font-style="italic" text-anchor="middle">personalizes</text>
+  <text x="105" y="90" font-family="Georgia, serif" font-size="9" fill="#94a3b8" font-style="italic">targets next</text>
+
+  <!-- 1. Memory Curation (blue) -->
+  <rect x="189" y="47" width="142" height="36" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2" filter="url(#shadow3)"/>
+  <text x="260" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#1e40af">Memory Curation</text>
+
+  <!-- 2. Skill Creation (violet) -->
+  <rect x="374" y="130" width="142" height="36" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#shadow3)"/>
+  <text x="445" y="153" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#7c3aed">Skill Creation</text>
+
+  <!-- 3. Skill Improvement (magenta) -->
+  <rect x="304" y="264" width="142" height="36" rx="8" fill="#fdf4ff" stroke="#c026d3" stroke-width="2" filter="url(#shadow3)"/>
+  <text x="375" y="287" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#c026d3">Skill Improvement</text>
+
+  <!-- 4. FTS5 Recall (cyan) -->
+  <rect x="74" y="264" width="142" height="36" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="2" filter="url(#shadow3)"/>
+  <text x="145" y="287" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#0891b2">FTS5 Recall</text>
+
+  <!-- 5. User Profiling (emerald) -->
+  <rect x="4" y="130" width="142" height="36" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="2" filter="url(#shadow3)"/>
+  <text x="75" y="153" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#059669">User Profiling</text>
+
+  <!-- Center label -->
+  <text x="260" y="190" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#cbd5e1" font-style="italic">positive feedback loop</text>
+</svg>
+</div>
+
+<p>Here is how the chain works:</p>
+
+<ol class="steps">
+  <li><strong>Memory curation feeds Skill creation.</strong> The observations stored in memory provide the raw material. The agent notices "I've done this CSV import three times now" because it can search past sessions.</li>
+  <li><strong>Skill usage generates new memories.</strong> Every time a Skill runs, the results (success, failure, user corrections) get recorded in session memory, triggering potential Skill improvements.</li>
+  <li><strong>Improved Skills produce better results.</strong> Better results mean the user is satisfied more often, which means fewer corrections, which means the agent's user model becomes more accurate.</li>
+  <li><strong>Better user modeling makes memory curation more targeted.</strong> The agent knows what this specific user cares about, so it saves observations that are genuinely relevant.</li>
+  <li><strong>More targeted memories feed better Skill creation.</strong> And the loop continues.</li>
+</ol>
+
+<p>This is a <strong>positive feedback loop</strong>. The more you use it, the stronger every step gets. Use it for three to five days, and you will notice a clear difference.</p>
+
+<h3>The review prompts</h3>
+
+<p>The background review agent receives one of three prompts depending on which triggers fired:</p>
+
+<div class="note">
+  <span class="label">Memory review prompt (actual)</span>
+  "Review the conversation above and consider saving to memory if appropriate. Focus on: Has the user revealed things about themselves -- their persona, desires, preferences, or personal details worth remembering? Has the user expressed expectations about how you should behave? If something stands out, save it using the memory tool. If nothing is worth saving, just say 'Nothing to save.' and stop."
+</div>
+
+<div class="note">
+  <span class="label">Skill review prompt (actual)</span>
+  "Review the conversation above and consider saving or updating a skill if appropriate. Focus on: was a non-trivial approach used to complete a task that required trial and error, or changing course due to experiential findings? If a relevant skill already exists, update it with what you learned. Otherwise, create a new skill if the approach is reusable."
+</div>
+
+<p>When both triggers fire simultaneously, a combined prompt covers both. The review agent has a low iteration budget (max 8) to prevent runaway costs.</p>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Two nudge counters + compression flush. Background thread with forked agent. Configurable intervals.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Same architecture, plus: nudge counters persist across <code>run_conversation()</code> calls in CLI mode. External memory providers get <code>on_session_end()</code>, <code>on_pre_compress()</code>, and <code>on_delegation()</code> hooks. Review agent stdout/stderr redirected to <code>/dev/null</code>. Memory flush injects a system message, executes one API call, then strips all artifacts.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>run_agent.py</code> lines 2034-2115 (<code>_spawn_background_review</code>), lines 6390-6420 (<code>flush_memories</code>), lines 7629-7638 (nudge logic), lines 10218-10246 (post-turn trigger)</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 14 -->
+<!-- ============================================================ -->
+<h2 id="ch14"><span class="chapter-num">14</span> Context Compression</h2>
+
+<p class="chapter-intro">Long conversations blow up the context window. Compression keeps the agent running without hitting token limits.</p>
+
+<p>LLMs have a fixed context window (128K tokens for many current models, but costs scale linearly). A long coding session can easily hit 50K+ tokens. Without compression, the agent either crashes or becomes very expensive.</p>
+
+<p>Hermes implements a <strong>middle-out compression</strong> strategy:</p>
+
+<ol class="steps">
+  <li><strong>Protect the head.</strong> The first 3 messages (system prompt + initial user message + first assistant response) are never compressed. They contain the identity and task context.</li>
+  <li><strong>Protect the tail.</strong> The most recent ~20K tokens are kept intact. This is the active working context.</li>
+  <li><strong>Compress the middle.</strong> Everything between head and tail is summarized by a cheap, fast LLM into a structured summary.</li>
+</ol>
+
+<pre data-label="compression.py"><code><span class="kw">class</span> <span class="fn">ContextCompressor</span>:
+    THRESHOLD = <span class="num">0.5</span>  <span class="cm"># Trigger at 50% of context window</span>
+    TAIL_TOKENS = <span class="num">20000</span>
+    HEAD_MESSAGES = <span class="num">3</span>
+
+    <span class="kw">def</span> <span class="fn">maybe_compress</span>(self, messages, max_tokens):
+        estimated = self._estimate_tokens(messages)
+        <span class="kw">if</span> estimated < max_tokens * self.THRESHOLD:
+            <span class="kw">return</span> messages  <span class="cm"># No compression needed</span>
+
+        head = messages[:self.HEAD_MESSAGES]
+        tail = self._get_tail(messages, self.TAIL_TOKENS)
+        middle = messages[self.HEAD_MESSAGES:-<span class="nb">len</span>(tail)]
+
+        <span class="kw">if not</span> middle:
+            <span class="kw">return</span> messages
+
+        <span class="cm"># Summarize the middle section</span>
+        summary = self._summarize_middle(middle)
+
+        <span class="kw">return</span> head + [{
+            <span class="st">"role"</span>: <span class="st">"system"</span>,
+            <span class="st">"content"</span>: <span class="st">f"[Compressed context summary]\n{summary}"</span>
+        }] + tail
+
+    <span class="kw">def</span> <span class="fn">_summarize_middle</span>(self, messages) -> <span class="nb">str</span>:
+        transcript = <span class="st">"\n"</span>.join(
+            <span class="st">f"{m['role']}: {m.get('content', '[tool call]')[:200]}"</span>
+            <span class="kw">for</span> m <span class="kw">in</span> messages
+        )
+        resp = self.aux_client.chat.completions.create(
+            model=self.aux_model,
+            messages=[{
+                <span class="st">"role"</span>: <span class="st">"system"</span>,
+                <span class="st">"content"</span>: <span class="st">"Summarize this conversation segment. Include:\n"
+                    "- Questions that were resolved\n"
+                    "- Decisions that were made\n"
+                    "- Pending work items\n"
+                    "- Key facts discovered\n"
+                    "Be concise. Under 500 words."</span>
+            }, {
+                <span class="st">"role"</span>: <span class="st">"user"</span>,
+                <span class="st">"content"</span>: transcript
+            }],
+            max_tokens=<span class="num">800</span>,
+        )
+        <span class="kw">return</span> resp.choices[<span class="num">0</span>].message.content</code></pre>
+
+<p>Before compression happens, two things fire (as described in Chapter 13): <code>flush_memories()</code> gives the agent one API call to save important observations, and <code>on_pre_compress()</code> notifies external memory providers. This way, facts are not lost to summarization.</p>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Threshold-based trigger. Protect head (3 messages) + tail (~20K tokens). Summarize middle via cheap LLM.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Same core strategy, plus: <code>flush_memories()</code> before compression (one extra API call to save facts). <code>on_pre_compress()</code> hook for external memory providers. Iterative re-compression: if the summary from a previous compression is in the middle, it gets re-summarized. Structured summary template (Resolved/Pending/Remaining Work). System prompt invalidation + memory reload after compression.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>agent/context_compressor.py</code>, <code>run_agent.py</code> lines 6564-6579 (compression trigger with memory flush)</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 15 -->
+<!-- ============================================================ -->
+<h2 id="ch15"><span class="chapter-num">15</span> Building the CLI and Gateway</h2>
+
+<p class="chapter-intro">The interface. Where the user meets the agent.</p>
+
+<h3>The CLI</h3>
+
+<p>The minimal CLI is a read-eval-print loop that initializes the agent and feeds it user input:</p>
+
+<pre data-label="cli.py"><code><span class="kw">import</span> yaml
+<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="kw">def</span> <span class="fn">main</span>():
+    <span class="cm"># Load config</span>
+    config_path = Path.home() / <span class="st">".mini-hermes"</span> / <span class="st">"config.yaml"</span>
+    config = yaml.safe_load(config_path.read_text())
+
+    <span class="cm"># Initialize components</span>
+    client = OpenAI(
+        api_key=config[<span class="st">"model"</span>][<span class="st">"api_key"</span>],
+        base_url=config[<span class="st">"model"</span>].get(<span class="st">"base_url"</span>),
+    )
+    data_dir = Path.home() / <span class="st">".mini-hermes"</span>
+
+    session_db = SessionDB(data_dir / <span class="st">"state.db"</span>)
+    persistent = PersistentMemory(data_dir)
+    skill_loader = SkillLoader(data_dir / <span class="st">"skills"</span>)
+
+    <span class="cm"># Build system prompt ONCE (frozen snapshot for the session)</span>
+    builder = PromptBuilder()
+    system_prompt = builder.build(
+        memory_block=persistent.load(),  <span class="cm"># frozen at session start</span>
+        skills_index=skill_loader.build_skills_index(),
+        user_context=<span class="st">""</span>,
+    )
+
+    <span class="cm"># Create session</span>
+    session_id = session_db.create_session()
+
+    <span class="cm"># Create agent with frozen system prompt</span>
+    agent = HermesAgent(
+        client=client,
+        model=config[<span class="st">"model"</span>][<span class="st">"model"</span>],
+        system_prompt=system_prompt,  <span class="cm"># not rebuilt per turn</span>
+        tools=registry.get_schemas(),
+        tool_handlers={t.name: t.handler <span class="kw">for</span> t <span class="kw">in</span> registry._tools.values()},
+    )
+    agent.session_db = session_db
+    agent.session_id = session_id
+
+    <span class="cm"># REPL</span>
+    <span class="nb">print</span>(<span class="st">"Mini-Hermes ready. Type 'exit' to quit.\n"</span>)
+    <span class="kw">while</span> <span class="nb">True</span>:
+        user_input = <span class="nb">input</span>(<span class="st">"you > "</span>).strip()
+        <span class="kw">if</span> user_input.lower() <span class="kw">in</span> (<span class="st">"exit"</span>, <span class="st">"quit"</span>):
+            <span class="kw">break</span>
+        <span class="kw">if not</span> user_input:
+            <span class="kw">continue</span>
+
+        response = agent.run_with_learning(user_input)
+        <span class="nb">print</span>(<span class="st">f"\nhermes > {response}\n"</span>)
+
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    main()</code></pre>
+
+<h3>Extending to Telegram</h3>
+
+<p>Hermes supports 14 platforms through a single <strong>Messaging Gateway</strong>: one process that listens to all configured platforms simultaneously. The key design decision is that all platforms share the <strong>same memory database, the same skills directory, and the same session store</strong>.</p>
+
+<p>However, the gateway does <strong>not</strong> keep a single agent instance alive. It creates a <strong>fresh agent object per message</strong>, loading the stored system prompt from the session DB so the Anthropic prefix cache still hits. This is an important distinction: session continuity comes from the database, not from a long-lived object in memory.</p>
+
+<pre data-label="gateway.py"><code><span class="kw">from</span> telegram.ext <span class="kw">import</span> Application, MessageHandler, filters
+
+<span class="kw">async def</span> <span class="fn">handle_message</span>(update, context):
+    user_text = update.message.text
+
+    <span class="cm"># Create a fresh agent per message (like real Hermes gateway)</span>
+    <span class="cm"># The session DB provides continuity, not a long-lived object</span>
+    session_id = get_or_create_session(update.effective_user.id)
+    agent = HermesAgent(
+        client=client,
+        model=config[<span class="st">"model"</span>][<span class="st">"model"</span>],
+        system_prompt=load_system_prompt_from_session(session_id),
+        tools=registry.get_schemas(),
+        tool_handlers={t.name: t.handler <span class="kw">for</span> t <span class="kw">in</span> registry._tools.values()},
+    )
+    agent.session_db = session_db
+    agent.session_id = session_id
+
+    response = agent.run_with_learning(user_text)
+    <span class="kw">await</span> update.message.reply_text(response)
+
+app = Application.builder().token(config[<span class="st">"gateway"</span>][<span class="st">"telegram"</span>][<span class="st">"token"</span>]).build()
+app.add_handler(MessageHandler(filters.TEXT, handle_message))
+app.run_polling()</code></pre>
+
+<p>Deploy this on a $5 VPS and you have a 24/7 AI assistant reachable from your phone, with persistent memory across every conversation.</p>
+
+<div class="hermes-compare">
+  <div class="compare-header">Minimal version vs. real Hermes</div>
+  <div class="compare-body">
+    <div class="compare-col">
+      <span class="col-label">This book</span>
+      Fresh agent per message. System prompt loaded from session DB. Single-user Telegram bot.
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Hermes v0.8</span>
+      Gateway process (<code>hermes gateway</code>) with platform adapters for 14 services. Session routing tied to user IDs, not platforms. Cron ticking for scheduled tasks. Cross-platform conversation continuity. Fresh <code>AIAgent</code> per message with stored system prompt from session DB for cache consistency.
+    </div>
+  </div>
+</div>
+
+<div class="chapter-cite">Source: <code>gateway/run.py</code>, <code>run_agent.py</code> lines 7650-7677 (system prompt caching on continuation)</div>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 16 -->
+<!-- ============================================================ -->
+<h2 id="ch16"><span class="chapter-num">16</span> What You Built and Where to Go Next</h2>
+
+<p class="chapter-intro">A review of the complete system, and pointers to everything we left out.</p>
+
+<h3>What you have</h3>
+
+<p>By following this guide, you have built a minimal but complete self-improving AI agent. Here is the component map:</p>
+
+<table>
+  <tr><th>Component</th><th>What it does</th><th>Hermes equivalent</th></tr>
+  <tr><td>Agent Loop</td><td>Message -> tools -> response cycle</td><td><code>run_agent.py</code></td></tr>
+  <tr><td>Tool Registry</td><td>Register, schema, dispatch tools</td><td><code>tools/registry.py</code></td></tr>
+  <tr><td>Prompt Builder</td><td>Assemble identity + memory + skills</td><td><code>agent/prompt_builder.py</code></td></tr>
+  <tr><td>Prompt Caching</td><td>system_and_3 cache breakpoints</td><td><code>agent/prompt_caching.py</code></td></tr>
+  <tr><td>Session DB</td><td>SQLite + FTS5 conversation storage</td><td><code>hermes_state.py</code></td></tr>
+  <tr><td>Persistent Memory</td><td>MEMORY.md / USER.md</td><td>Built-in memory provider</td></tr>
+  <tr><td>Session Recall</td><td>FTS5 search + LLM summarization</td><td><code>tools/session_search_tool.py</code></td></tr>
+  <tr><td>Skill Tools</td><td><code>skills_list</code> / <code>skill_view</code> / <code>skill_manage</code></td><td><code>tools/skills_tool.py</code>, <code>tools/skill_manager_tool.py</code></td></tr>
+  <tr><td>Learning Loop</td><td>Nudge counters + background review + compression flush</td><td><code>run_agent.py</code> (<code>_spawn_background_review</code>)</td></tr>
+  <tr><td>Compression</td><td>Middle-out context window management</td><td><code>agent/context_compressor.py</code></td></tr>
+  <tr><td>CLI</td><td>Terminal interface</td><td><code>cli.py</code></td></tr>
+</table>
+
+<h3>What we left out</h3>
+
+<p>The real Hermes has substantially more. Here is what to explore next, in order of impact:</p>
+
+<h4>Sub-agent delegation</h4>
+<p>Hermes can spawn up to 3 concurrent sub-agents, each with its own context and restricted toolset. Useful for parallel research (one agent per topic) or separating concerns (one codes, one tests, one reviews). The key insight: sub-agents get <em>restricted</em> tool access for both efficiency and security.</p>
+
+<h4>MCP integration</h4>
+<p>Model Context Protocol lets the agent connect to 6,000+ external applications (GitHub, Slack, Jira, databases) via a standard protocol. Each MCP server is a separate process, communicating over stdio or HTTP.</p>
+
+<h4>Honcho user modeling</h4>
+<p>An optional external integration that goes beyond what you said to infer <em>what kind of person you are</em>. It tracks 12 identity layers including technical level, work rhythm, communication style, and preference contradictions. The inferences are injected as invisible context.</p>
+
+<h4>Cron scheduling</h4>
+<p>Natural-language scheduled tasks. "Check my GitHub notifications every morning at 9am" creates a timed trigger. Results are delivered through the Messaging Gateway.</p>
+
+<h4>Multi-model orchestration</h4>
+<p>The <code>moa</code> tool calls multiple LLMs simultaneously and synthesizes their responses. Useful for high-stakes decisions where you want diverse perspectives.</p>
+
+<h4>Reinforcement learning</h4>
+<p>Hermes has experimental RL support for fine-tuning the agent's decision-making. This is a research frontier, not yet stable.</p>
+
+<hr>
+
+<h3>The ceiling of self-improvement</h3>
+
+<p>Self-improvement makes the agent run faster in a known direction. But the direction itself still needs a human to set. The agent can optimize its git commit format, but it cannot judge whether the architecture of your system is sound. It can learn your preferences, but it can learn wrong ones too.</p>
+
+<p>The Learning Loop relies on feedback quality. When you provide clear corrections ("add Discussions to the GitHub digest"), the system works beautifully. When you say nothing, the agent evaluates itself using its own criteria. "Faster" does not always mean "correct."</p>
+
+<p>This is worth keeping in mind as you extend your minimal agent. The mechanisms work. The question is always whether they are pointed in the right direction.</p>
+
+<div class="key-idea">
+  <span class="label">Final thought</span>
+  The tools in this guide are not theoretical. Every component maps to real, running code. What you have built is a skeleton key to understanding agent architectures like Hermes. Read it. Modify it. Make it your own. The most powerful AI tools are the ones you understand end to end.
+</div>
+
+</div><!-- end page-content -->
+
+<!-- ============================================================ -->
+<!-- SIDE NAVIGATION -->
+<!-- ============================================================ -->
+<nav class="side-nav" id="side-nav">
+  <div class="sn-part">I. The Machine</div>
+  <a href="#ch01">01 What Hermes Is</a>
+  <a href="#ch02">02 Architecture</a>
+  <div class="sn-part">II. Agent Loop</div>
+  <a href="#ch03">03 Agent Loop</a>
+  <a href="#ch04">04 Tool Registry</a>
+  <a href="#ch05">05 Prompt Building</a>
+  <a href="#ch06">06 Prompt Caching</a>
+  <div class="sn-part">III. Memory</div>
+  <a href="#ch07">07 Session DB</a>
+  <a href="#ch08">08 Persistent Memory</a>
+  <a href="#ch09">09 Cross-Session Recall</a>
+  <div class="sn-part">IV. Skills</div>
+  <a href="#ch10">10 Skill System</a>
+  <a href="#ch11">11 Skill Creation</a>
+  <a href="#ch12">12 Self-Improvement</a>
+  <div class="sn-part">V. All Together</div>
+  <a href="#ch13">13 Learning Loop</a>
+  <a href="#ch14">14 Compression</a>
+  <a href="#ch15">15 CLI &amp; Gateway</a>
+  <a href="#ch16">16 What's Next</a>
+</nav>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+<script>
+(function() {
+  var headings = document.querySelectorAll('h2[id^="ch"]');
+  var links = document.querySelectorAll('.side-nav a[href^="#ch"]');
+  if (!headings.length || !links.length) return;
+
+  var linkMap = {};
+  links.forEach(function(a) { linkMap[a.getAttribute('href').slice(1)] = a; });
+
+  var current = null;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        if (current) current.classList.remove('active');
+        var a = linkMap[entry.target.id];
+        if (a) { a.classList.add('active'); current = a; }
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  headings.forEach(function(h) { observer.observe(h); });
+
+  links.forEach(function(a) {
+    a.addEventListener('click', function() {
+      if (current) current.classList.remove('active');
+      a.classList.add('active');
+      current = a;
+    });
+  });
+
+  if (links[0]) { links[0].classList.add('active'); current = links[0]; }
+})();
+</script>
+</body>
+</html>
