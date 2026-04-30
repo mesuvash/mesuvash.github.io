@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XB18VJ73B7');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Semantic IDs: Replacing Random Item IDs with Content-Derived Tokens</title>
+    <meta property="og:title" content="Semantic IDs: Replacing Random Item IDs with Content-Derived Tokens" />
+    <meta property="og:description" content="How YouTube compresses video content embeddings into hierarchical discrete tokens with RQ-VAE, and uses SentencePiece tokenization to plug them into production ranking models." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/semantic-ids/" />
+    <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Semantic IDs: Replacing Random Item IDs with Content-Derived Tokens" />
+    <meta name="twitter:description" content="How YouTube compresses video content embeddings into hierarchical discrete tokens with RQ-VAE, and uses SentencePiece tokenization to plug them into production ranking models." />
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <style>
+        .sid-table td, .sid-table th { text-align: center; padding: 8px 12px; }
+        .sid-table .highlight-cell { background: #f0f4ff; font-weight: 600; color: #1e40af; }
+        .sid-codes { font-family: monospace; font-size: 15px; letter-spacing: 1px; }
+        .anim-wrap { margin: 24px 0; }
+        .anim-wrap video { width: 100%; max-width: 720px; display: block; border: 1px solid #e0e0e0; border-radius: 6px; }
+        .anim-caption { color: #555; font-style: italic; font-size: 14px; margin-top: 6px; }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Semantic IDs: Replacing Random Item IDs with Content-Derived Tokens</h1>
+    <p class="post-meta">April 29, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/">LinkedIn</a></p>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+A detailed walkthrough of <a href="https://arxiv.org/abs/2306.08121">Singh et al., 2023</a>: how YouTube compresses a 2048-dim video embedding into 8 integer tokens using RQ-VAE, then plugs those tokens into a production ranking model via SentencePiece, improving cold-start recommendations without replacing the ID embedding table entirely.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#motivation">Why Random Item IDs Are a Problem</a></li>
+        <li><a href="#big-picture">Big Picture: Two Stages</a></li>
+        <li><a href="#rqvae">Stage 1: RQ-VAE for Semantic IDs</a></li>
+        <li><a href="#codebook-collapse">Handling Codebook Collapse</a></li>
+        <li><a href="#pytorch">RQ-VAE in PyTorch</a></li>
+        <li><a href="#adaptation">Stage 2: Using Semantic IDs in the Ranking Model</a></li>
+        <li><a href="#ngram-vs-spm">N-gram vs. SentencePiece Tokenization</a></li>
+        <li><a href="#results">Experimental Results</a></li>
+        <li><a href="#hierarchy">Hierarchy: What the Tokens Actually Capture</a></li>
+        <li><a href="#practical">Practical Notes</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="motivation">1. Why Random Item IDs Are a Problem</h2>
+
+<p>
+Almost every production recommender system keeps a giant embedding table indexed by item ID. The ID itself is a random string (a <code>video_id</code>, a <code>product_id</code>) with no semantic meaning. The model learns an embedding per item from interaction data, and that embedding stores everything the model knows about the item: its quality, its audience, its engagement patterns.
+</p>
+
+<p>
+This works beautifully for head items with millions of interactions. It breaks for three situations:
+</p>
+
+<ul>
+    <li><strong>New items.</strong> A video uploaded an hour ago has no training signal. Its embedding is either freshly-initialized noise or a random-hashed collision with unrelated videos.</li>
+    <li><strong>Long-tail items.</strong> Most items in a power-law catalog have few interactions. Their embeddings never converge to anything meaningful.</li>
+    <li><strong>Evolving catalogs.</strong> YouTube adds hundreds of hours of video per minute. The ID-to-embedding mapping is always chasing a moving target.</li>
+</ul>
+
+<p>
+The natural fix is to replace the ID with a <strong>content embedding</strong>: take the video, run it through a pre-trained encoder, use the resulting vector as the item representation. Content embeddings generalize by construction: two videos about cooking sushi land near each other in embedding space, regardless of whether the model has seen either before.
+</p>
+
+<p>
+But when the authors at YouTube tried this directly, quality <em>dropped</em>. The ranking model had been relying on the ID embedding table for memorization, the per-item quality signal that a fixed content embedding cannot carry. Making up for it by making the MLP deeper helped, but at a cost: 1.5x to 2x more layers, which means 1.5x to 2x more serving compute on a system that runs at millions of QPS.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> ID embeddings and content embeddings solve different problems. ID embeddings <em>memorize</em> how specific items perform. Content embeddings <em>generalize</em> what similar items look like. Neither alone is enough. The question is: can we get both, cheaply?
+</div>
+
+<p>
+Semantic IDs are the answer. Instead of using a fixed content embedding as input, you compress the content embedding into a short sequence of discrete tokens, then learn an embedding table indexed by those tokens. Similar items share tokens, so they share embeddings (generalization). But each token still has its own learnable vector, so the model can still memorize what each semantic cluster tends to do (memorization). The embedding table is small because the token vocabulary is small.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">2. Big Picture: Two Stages</h2>
+
+<p>
+The system has two decoupled stages. Stage 1 trains a quantizer that turns a content embedding into a token sequence. Stage 2 trains the ranking model with those token sequences as features. Stage 1 runs once and is frozen. Stage 2 runs continuously on fresh logged data.
+</p>
+
+<div class="diagram">
+<svg width="520" height="560" viewBox="0 0 520 560" xmlns="http://www.w3.org/2000/svg" style="font-family: Georgia, serif;">
+    <defs>
+        <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
+        </marker>
+        <filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>
+    </defs>
+
+    <!-- Stage 1 label -->
+    <text x="260" y="25" text-anchor="middle" font-size="14" fill="#555" font-style="italic">Stage 1: train once, then freeze</text>
+    <rect x="20" y="40" width="480" height="220" rx="12" fill="#fafafa" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4"/>
+
+    <!-- Video -->
+    <rect x="60" y="70" width="140" height="44" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="130" y="96" text-anchor="middle" font-size="13" fill="#333">Video (raw media)</text>
+
+    <!-- arrow -->
+    <line x1="200" y1="92" x2="238" y2="92" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- Video encoder -->
+    <rect x="240" y="70" width="170" height="44" rx="8" fill="#fff" stroke="#333" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="89" text-anchor="middle" font-size="13" fill="#333">Frozen video encoder</text>
+    <text x="325" y="104" text-anchor="middle" font-size="11" fill="#888" font-style="italic">VideoBERT</text>
+
+    <!-- 2048-dim embedding -->
+    <line x1="325" y1="114" x2="325" y2="138" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <rect x="240" y="140" width="170" height="40" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="165" text-anchor="middle" font-size="13" fill="#333">2048-dim embedding $x$</text>
+
+    <!-- arrow -->
+    <line x1="325" y1="180" x2="325" y2="204" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- RQ-VAE -->
+    <rect x="240" y="206" width="170" height="44" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="225" text-anchor="middle" font-size="13" fill="#1e40af" font-weight="600">RQ-VAE quantizer</text>
+    <text x="325" y="240" text-anchor="middle" font-size="11" fill="#1e40af" font-style="italic">L=8 levels, K=2048</text>
+
+    <!-- Stage 2 label -->
+    <text x="260" y="290" text-anchor="middle" font-size="14" fill="#555" font-style="italic">Stage 2: train ranking model continuously</text>
+    <rect x="20" y="305" width="480" height="235" rx="12" fill="#fafafa" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4"/>
+
+    <!-- arrow from stage 1 to stage 2 -->
+    <line x1="325" y1="250" x2="325" y2="340" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- Semantic ID -->
+    <rect x="210" y="342" width="230" height="40" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="360" text-anchor="middle" font-size="13" fill="#166534" font-weight="600">Semantic ID</text>
+    <text x="325" y="375" text-anchor="middle" font-size="12" fill="#166534" font-family="monospace">(1, 4, 6, 2, 7, 3, 1, 5)</text>
+
+    <!-- arrow -->
+    <line x1="325" y1="382" x2="325" y2="408" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- Tokenizer -->
+    <rect x="240" y="410" width="170" height="44" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="429" text-anchor="middle" font-size="13" fill="#1e40af" font-weight="600">SPM tokenizer</text>
+    <text x="325" y="444" text-anchor="middle" font-size="11" fill="#1e40af" font-style="italic">subword grouping</text>
+
+    <!-- arrow -->
+    <line x1="325" y1="454" x2="325" y2="478" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- Ranking model -->
+    <rect x="200" y="480" width="250" height="44" rx="8" fill="#fff" stroke="#333" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="325" y="499" text-anchor="middle" font-size="13" fill="#333">Multitask ranking model</text>
+    <text x="325" y="514" text-anchor="middle" font-size="11" fill="#888" font-style="italic">CTR, watch time, ...</text>
+
+    <!-- Side annotation: other features -->
+    <rect x="40" y="410" width="140" height="44" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="110" y="429" text-anchor="middle" font-size="12" fill="#333">User features,</text>
+    <text x="110" y="444" text-anchor="middle" font-size="12" fill="#333">other context</text>
+    <line x1="180" y1="460" x2="230" y2="490" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
+</div>
+
+<p>
+Three things to notice:
+</p>
+
+<ul>
+    <li>The video encoder is trained separately (using graph clustering techniques, not recommendation feedback) and frozen. The RQ-VAE is also frozen once trained. Only the embedding table indexed by Semantic ID tokens, and the rest of the ranking model, keep learning.</li>
+    <li>The Semantic ID is a short sequence of integers: 8 tokens for YouTube, each from a vocabulary of 2048. That is tiny compared to a 2048-dim dense embedding, which matters when you need to store a user's entire watch history.</li>
+    <li>The tokenizer in Stage 2 is the key production trick. A naive approach (one embedding per token, summed across positions) wastes the hierarchy. SentencePiece learns <em>which token combinations</em> are worth their own embedding.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="rqvae">3. Stage 1: RQ-VAE for Semantic IDs</h2>
+
+<p>
+Residual-Quantized Variational AutoEncoder (RQ-VAE) is a hierarchical vector quantizer. It takes a continuous vector, encodes it into a latent, then approximates that latent by a <em>sum of codebook vectors</em>, one per level. The indices of the chosen codebook vectors become the discrete tokens.
+</p>
+
+<h3>Architecture</h3>
+
+<p>
+The YouTube setup uses a compact encoder/decoder:
+</p>
+
+<ul>
+    <li><strong>Encoder $E$</strong>: 1-layer MLP that maps the content embedding $x \in \mathbb{R}^{2048}$ to a latent $z \in \mathbb{R}^{256}$.</li>
+    <li><strong>Residual quantizer</strong>: $L = 8$ levels, each with a codebook $\mathcal{C}_l = \{e^l_k\}_{k=1}^{K}$ of $K = 2048$ vectors in $\mathbb{R}^{256}$.</li>
+    <li><strong>Decoder $D$</strong>: 1-layer MLP that maps the quantized latent $\hat{z}$ back to $\hat{x} \in \mathbb{R}^{2048}$.</li>
+</ul>
+
+<p>
+The whole RQ-VAE has roughly $2 \times 8 \times 2048 \times 256 \approx 8.4\text{M}$ codebook parameters, plus the tiny encoder/decoder. That is a rounding error compared to the ranking model it feeds.
+</p>
+
+<h3>The residual quantization procedure</h3>
+
+<p>
+Given the latent $z$, the quantizer walks down the levels, at each step picking the codebook vector closest to the current residual and subtracting it:
+</p>
+
+<div class="steps">
+    <div class="step"><strong>Initialize</strong> $r_1 = z$.</div>
+    <div class="step"><strong>At level $l$</strong>, find the code $c_l = \arg\min_k \|r_l - e^l_k\|^2$. The token at level $l$ is $c_l$.</div>
+    <div class="step"><strong>Update the residual</strong>: $r_{l+1} = r_l - e^l_{c_l}$. Pass it to the next level.</div>
+    <div class="step"><strong>After $L$ levels</strong>, the quantized latent is $\hat{z} = \sum_{l=1}^{L} e^l_{c_l}$, and the Semantic ID is the sequence $(c_1, c_2, \dots, c_L)$.</div>
+</div>
+
+<div class="diagram">
+<svg width="560" height="440" viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg" style="font-family: Georgia, serif;">
+    <defs>
+        <marker id="arrow-rq" viewBox="0 0 10 7" refX="10" refY="3.5"
+                markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
+        </marker>
+        <marker id="arrow-blue" viewBox="0 0 10 7" refX="10" refY="3.5"
+                markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#2563eb"/>
+        </marker>
+        <marker id="arrow-green" viewBox="0 0 10 7" refX="10" refY="3.5"
+                markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#16a34a"/>
+        </marker>
+        <filter id="shadow-rq">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+        </filter>
+    </defs>
+
+    <!-- Column headers -->
+    <text x="80" y="22" text-anchor="middle" font-size="13" fill="#555" font-style="italic">residual</text>
+    <text x="280" y="22" text-anchor="middle" font-size="13" fill="#555" font-style="italic">nearest code + index</text>
+    <text x="480" y="22" text-anchor="middle" font-size="13" fill="#555" font-style="italic">next residual</text>
+
+    <!-- =============== LEVEL 1 =============== -->
+    <rect x="30" y="50" width="100" height="38" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="80" y="74" text-anchor="middle" font-size="15" fill="#1e40af" font-weight="600">
+        r<tspan font-size="11" dy="4">1</tspan><tspan dy="-4"> = z</tspan>
+    </text>
+
+    <line x1="130" y1="69" x2="228" y2="69" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+    <text x="178" y="62" text-anchor="middle" font-size="11" fill="#555" font-style="italic">argmin</text>
+
+    <rect x="230" y="50" width="100" height="38" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="280" y="74" text-anchor="middle" font-size="15" fill="#166534" font-weight="600">
+        e<tspan font-size="11" dy="4">c₁</tspan><tspan dy="-8" font-size="11">1</tspan>
+    </text>
+    <text x="280" y="105" text-anchor="middle" font-size="12" fill="#166534" font-style="italic">token c₁ = 1</text>
+
+    <line x1="330" y1="69" x2="428" y2="69" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+    <text x="378" y="62" text-anchor="middle" font-size="13" fill="#555">subtract</text>
+
+    <rect x="430" y="50" width="100" height="38" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="480" y="74" text-anchor="middle" font-size="15" fill="#1e40af" font-weight="600">
+        r<tspan font-size="11" dy="4">2</tspan>
+    </text>
+
+    <line x1="480" y1="88" x2="480" y2="130" stroke="#888" stroke-width="1.5"/>
+    <line x1="480" y1="130" x2="80" y2="130" stroke="#888" stroke-width="1.5"/>
+    <line x1="80" y1="130" x2="80" y2="148" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+
+    <!-- =============== LEVEL 2 =============== -->
+    <rect x="30" y="150" width="100" height="38" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="80" y="174" text-anchor="middle" font-size="15" fill="#1e40af" font-weight="600">
+        r<tspan font-size="11" dy="4">2</tspan>
+    </text>
+
+    <line x1="130" y1="169" x2="228" y2="169" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+    <text x="178" y="162" text-anchor="middle" font-size="11" fill="#555" font-style="italic">argmin</text>
+
+    <rect x="230" y="150" width="100" height="38" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="280" y="174" text-anchor="middle" font-size="15" fill="#166534" font-weight="600">
+        e<tspan font-size="11" dy="4">c₂</tspan><tspan dy="-8" font-size="11">2</tspan>
+    </text>
+    <text x="280" y="205" text-anchor="middle" font-size="12" fill="#166534" font-style="italic">token c₂ = 4</text>
+
+    <line x1="330" y1="169" x2="428" y2="169" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+    <text x="378" y="162" text-anchor="middle" font-size="13" fill="#555">subtract</text>
+
+    <rect x="430" y="150" width="100" height="38" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="480" y="174" text-anchor="middle" font-size="15" fill="#1e40af" font-weight="600">
+        r<tspan font-size="11" dy="4">3</tspan>
+    </text>
+
+    <line x1="480" y1="188" x2="480" y2="230" stroke="#888" stroke-width="1.5"/>
+    <line x1="480" y1="230" x2="80" y2="230" stroke="#888" stroke-width="1.5"/>
+    <line x1="80" y1="230" x2="80" y2="248" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+
+    <!-- =============== Dots indicating more levels =============== -->
+    <text x="80" y="265" text-anchor="middle" font-size="20" fill="#888">⋮</text>
+    <text x="280" y="265" text-anchor="middle" font-size="20" fill="#888">⋮</text>
+    <text x="480" y="265" text-anchor="middle" font-size="20" fill="#888">⋮</text>
+
+    <line x1="80" y1="275" x2="80" y2="298" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+
+    <!-- =============== LEVEL L (=8) =============== -->
+    <rect x="30" y="300" width="100" height="38" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="80" y="324" text-anchor="middle" font-size="15" fill="#1e40af" font-weight="600">
+        r<tspan font-size="11" dy="4">8</tspan>
+    </text>
+
+    <line x1="130" y1="319" x2="228" y2="319" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+    <text x="178" y="312" text-anchor="middle" font-size="11" fill="#555" font-style="italic">argmin</text>
+
+    <rect x="230" y="300" width="100" height="38" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="280" y="324" text-anchor="middle" font-size="15" fill="#166534" font-weight="600">
+        e<tspan font-size="11" dy="4">c₈</tspan><tspan dy="-8" font-size="11">8</tspan>
+    </text>
+    <text x="280" y="355" text-anchor="middle" font-size="12" fill="#166534" font-style="italic">token c₈ = 5</text>
+
+    <line x1="330" y1="319" x2="428" y2="319" stroke="#888" stroke-width="1.5" marker-end="url(#arrow-rq)"/>
+    <text x="378" y="312" text-anchor="middle" font-size="11" fill="#555" font-style="italic">stop</text>
+
+    <rect x="430" y="300" width="100" height="38" rx="8" fill="#f9fafb" stroke="#bbb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="480" y="324" text-anchor="middle" font-size="13" fill="#333">tiny r₉</text>
+
+    <rect x="30" y="382" width="500" height="46" rx="10" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow-rq)"/>
+    <text x="280" y="402" text-anchor="middle" font-size="14" fill="#1e40af" font-weight="600">
+        Semantic ID = (c₁, c₂, …, c₈) = (1, 4, …, 5)
+    </text>
+    <text x="280" y="420" text-anchor="middle" font-size="12" fill="#1e40af" font-style="italic">
+        quantized latent ẑ = e¹_c₁ + e²_c₂ + … + e⁸_c₈
+    </text>
+</svg>
+</div>
+
+<p>
+The key word is <strong>residual</strong>. Level 1 captures the coarsest structure of $z$. Level 2 captures what level 1 missed. Level 3 refines further. By level 8, the sum $\hat{z}$ is a close approximation of $z$, and the 8 indices together specify the video at whatever granularity matters.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of it like rounding a real number with a series of increasingly fine rulers. The first ruler gets you to the nearest 100. The next ruler gets you to the nearest 10 <em>relative to that hundred</em>. The next gets you to the nearest 1. After enough rulers, you have the exact number, and the sequence of ruler readings identifies it uniquely.
+</div>
+
+<h3>The training loss</h3>
+
+<p>
+RQ-VAE is trained end-to-end with a sum of two losses. The reconstruction loss teaches the encoder and decoder to round-trip faithfully; the quantization loss teaches the codebook and the encoder to agree on where the latent lives.
+</p>
+
+<div class="eq-block">
+    <div class="eq-label">Total RQ-VAE loss:</div>
+    $$\mathcal{L} = \mathcal{L}_{\text{recon}} + \mathcal{L}_{\text{rqvae}}$$
+</div>
+
+<div class="eq-block">
+    <div class="eq-label">Reconstruction (decoder fits original):</div>
+    $$\mathcal{L}_{\text{recon}} = \|x - \hat{x}\|^2$$
+</div>
+
+<div class="eq-block">
+    <div class="eq-label">Residual quantization (codes align with residuals):</div>
+    $$\mathcal{L}_{\text{rqvae}} = \sum_{l=1}^{L} \Big( \beta \, \|r_l - \text{sg}[e^l_{c_l}]\|^2 + \|\text{sg}[r_l] - e^l_{c_l}\|^2 \Big)$$
+</div>
+
+<p>
+where $\text{sg}[\cdot]$ is the stop-gradient operator (identity on the forward pass, zero on the backward pass) and $\beta = 0.25$. To understand why the loss is written this way, you have to think about who owns which parameters.
+</p>
+
+<div class="anim-wrap">
+    <video controls preload="metadata" poster="rqvae_loss_poster.jpg">
+        <source src="rqvae_loss.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <p class="anim-caption">
+        Animation: the two-term structure of the RQ-VAE loss. First, a single-term loss
+        oscillates because both encoder and codebook chase each other at full speed. Then,
+        split into two stop-gradient terms: the commitment term nudges the encoder gently
+        (β = 0.25), and the codebook term pulls each code to the centroid of its assigned
+        residuals (online k-means).
+    </p>
+</div>
+
+<h3>Why two terms instead of one?</h3>
+
+<p>
+The natural thing to write is a single term, $\|r_l - e^l_{c_l}\|^2$. That looks cleaner and says what we want: make the residual and the code agree. The problem is that this one term updates <em>both</em> $r_l$ (via the encoder) and $e^l_{c_l}$ (the codebook vector) by the same gradient magnitude. Both sides move toward each other at the same rate. That creates two failure modes:
+</p>
+
+<ul>
+    <li><strong>Codebook chases a moving target.</strong> The encoder is being trained jointly. Its outputs $r_l$ shift with every gradient step. If the codebook also tries to move at full speed toward $r_l$, it never settles, because $r_l$ keeps moving.</li>
+    <li><strong>Encoder loses its reconstruction signal.</strong> The encoder has another job: produce latents that the decoder can reconstruct from. That signal comes from $\mathcal{L}_{\text{recon}}$. If the quantization loss updates the encoder aggressively, it dominates reconstruction and the latents collapse to whatever is easiest to quantize rather than whatever is most informative.</li>
+</ul>
+
+<p>
+The fix is to <em>split the one term into two</em> and control each side independently with stop-gradients.
+</p>
+
+<h3>Term 1: the commitment loss</h3>
+
+<div class="eq-block">
+    <div class="eq-label">Commitment (encoder commits to the codebook):</div>
+    $$\beta \, \|r_l - \text{sg}[e^l_{c_l}]\|^2$$
+</div>
+
+<p>
+The stop-gradient freezes $e^l_{c_l}$ during backprop. Only $r_l$ gets a gradient. The encoder is being told: "the codebook is fixed. Move your output toward the code it would have chosen." The scalar $\beta = 0.25$ says: do this gently, because the encoder also needs to listen to the reconstruction loss.
+</p>
+
+<p>
+This is called a "commitment" loss because it forces the encoder to <em>commit</em> to values near one of the existing codes. Without it, the encoder would drift away from every code (since the codebook, not the encoder, is taking most of the quantization hit), and reconstruction would rely on a lucky alignment that never stabilizes.
+</p>
+
+<h3>Term 2: the codebook loss</h3>
+
+<div class="eq-block">
+    <div class="eq-label">Codebook (codes chase the encoder):</div>
+    $$\|\text{sg}[r_l] - e^l_{c_l}\|^2$$
+</div>
+
+<p>
+Now the stop-gradient is on $r_l$. Only the codebook vector $e^l_{c_l}$ gets a gradient. The codebook is being told: "the encoder's output is fixed. Move the chosen code toward it." There is no $\beta$ in front, so the codebook moves at full speed (coefficient 1).
+</p>
+
+<p>
+Intuitively, this is an online k-means update. Each codebook vector is the centroid of the residuals that get assigned to it, and this loss is the quadratic pull toward that centroid.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> Think of the codebook and the encoder as two dancers who need to end up in the same spot. If both try to move toward each other at the same speed, they overshoot and oscillate. The VQ-VAE trick is to have the codebook move fast (full-speed toward the encoder) and the encoder move slow ($\beta = 0.25$ toward the codebook). The codebook does most of the work of catching up, while the encoder stays mostly focused on reconstruction.
+</div>
+
+<h3>Why $\beta = 0.25$?</h3>
+
+<p>
+$\beta$ controls how loudly the quantization error yells at the encoder, relative to the reconstruction loss. Too small and the encoder ignores the codebook, producing residuals far from any code and making quantization lossy. Too large and quantization dominates reconstruction, producing latents that are easy to quantize but uninformative.
+</p>
+
+<p>
+$\beta = 0.25$ is the value from the original VQ-VAE paper (van den Oord et al., 2017), and it has held up across essentially every follow-up (VQ-GAN, RQ-VAE, SoundStream). It is one of those hyperparameters that rarely needs retuning.
+</p>
+
+<h3>What about the reconstruction loss?</h3>
+
+<p>
+You might wonder how the encoder learns to produce <em>good</em> latents at all, not just latents close to codes. That signal comes from $\mathcal{L}_{\text{recon}} = \|x - \hat{x}\|^2$, which flows through the decoder, through the quantized latent $\hat{z}$, and back through the encoder via the straight-through estimator. The encoder thus has two jobs: (1) make $\hat{z}$ decode back to $x$ (reconstruction), and (2) make its output $r_l$ commit to the nearest code (commitment). The $\beta = 0.25$ weighting keeps job 2 from overwhelming job 1.
+</p>
+
+<h3>How this looks in code</h3>
+
+<p>
+The PyTorch snippet in the next section makes all of this concrete. Look at these three lines:
+</p>
+
+<pre><code>commitment_loss = commitment_loss + F.mse_loss(residual, e.detach())
+codebook_loss = codebook_loss + F.mse_loss(e, residual.detach())
+e_st = residual + (e - residual).detach()</code></pre>
+
+<p>
+The <code>.detach()</code> calls are exactly the stop-gradients from the math. The third line is the straight-through estimator: in the forward pass <code>e_st == e</code>, but gradients from the decoder flow back through <code>residual</code>, so the reconstruction loss reaches the encoder even though $\arg\min$ is not differentiable.
+</p>
+
+<p>
+Training runs on a random sample of impressed YouTube videos for tens of millions of steps, until reconstruction loss stabilizes.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="codebook-collapse">4. Handling Codebook Collapse</h2>
+
+<p>
+All vector quantization methods share one nasty failure mode: <strong>codebook collapse</strong>. A small fraction of codebook vectors become "winners" early in training, get selected by most inputs, and then accumulate all the gradient. The remaining vectors are never chosen, never updated, and effectively dead. A $K = 2048$ codebook can collapse to a few dozen active codes.
+</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Codebook collapse wrecks the whole pipeline. If only 50 of 2048 codes are ever used at level 1, your Semantic IDs have a level-1 branching factor of 50 instead of 2048, and the hierarchy is much coarser than it appears on paper.
+</div>
+
+<p>
+The fix, borrowed from SoundStream (Zeghidour et al., 2021): at every training step, detect codebook vectors that were not used by any input in the current batch, and reset each of them to a randomly-sampled content embedding from that same batch. This keeps the codebook alive without requiring any auxiliary loss or careful warm-up schedule.
+</p>
+
+<p>
+The authors report that this single trick "significantly improved the codebook utilization." For a corpus of billions of videos, it is the difference between a working quantizer and a broken one.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="pytorch">5. RQ-VAE in PyTorch</h2>
+
+<p>
+The full picture fits in around 100 lines of PyTorch. Below is a minimal but complete implementation: encoder, decoder, residual quantizer with codebook reset, the loss function, and a training step. No tricks beyond what the paper describes.
+</p>
+
+<h3>The residual quantizer</h3>
+
+<p>
+Each level holds a codebook of $K$ vectors in $\mathbb{R}^{D'}$. Given the current residual, it finds the nearest code, emits its index, and returns the quantized vector along with the loss terms for that level. The straight-through estimator copies gradients from the quantized vector back to the residual, since $\arg\min$ is not differentiable.
+</p>
+
+<pre><code>import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class ResidualQuantizer(nn.Module):
+    def __init__(self, num_levels=8, codebook_size=2048, latent_dim=256, beta=0.25):
+        super().__init__()
+        self.num_levels = num_levels
+        self.codebook_size = codebook_size
+        self.beta = beta
+        # One codebook per level: (L, K, D')
+        self.codebooks = nn.Parameter(
+            torch.randn(num_levels, codebook_size, latent_dim) * 0.01
+        )
+
+    def forward(self, z):
+        # z: (B, D')
+        residual = z
+        quantized = torch.zeros_like(z)
+        codes = []
+        commitment_loss = 0.0
+        codebook_loss = 0.0
+
+        for l in range(self.num_levels):
+            cb = self.codebooks[l]                       # (K, D')
+            # Squared distance from residual to every code: (B, K)
+            dists = torch.cdist(residual, cb) ** 2
+            idx = dists.argmin(dim=-1)                   # (B,)
+            e = cb[idx]                                  # (B, D')
+
+            # VQ losses at this level
+            commitment_loss = commitment_loss + F.mse_loss(residual, e.detach())
+            codebook_loss = codebook_loss + F.mse_loss(e, residual.detach())
+
+            # Straight-through: forward uses e, backward flows through residual
+            e_st = residual + (e - residual).detach()
+
+            quantized = quantized + e_st
+            residual = residual - e.detach()
+            codes.append(idx)
+
+        codes = torch.stack(codes, dim=1)                # (B, L)
+        rq_loss = self.beta * commitment_loss + codebook_loss
+        return quantized, codes, rq_loss
+
+    @torch.no_grad()
+    def reset_dead_codes(self, z_batch):
+        """Replace codes not used in this batch with random content embeddings."""
+        residual = z_batch
+        for l in range(self.num_levels):
+            cb = self.codebooks[l]
+            dists = torch.cdist(residual, cb) ** 2
+            idx = dists.argmin(dim=-1)
+            used = torch.zeros(self.codebook_size, dtype=torch.bool, device=z_batch.device)
+            used[idx] = True
+            dead = (~used).nonzero(as_tuple=True)[0]
+            if len(dead) &gt; 0:
+                # Sample from the batch (with replacement if needed)
+                sample_idx = torch.randint(0, z_batch.size(0), (len(dead),), device=z_batch.device)
+                self.codebooks[l, dead] = z_batch[sample_idx]
+            residual = residual - cb[idx]</code></pre>
+
+<p>
+Two things to watch for. First, <code>e_st = residual + (e - residual).detach()</code> is the straight-through estimator. In the forward pass it equals <code>e</code>; in the backward pass its gradient is the identity with respect to <code>residual</code>, bypassing the non-differentiable $\arg\min$. Second, <code>residual = residual - e.detach()</code> uses the detached code so that gradients from deeper levels don't leak back through the codebook of the current level.
+</p>
+
+<h3>The full RQ-VAE</h3>
+
+<p>
+The encoder and decoder here are one-layer MLPs, matching the paper's "1-layer encoder decoder model with dimension 256." In practice you would swap in whatever depth you need.
+</p>
+
+<pre><code>class RQVAE(nn.Module):
+    def __init__(self, input_dim=2048, latent_dim=256, num_levels=8,
+                 codebook_size=2048, beta=0.25):
+        super().__init__()
+        self.encoder = nn.Linear(input_dim, latent_dim)
+        self.decoder = nn.Linear(latent_dim, input_dim)
+        self.quantizer = ResidualQuantizer(
+            num_levels=num_levels,
+            codebook_size=codebook_size,
+            latent_dim=latent_dim,
+            beta=beta,
+        )
+
+    def forward(self, x):
+        z = self.encoder(x)                              # (B, D')
+        z_hat, codes, rq_loss = self.quantizer(z)        # (B, D'), (B, L), scalar
+        x_hat = self.decoder(z_hat)                      # (B, D)
+        recon_loss = F.mse_loss(x_hat, x)
+        loss = recon_loss + rq_loss
+        return loss, codes, x_hat
+
+    @torch.no_grad()
+    def encode_to_sid(self, x):
+        """Serving path: content embedding → Semantic ID."""
+        z = self.encoder(x)
+        _, codes, _ = self.quantizer(z)
+        return codes                                     # (B, L) integers</code></pre>
+
+<h3>The training loop</h3>
+
+<p>
+Standard optimizer, plus the codebook-reset call every step. The reset runs under <code>no_grad</code> and edits the parameters in place, so it does not interfere with autograd.
+</p>
+
+<pre><code>model = RQVAE(input_dim=2048, latent_dim=256, num_levels=8, codebook_size=2048)
+opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+for step, content_emb in enumerate(loader):             # content_emb: (B, 2048)
+    loss, codes, x_hat = model(content_emb)
+    opt.zero_grad()
+    loss.backward()
+    opt.step()
+
+    # Codebook collapse fix: reset unused codes from current batch
+    with torch.no_grad():
+        z = model.encoder(content_emb)
+        model.quantizer.reset_dead_codes(z)
+
+    if step % 1000 == 0:
+        print(f"step {step} loss {loss.item():.4f}")</code></pre>
+
+<h3>What each piece is doing</h3>
+
+<div class="steps">
+    <div class="step"><strong>Encoder compresses.</strong> The 2048-dim content embedding gets projected to a 256-dim latent $z$. This is the space where quantization happens.</div>
+    <div class="step"><strong>Residual quantizer discretizes.</strong> At each of the 8 levels, it picks the nearest code, emits the index, and subtracts that code from the residual. The quantized latent $\hat{z}$ is the sum of the 8 chosen codes.</div>
+    <div class="step"><strong>Decoder reconstructs.</strong> $\hat{z}$ gets projected back to 2048 dims. The reconstruction loss pushes the encoder and decoder to round-trip through the quantized space.</div>
+    <div class="step"><strong>Codebook reset runs every step.</strong> Any code that was not the nearest neighbor for any item in the batch gets overwritten with a sampled content embedding. This keeps the full 2048-code vocabulary alive instead of collapsing to a handful of winners.</div>
+</div>
+
+<p>
+Once training converges, you freeze the model and call <code>encode_to_sid</code> at serving time to turn any new video's content embedding into its 8-integer Semantic ID. That sequence is what feeds into Stage 2.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> This is the simplest version that actually works. Production implementations add things like exponential-moving-average codebook updates (instead of gradient descent on the codebook), learnable encoder/decoder depth, and better initialization. But the core residual-quantization loop and the codebook-reset trick are the load-bearing pieces. Everything else is tuning.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="adaptation">6. Stage 2: Using Semantic IDs in the Ranking Model</h2>
+
+<p>
+The ranking model is a multitask neural network that predicts CTR, watch time, and other engagement targets. The baseline uses three categorical features per scoring request, all keyed by random video IDs:
+</p>
+
+<ul>
+    <li>The video the user is currently watching.</li>
+    <li>The candidate video being considered for recommendation.</li>
+    <li>The user's watch history, represented as a sequence of video IDs.</li>
+</ul>
+
+<p>
+For a corpus of O(100M) videos, the ID embedding table uses O(10M) buckets via the hashing trick. Many videos collide into the same bucket, but since IDs are random, the collisions are uniform noise that averages out.
+</p>
+
+<p>
+The question: what replaces the video ID? You have an 8-token Semantic ID per video. How do you turn a sequence of tokens into a single dense vector that the rest of the ranking network can consume?
+</p>
+
+<h3>The tokenization problem</h3>
+
+<p>
+The obvious idea, summing a per-level embedding, throws away the hierarchy. If your tokens are $(c_1, \dots, c_8)$ and you look up $e_1[c_1] + e_2[c_2] + \dots + e_8[c_8]$ with a separate table per level, two videos that differ only at level 8 will have nearly identical representations, and two videos that differ at level 1 will also look nearly identical in embedding space (since 7 of 8 contributions are shared elsewhere). This is exactly the wrong behavior.
+</p>
+
+<p>
+The fix is to embed <strong>combinations</strong> of consecutive tokens, not individual tokens. The token combinations are called <em>subwords</em>, by analogy with LLM tokenization.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="ngram-vs-spm">7. N-gram vs. SentencePiece Tokenization</h2>
+
+<p>
+Two options for grouping tokens into subwords:
+</p>
+
+<h3>N-gram: fixed-size grouping</h3>
+
+<p>
+Split the 8-token Semantic ID into contiguous chunks of size $N$. Each unique chunk gets its own embedding.
+</p>
+
+<ul>
+    <li><strong>Unigram ($N=1$):</strong> 8 subwords per video, each from a vocabulary of $K = 2048$. Total embedding table: $8 \times 2048 = 16\text{K}$ rows.</li>
+    <li><strong>Bigram ($N=2$):</strong> 4 subwords per video, each from a vocabulary of $K^2 = 2048^2 \approx 4.2\text{M}$ per group. Total embedding table: $4 \times K^2 \approx 17\text{M}$ rows.</li>
+    <li><strong>Trigram ($N=3$):</strong> $K^3 \approx 8.6\text{B}$ rows per group. Infeasible.</li>
+</ul>
+
+<p>
+The embedding table size grows as $K^N$. The authors cap $N$ at 2 for memory reasons. The final video representation is the sum of the $L/N$ chunk embeddings.
+</p>
+
+<h3>SPM: adaptive, variable-length subwords</h3>
+
+<p>
+SentencePiece (Kudo, 2018), the same tokenizer used in BERT and T5, learns a subword vocabulary of a fixed size $V$ from a corpus of token sequences. Popular token combinations (ones that occur frequently across items) get their own multi-token subword. Rare combinations fall back to shorter subwords or unigrams.
+</p>
+
+<p>
+You train SPM once on a large sample of video Semantic IDs. Given a new Semantic ID $(c_1, \dots, c_8)$, SPM returns a segmentation, for example $[(c_1, c_2, c_3), (c_4, c_5), (c_6), (c_7, c_8)]$. Each segment maps to a row in a single shared embedding table of size $V$. The video representation is the sum of the segment embeddings.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> N-gram treats all bigrams as equally deserving of their own embedding. SPM recognizes that some bigrams are common enough across the corpus to justify one, while others are so rare that the embedding slot is wasted and the model should fall back to per-token embeddings. SPM's segmentation is learned from the data.
+</div>
+
+<h3>Direct comparison</h3>
+
+<table class="sid-table">
+    <tr>
+        <th>Aspect</th>
+        <th>N-gram</th>
+        <th>SentencePiece</th>
+    </tr>
+    <tr>
+        <td>Subword length</td>
+        <td>Fixed ($N$)</td>
+        <td>Variable (1 to $L$)</td>
+    </tr>
+    <tr>
+        <td>Vocabulary</td>
+        <td>$K^N$ per group</td>
+        <td>Any fixed $V$</td>
+    </tr>
+    <tr>
+        <td>Embedding tables</td>
+        <td>$L/N$ separate tables</td>
+        <td>One shared table</td>
+    </tr>
+    <tr>
+        <td>Lookups per video</td>
+        <td>$L/N$ (fixed)</td>
+        <td>Adaptive; fewer for popular combos</td>
+    </tr>
+    <tr>
+        <td>Adapts to data distribution</td>
+        <td>No</td>
+        <td>Yes</td>
+    </tr>
+</table>
+
+<p>
+SPM's adaptivity is not just elegant, it is efficient in production. Common videos get represented by one or two long subwords (fewer lookups); rare videos fall back to many short subwords. The average lookup count is comparable to N-gram, but the head of the distribution gets faster serving.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="results">8. Experimental Results</h2>
+
+<h3>Setup</h3>
+
+<p>
+Training data: sequentially-logged YouTube engagement data over $N$ days. Evaluation is on day $N+1$, which has not been seen during training. Two metrics:
+</p>
+
+<ul>
+    <li><strong>CTR AUC:</strong> overall click-through-rate AUC on day $N+1$. Measures generalization under distribution shift.</li>
+    <li><strong>CTR/1D AUC:</strong> same metric but sliced to items that were <em>introduced on day $N+1$</em>. Pure cold-start evaluation.</li>
+</ul>
+
+<p>
+A 0.1% change in CTR AUC is significant in this production system. Two ranking-model variants are studied: one without user history (two item features), and one with user history (three item features).
+</p>
+
+<h3>Baselines and key findings</h3>
+
+<p>
+Four configurations were compared:
+</p>
+
+<ol>
+    <li><strong>Random Hashing:</strong> the original baseline. Video IDs hashed into 10M buckets.</li>
+    <li><strong>Dense Input:</strong> replace the ID embedding with the raw 2048-dim content embedding. Same model architecture.</li>
+    <li><strong>Dense Input + 1.5x / 2x layers:</strong> same as above but deeper MLP, to compensate for lost memorization capacity.</li>
+    <li><strong>Semantic ID (Unigram, Bigram, SPM):</strong> the proposed approach.</li>
+</ol>
+
+<p>
+Three findings stand out.
+</p>
+
+<p>
+<strong>Finding 1: Dense content embeddings alone hurt quality.</strong> Directly swapping video IDs for 2048-dim content embeddings causes CTR AUC to drop below the random-hashing baseline, on both overall and cold-start slices. The content embedding is a fixed input feature, so the model loses its per-item memorization capacity. Making the MLP 1.5x or 2x deeper partially recovers quality, but at a serving cost that is not acceptable in production.
+</p>
+
+<p>
+<strong>Finding 2: Semantic IDs beat random hashing on cold-start, and match or beat it overall.</strong> When user history is included as a feature (the realistic setting), both Bigram-SID and SPM-SID outperform the random-hashing baseline on CTR AUC, and substantially outperform it on CTR/1D AUC. The Dense Input with 2x layers gets similar cold-start gains, but SIDs match those gains without the 2x compute.
+</p>
+
+<p>
+<strong>Finding 3: SPM dominates N-gram for large embedding tables.</strong> At small table sizes (below roughly $8K$ or $4K^2$ rows), the fixed N-gram structure has a slight edge: it forces the tiny vocabulary to cover simple token patterns. At the larger table sizes that production ranking models actually use, SPM's adaptive vocabulary wins decisively, especially on cold-start CTR/1D AUC. Popular token combinations get their own embedding slot; rare ones fall back gracefully.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> With a small table, a hand-crafted N-gram scheme fills up the table with every possible short chunk. SPM can't do better than that when there is no room for adaptivity. With a large table, N-gram wastes slots on combinations that never appear, while SPM spends its vocabulary budget on combinations that actually occur. This is the same reason SentencePiece beats character-level or fixed-N-gram tokenization for LLM pretraining.
+</div>
+
+<h3>Stability of Semantic IDs over time</h3>
+
+<p>
+One concern with a frozen Stage 1 model: the video corpus drifts. Movies from 2026 may not look like movies from 2025 in the feature space. To test this, the authors trained two RQ-VAE models on data <em>six months apart</em> (RQ-VAEv0 and RQ-VAEv1) and evaluated the ranking model trained on the most recent engagement data using Semantic IDs from each.
+</p>
+
+<p>
+Both versions give comparable ranking performance. The semantic token space is stable enough that you do not need to retrain the quantizer frequently. In practice, this means Stage 1 is a rare batch job, and Stage 2 is a continuous online job.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="hierarchy">9. Hierarchy: What the Tokens Actually Capture</h2>
+
+<p>
+The authors include a simple but illuminating analysis. For each pair of videos that share a Semantic ID prefix of length $n$, compute their average pairwise cosine similarity in the original content embedding space. If the hierarchy is meaningful, longer shared prefixes should mean more similar videos.
+</p>
+
+<table class="sid-table">
+    <tr>
+        <th>Shared prefix length</th>
+        <th>Avg. pairwise cosine similarity</th>
+        <th>Typical sub-trie size</th>
+    </tr>
+    <tr><td>1</td><td>0.41</td><td>150,000-450,000 videos</td></tr>
+    <tr><td>2</td><td>0.68</td><td>20-150 videos</td></tr>
+    <tr><td>3</td><td>0.91</td><td>1-5 videos</td></tr>
+    <tr><td>4</td><td class="highlight-cell">0.97</td><td>1 video</td></tr>
+</table>
+
+<p>
+The progression is clean. A length-1 prefix groups hundreds of thousands of videos at cosine similarity 0.41 (loose topical affinity). A length-4 prefix typically uniquely identifies a video at cosine similarity 0.97. Every additional token narrows the cluster by roughly one to two orders of magnitude.
+</p>
+
+<p>
+The paper shows example sub-tries where the hierarchy aligns with human-understandable concepts: a sports cluster with sub-clusters for different sports; a food-vlogging cluster with sub-clusters for different cuisines. The model has learned a semantic trie over the catalog, for free, from a generic pretrained video encoder and a vector-quantization objective.
+</p>
+
+<div class="note">
+    <strong>Intuition:</strong> This is why Semantic IDs work for cold-start. When a new video arrives, the frozen RQ-VAE assigns it a token sequence based purely on its content embedding. A new cooking video will share its length-2 prefix with the cooking-video cluster, and its bigram and SPM subwords will already have learned embeddings trained on that cluster's engagement data. The model generalizes automatically.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="practical">10. Practical Notes</h2>
+
+<p><strong>Start with the right content encoder.</strong> The quality of the Semantic ID hierarchy is bounded by the quality of the content embedding going into RQ-VAE. YouTube uses a VideoBERT-based transformer trained on audio and visual features using graph clustering. If your content encoder doesn't capture the distinctions that matter for your task, no amount of quantization will fix it.</p>
+
+<p><strong>The RQ-VAE is small, but codebook collapse will ruin it.</strong> The codebook-reset trick (replacing unused codes with sampled content embeddings every step) is not optional. Skip it and you will end up with a codebook that collapses to a handful of clusters, making the whole Semantic ID pipeline degenerate to a poor hash.</p>
+
+<p><strong>SentencePiece, not N-gram, for production-scale embedding tables.</strong> N-gram is simpler and works for small-scale systems. Once your embedding budget is in the millions of rows, SPM's adaptive vocabulary wins on every axis: quality, memory efficiency, lookup count for head items. The infrastructure cost of adding SPM to your Stage-2 pipeline is small.</p>
+
+<p><strong>Don't replace random hashing, augment it, if you can afford both.</strong> The paper frames this as a replacement, and for YouTube it works. But if you have the capacity, the Semantic ID tokens and the random-hashed ID can be used as parallel features: the SID gives you generalization and cold-start, the ID table gives you extra memorization for head items beyond what the SPM subwords can hold.</p>
+
+<p><strong>$L = 8$ and $K = 2048$ are good starting points, not magic numbers.</strong> The right depth is "enough levels to uniquely identify most items at the deepest prefix length." For YouTube's billions of videos, $2048^4 \approx 1.7 \times 10^{13}$ at length 4, which already exceeds the catalog size. Length 8 gives headroom for continued growth. Smaller catalogs can use shorter Semantic IDs.</p>
+
+<p><strong>The ranking model still learns everything about the world from data.</strong> Semantic IDs do not inject any supervised knowledge about what is "good." They inject <em>similarity structure</em>, letting the ranking model share engagement signal across similar items. The quality signal itself still comes from logged clicks and watch time. If your engagement data is biased, Semantic IDs will propagate that bias across clusters faster, not eliminate it.</p>
+
+<div class="warning">
+    <strong>Key limitation:</strong> Semantic IDs are tied to the content encoder's notion of similarity. Two videos that look identical to the encoder (same topic, same visual style) will share deep prefixes and therefore share embedding mass, even if users treat them very differently. If user-level preference patterns disagree with content similarity, the SID clusters can over-generalize. The paper does not dwell on this, but it is the main failure mode worth watching for in production.
+</div>
+
+<hr>
+
+<p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+
+</article>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    &copy; 2026 Suvash Sedhain
+  </div>
+</footer>
+
+</body>
+</html>
