@@ -21,6 +21,10 @@
 <style>
 /* ==================== PAGE-SPECIFIC STYLES ==================== */
 
+/* Wider page-content for code-heavy tutorials */
+.page-content { max-width: 880px; }
+.side-nav { left: max(calc((100vw - 880px) / 2 - 250px), 16px); }
+
 /* Book-style header */
 .book-header {
   text-align: center;
@@ -384,7 +388,7 @@ h2 .chapter-num {
 .side-nav {
   position: fixed;
   top: 50%;
-  left: max(calc((100vw - 720px) / 2 - 220px), 16px);
+  left: max(calc((100vw - 880px) / 2 - 250px), 16px);
   transform: translateY(-50%);
   width: 180px;
   max-height: 80vh;
