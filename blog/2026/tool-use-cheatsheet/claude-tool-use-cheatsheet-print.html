@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Claude Tool Use — 1-Page Cheatsheet</title>
+<style>
+  @page { size: letter; margin: 0.35in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 8.2pt;
+    line-height: 1.25;
+    color: #111;
+    column-count: 2;
+    column-gap: 14px;
+  }
+  h1 {
+    column-span: all;
+    font-size: 13pt;
+    margin: 0 0 4px 0;
+    padding-bottom: 3px;
+    border-bottom: 1.5px solid #111;
+    letter-spacing: 0.2px;
+  }
+  h1 .sub { font-size: 8pt; font-weight: normal; color: #555; float: right; margin-top: 3px; }
+  h2 {
+    font-size: 9pt;
+    margin: 6px 0 2px 0;
+    padding: 1px 4px;
+    background: #111;
+    color: #fff;
+    break-after: avoid;
+  }
+  p, ul { margin: 2px 0; }
+  ul { padding-left: 14px; }
+  li { margin-bottom: 1px; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 7.4pt;
+    background: #f0f0f0;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 7.2pt;
+    background: #f5f5f5;
+    border-left: 2px solid #888;
+    padding: 3px 5px;
+    margin: 2px 0;
+    white-space: pre-wrap;
+    line-height: 1.2;
+    break-inside: avoid;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 2px 0;
+    font-size: 7.6pt;
+    break-inside: avoid;
+  }
+  th, td {
+    border: 0.5px solid #999;
+    padding: 1.5px 3px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #e8e8e8; font-weight: 600; }
+  .section { break-inside: avoid; margin-bottom: 3px; }
+  .note { font-size: 7.4pt; color: #444; font-style: italic; }
+  strong { color: #000; }
+  .warn { color: #a00; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Claude Tool Use — 1-Page Cheatsheet <span class="sub">Messages API · tools[]</span></h1>
+
+<div class="section">
+<h2>Minimal Request</h2>
+<pre>client.messages.create(
+  model="claude-opus-4-7",
+  max_tokens=1024,
+  tools=[{"name":"...","description":"...",
+          "input_schema":{...}}],
+  tool_choice={"type":"auto"},   # optional
+  messages=[{"role":"user","content":"..."}])</pre>
+</div>
+
+<div class="section">
+<h2>Response (Message object)</h2>
+<pre>{
+  "id": "msg_01ABC...",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-opus-4-7",
+  "stop_reason": "tool_use",   // see table below
+  "stop_sequence": null,
+  "content": [
+    {"type":"text","text":"I'll check the weather."},
+    {"type":"tool_use",
+     "id":"toolu_01A09q90qw90lq917835lq9",
+     "name":"get_weather",
+     "input":{"location":"San Francisco, CA"}}
+  ],
+  "usage": {
+    "input_tokens": 472,
+    "output_tokens": 89,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0
+  }
+}</pre>
+<p class="note"><strong>Access in SDK:</strong> <code>resp.content</code> (list of blocks), <code>resp.stop_reason</code>, <code>resp.usage.input_tokens</code>. Iterate blocks and check <code>b.type == "tool_use"</code> to find calls; use <code>b.id</code>, <code>b.name</code>, <code>b.input</code>.</p>
+</div>
+
+<div class="section">
+<h2>tool_choice</h2>
+<table>
+  <tr><th>Value</th><th>Use when</th></tr>
+  <tr><td><code>{"type":"auto"}</code></td><td>Default; tool optional</td></tr>
+  <tr><td><code>{"type":"any"}</code></td><td>Must call <em>some</em> tool</td></tr>
+  <tr><td><code>{"type":"tool","name":"X"}</code></td><td>Must call <em>this</em> tool</td></tr>
+  <tr><td><code>{"type":"none"}</code></td><td>Disable tools this turn</td></tr>
+</table>
+<p class="note"><span class="warn">⚠</span> <code>any</code>/<code>tool</code> block text preamble &amp; are incompatible with extended thinking.</p>
+</div>
+
+<div class="section">
+<h2>stop_reason → Action</h2>
+<table>
+  <tr><th>Value</th><th>Action</th></tr>
+  <tr><td><code>end_turn</code></td><td>Done</td></tr>
+  <tr><td><code>tool_use</code></td><td>Run tool → send <code>tool_result</code> → loop</td></tr>
+  <tr><td><code>max_tokens</code></td><td>Raise cap</td></tr>
+  <tr><td><code>pause_turn</code></td><td>Re-send to continue server-tool loop</td></tr>
+  <tr><td><code>refusal</code></td><td>Surface to user</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Content Blocks</h2>
+<table>
+  <tr><th>Assistant (response)</th><th>User (request)</th></tr>
+  <tr><td><code>text</code></td><td><code>text</code></td></tr>
+  <tr><td><code>thinking</code> / <code>redacted_thinking</code></td><td><code>image</code></td></tr>
+  <tr><td><code>tool_use</code> (id, name, input)</td><td><code>document</code></td></tr>
+  <tr><td><code>server_tool_use</code></td><td><code>tool_result</code> (tool_use_id, content, is_error?)</td></tr>
+  <tr><td><code>web_search_tool_result</code></td><td></td></tr>
+  <tr><td><code>code_execution_tool_result</code></td><td></td></tr>
+</table>
+<p class="note"><strong>Order:</strong> <code>tool_result</code> must come <em>before</em> any text in a user message, and immediately after the assistant's <code>tool_use</code> turn.</p>
+</div>
+
+<div class="section">
+<h2>The Loop (6 lines)</h2>
+<pre>while True:
+  resp = client.messages.create(model, tools=tools,
+           messages=messages, max_tokens=1024)
+  messages.append({"role":"assistant","content":resp.content})
+  if resp.stop_reason != "tool_use": break
+  results = [{"type":"tool_result","tool_use_id":b.id,
+              "content": run(b.name, b.input)}
+             for b in resp.content if b.type=="tool_use"]
+  messages.append({"role":"user","content":results})</pre>
+</div>
+
+<div class="section">
+<h2>input_schema Keywords (supported)</h2>
+<table>
+  <tr><th>Keyword</th><th>Where</th><th>Example</th></tr>
+  <tr><td><code>type</code></td><td>any</td><td>string, integer, number, boolean, null, array, object</td></tr>
+  <tr><td><code>description</code></td><td>any</td><td>"Stock ticker"</td></tr>
+  <tr><td><code>enum</code> / <code>const</code></td><td>scalars</td><td><code>["celsius","fahrenheit"]</code></td></tr>
+  <tr><td><code>default</code></td><td>any</td><td><code>"celsius"</code></td></tr>
+  <tr><td><code>format</code></td><td>string</td><td>date, date-time, email, uri, uuid, ipv4</td></tr>
+  <tr><td><code>items</code></td><td>array</td><td><code>{"type":"string"}</code></td></tr>
+  <tr><td><code>properties</code>, <code>required</code></td><td>object</td><td>—</td></tr>
+  <tr><td><code>additionalProperties</code></td><td>object</td><td><code>false</code> (strict mode)</td></tr>
+  <tr><td><code>minItems</code></td><td>array</td><td>0 or 1 only</td></tr>
+  <tr><td><code>pattern</code></td><td>string</td><td><code>"^[A-Z]{1,5}$"</code></td></tr>
+  <tr><td><code>anyOf</code> / <code>allOf</code></td><td>any</td><td>composition</td></tr>
+</table>
+<p class="note"><span class="warn">NOT supported (strict):</span> minimum, maximum, minLength, maxLength, maxItems, uniqueItems, oneOf, not, recursion, regex lookaheads/backrefs. Put these in <code>description</code>.</p>
+</div>
+
+<div class="section">
+<h2>Full Tool Schema Example</h2>
+<pre>{
+  "name": "search_products",
+  "description": (
+    "Search the product catalog by keyword and filters. "
+    "Returns up to 20 matching products with id, name, price, "
+    "and stock. Use when the user asks to find/browse products. "
+    "Does NOT place orders — use place_order for that."
+  ),
+  "strict": true,
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["query"],
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search keywords, e.g. 'wireless headphones'.",
+        "pattern": "^.{1,200}$"
+      },
+      "category": {
+        "type": "string",
+        "enum": ["electronics","apparel","home","books","other"],
+        "default": "other",
+        "description": "Category filter."
+      },
+      "max_price": {
+        "type": "number",
+        "description": "Upper price bound in USD (must be > 0)."
+      },
+      "in_stock_only": {
+        "type": "boolean",
+        "default": true,
+        "description": "If true, exclude out-of-stock items."
+      },
+      "tags": {
+        "type": "array",
+        "description": "Tag filters; products must match ALL.",
+        "items": {"type": "string"},
+        "minItems": 0
+      },
+      "sort": {
+        "type": "object",
+        "description": "Sort config.",
+        "additionalProperties": false,
+        "required": ["by"],
+        "properties": {
+          "by":   {"type":"string","enum":["price","rating","newest"]},
+          "desc": {"type":"boolean","default": false}
+        }
+      },
+      "released_after": {
+        "type": "string",
+        "format": "date",
+        "description": "ISO date, e.g. '2026-01-01'."
+      },
+      "contact_email": {
+        "type": ["string","null"],
+        "format": "email",
+        "description": "Optional email for saved-search alerts."
+      },
+      "id_or_sku": {
+        "description": "Either a UUID (id) or SKU string.",
+        "anyOf": [
+          {"type":"string","format":"uuid"},
+          {"type":"string","pattern":"^SKU-[A-Z0-9]{6}$"}
+        ]
+      }
+    }
+  }
+}</pre>
+<p class="note">Covers: <code>type</code>, <code>description</code>, <code>enum</code>, <code>default</code>, <code>format</code>, <code>pattern</code>, nested <code>object</code>, <code>array</code>+<code>items</code>, <code>minItems</code>, <code>anyOf</code>, nullable union, <code>required</code>, <code>additionalProperties:false</code>, <code>strict:true</code>.</p>
+</div>
+
+<div class="section">
+<h2>tool_result Shapes</h2>
+<pre>// Success — string
+{"type":"tool_result","tool_use_id":"toolu_01",
+ "content":"15°C"}
+
+// Success — multi-block
+{"type":"tool_result","tool_use_id":"toolu_01","content":[
+  {"type":"text","text":"15°C"},
+  {"type":"image","source":{"type":"base64",
+   "media_type":"image/jpeg","data":"..."}}]}
+
+// Error
+{"type":"tool_result","tool_use_id":"toolu_01",
+ "content":"Rate limit. Retry after 60s.",
+ "is_error":true}</pre>
+</div>
+
+<div class="section">
+<h2>Where Tools Run</h2>
+<table>
+  <tr><th>Kind</th><th>Who runs</th><th>Examples</th></tr>
+  <tr><td>User-defined client</td><td>Your app</td><td>get_weather, query_db</td></tr>
+  <tr><td>Anthropic-schema client</td><td>Your app</td><td>bash, text_editor, computer, memory</td></tr>
+  <tr><td>Server</td><td>Anthropic</td><td>web_search, web_fetch, code_execution, computer use (beta), bash (beta), tool_search, memory, mcp connector</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Server Tools (run by Anthropic)</h2>
+<table>
+  <tr><th>Tool</th><th>type / name</th><th>Purpose</th></tr>
+  <tr><td>Web search</td><td><code>web_search_20250305</code> / <code>web_search</code></td><td>Query the live web; returns <code>web_search_tool_result</code> with citations.</td></tr>
+  <tr><td>Web fetch</td><td><code>web_fetch_20250910</code> / <code>web_fetch</code></td><td>Fetch a specific URL (HTML/PDF) as context. Beta header required.</td></tr>
+  <tr><td>Code execution</td><td><code>code_execution_20250825</code> / <code>code_execution</code></td><td>Python sandbox w/ numpy, pandas, matplotlib. Files via Files API. Returns <code>code_execution_tool_result</code>.</td></tr>
+  <tr><td>Computer use</td><td><code>computer_20250124</code> / <code>computer</code></td><td>Screenshot + mouse/keyboard on a VM. Beta.</td></tr>
+  <tr><td>Bash (server)</td><td><code>bash_20250124</code> / <code>bash</code></td><td>Shell in the code-exec sandbox. Pairs with code_execution.</td></tr>
+  <tr><td>Text editor</td><td><code>text_editor_20250728</code> / <code>str_replace_based_edit_tool</code></td><td>View/create/edit files in sandbox. No <code>undo_edit</code> in latest.</td></tr>
+  <tr><td>Memory</td><td><code>memory_20250818</code> / <code>memory</code></td><td>Persistent file-backed memory across turns/sessions.</td></tr>
+  <tr><td>Tool search</td><td><code>tool_search_tool_regex_20251119</code> (regex) or <code>..._20250916</code> (semantic)</td><td>Lazy-load tool defs from a large registry. Cuts prompt cost.</td></tr>
+  <tr><td>MCP connector</td><td><code>mcp_servers</code> (top-level, not in <code>tools</code>)</td><td>Attach remote MCP servers; Claude calls their tools via server.</td></tr>
+</table>
+<p class="note"><strong>Usage:</strong> declare as <code>{"type":"&lt;versioned&gt;","name":"&lt;name&gt;"}</code> in <code>tools</code> (no <code>input_schema</code>). Many require a beta header (e.g. <code>anthropic-beta: computer-use-2025-01-24</code>, <code>web-fetch-2025-09-10</code>, <code>code-execution-2025-08-25</code>).</p>
+<p class="note"><strong>Response blocks:</strong> server tools emit <code>server_tool_use</code> + a matching <code>*_tool_result</code> block (e.g. <code>web_search_tool_result</code>) — you do <em>not</em> send <code>tool_result</code> back. Expect <code>stop_reason: "pause_turn"</code> on long server-tool loops; re-send the message to continue.</p>
+</div>
+
+<div class="section">
+<h2>Definition Best Practices</h2>
+<ul>
+  <li><strong>Descriptions:</strong> 3–4+ sentences. What, when, parameter meaning, limitations.</li>
+  <li><strong>Namespace:</strong> <code>github_list_prs</code>, not bare <code>search</code>.</li>
+  <li><strong>Consolidate:</strong> one <code>manage_pr</code> w/ <code>action</code> param beats three tools.</li>
+  <li><strong>High-signal responses:</strong> stable IDs, no raw payload dumps.</li>
+  <li><strong>Strict mode:</strong> <code>"strict":true</code> + <code>"additionalProperties":false</code> → guaranteed schema match.</li>
+  <li><strong>Combine</strong> <code>tool_choice:any</code> + <code>strict:true</code> for guaranteed valid calls.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Cost Overhead</h2>
+<table>
+  <tr><th>Model</th><th>auto / none</th><th>any / tool</th></tr>
+  <tr><td>Opus 4.7 / Sonnet 4.6 / Haiku 4.5</td><td>346 tok</td><td>313 tok</td></tr>
+  <tr><td>Haiku 3.5</td><td>264 tok</td><td>340 tok</td></tr>
+</table>
+<p class="note">+ tokens for <code>tools</code> array, <code>tool_use</code>, <code>tool_result</code>. Server tools add per-call fees.</p>
+</div>
+
+<div class="section">
+<h2>Gotchas</h2>
+<ul>
+  <li>Changing <code>tool_choice</code> mid-convo <strong>invalidates prompt cache</strong>.</li>
+  <li><code>any</code>/<code>tool</code> + extended thinking → <strong>400 error</strong>.</li>
+  <li><code>tool_result</code> <strong>must immediately follow</strong> matching <code>tool_use</code> turn.</li>
+  <li>Write <em>instructive</em> error messages so Claude can recover.</li>
+  <li>No PHI in schema <code>enum</code>/<code>const</code>/<code>pattern</code>/property names (cached separately).</li>
+</ul>
+</div>
+
+</body>
+</html>
