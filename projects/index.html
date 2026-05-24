@@ -37,7 +37,7 @@
   </div>
 
   <div class="project-grid">
-    <div class="project-card">
+    <!-- <div class="project-card">
       <a href="/projects/softmax-cuda/">
         <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:150px;display:block;background:#f9fafb;">
           <rect x="0" y="0" width="400" height="150" fill="#f9fafb"/>
@@ -73,7 +73,7 @@
           <p>From a one-thread baseline to a vectorized fused CUDA kernel</p>
         </div>
       </a>
-    </div>
+    </div> -->
     <div class="project-card">
       <a href="/projects/mini-hermes/">
         <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:150px;display:block;background:#f9fafb;">
@@ -95,7 +95,7 @@
         </div>
       </a>
     </div>
-    <div class="project-card">
+    <!-- <div class="project-card">
       <a href="/projects/transformer/">
         <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:150px;display:block;background:#f9fafb;">
           <rect x="0" y="0" width="400" height="150" fill="#f9fafb"/>
@@ -104,27 +104,20 @@
               <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
             </marker>
           </defs>
-          <!-- Tokens in -->
           <rect x="40" y="30" width="70" height="22" rx="4" fill="#f9fafb" stroke="#bbb"/>
           <text x="75" y="45" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#333">tokens</text>
           <line x1="110" y1="41" x2="138" y2="41" stroke="#888" stroke-width="1.2" marker-end="url(#tarr)"/>
-          <!-- Attention block -->
           <rect x="140" y="25" width="120" height="34" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
           <text x="200" y="41" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#1e40af">Attention</text>
           <text x="200" y="53" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="9" fill="#1e40af">RoPE + GQA</text>
-          <!-- Residual -->
           <path d="M 262 42 L 285 42 L 285 98 L 262 98" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,2"/>
-          <!-- FFN block -->
           <rect x="140" y="83" width="120" height="34" rx="6" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
           <text x="200" y="100" text-anchor="middle" font-family="Georgia,serif" font-size="11" font-weight="bold" fill="#1e40af">SwiGLU FFN</text>
           <text x="200" y="112" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="9" fill="#1e40af">gated</text>
-          <!-- Connector -->
           <line x1="200" y1="59" x2="200" y2="82" stroke="#888" stroke-width="1.2" marker-end="url(#tarr)"/>
-          <!-- Out -->
           <line x1="262" y1="100" x2="290" y2="100" stroke="#888" stroke-width="1.2" marker-end="url(#tarr)"/>
           <rect x="292" y="89" width="70" height="22" rx="4" fill="#f9fafb" stroke="#bbb"/>
           <text x="327" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#333">logits</text>
-          <!-- Footer -->
           <text x="200" y="138" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="9" fill="#94a3b8" font-style="italic">decoder block</text>
         </svg>
         <div class="project-info">
@@ -132,8 +125,8 @@
           <p>A faithful decoder-only LM implementation in efficient PyTorch: RMSNorm, RoPE, GQA, SwiGLU, KV cache</p>
         </div>
       </a>
-    </div>
-    <div class="project-card">
+    </div> -->
+    <!-- <div class="project-card">
       <a href="/projects/deepseek-v3/">
         <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:150px;display:block;background:#f9fafb;">
           <rect x="0" y="0" width="400" height="150" fill="#f9fafb"/>
@@ -142,7 +135,6 @@
               <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
             </marker>
           </defs>
-          <!-- MLA side -->
           <text x="90" y="26" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="10" font-weight="700" fill="#1e40af" letter-spacing="1">MLA</text>
           <rect x="40" y="34" width="100" height="22" rx="4" fill="#f9fafb" stroke="#bbb"/>
           <text x="90" y="49" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#333">x (B, T, D)</text>
@@ -153,21 +145,16 @@
           <rect x="40" y="110" width="100" height="22" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
           <text x="90" y="125" text-anchor="middle" font-family="Georgia,serif" font-size="10" font-weight="bold" fill="#166534">K, V per head</text>
 
-          <!-- Divider -->
           <line x1="180" y1="20" x2="180" y2="140" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>
 
-          <!-- MoE side -->
           <text x="300" y="26" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="10" font-weight="700" fill="#1e40af" letter-spacing="1">MoE</text>
-          <!-- Router -->
           <rect x="260" y="34" width="80" height="20" rx="4" fill="#fffbeb" stroke="#d97706" stroke-width="1.2"/>
           <text x="300" y="48" text-anchor="middle" font-family="Georgia,serif" font-size="10" font-weight="bold" fill="#92400e">router</text>
-          <!-- Routing lines -->
           <line x1="285" y1="54" x2="225" y2="72" stroke="#bbb" stroke-width="1"/>
           <line x1="295" y1="54" x2="260" y2="72" stroke="#2563eb" stroke-width="1.5"/>
           <line x1="305" y1="54" x2="305" y2="72" stroke="#bbb" stroke-width="1"/>
           <line x1="315" y1="54" x2="350" y2="72" stroke="#2563eb" stroke-width="1.5"/>
           <line x1="325" y1="54" x2="385" y2="72" stroke="#bbb" stroke-width="1"/>
-          <!-- Experts row -->
           <rect x="210" y="72" width="28" height="28" rx="4" fill="#f9fafb" stroke="#bbb"/>
           <rect x="246" y="72" width="28" height="28" rx="4" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
           <rect x="282" y="72" width="28" height="28" rx="4" fill="#f9fafb" stroke="#bbb"/>
@@ -185,7 +172,7 @@
           <p>A faithful implementation of MLA, DeepSeekMoE with aux-loss-free balancing, MTP heads, and FP8</p>
         </div>
       </a>
-    </div>
+    </div> -->
     <div class="project-card">
       <a href="/projects/1_autorec/">
         <img src="/assets/img/projects/autorec/autorec.png" alt="AutoRec">
