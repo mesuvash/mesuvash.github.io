@@ -130,3 +130,69 @@ details.example .example-body {
     line-height: 1.5;
     margin-top: 6px;
 }
+
+/* ============================================================
+   STEPPED CANVAS ANIMATIONS
+
+   Controls and caption for canvas animations that can be walked
+   one beat at a time. Paired with a script that owns the canvas
+   (e.g. /assets/js/spec-decoding-anim.js).
+
+   <div class="diagram">
+     <canvas id="spec-canvas" width="960" height="600"
+             style="width:100%;height:auto;"></canvas>
+     <div class="anim-controls">
+       <button class="anim-btn secondary">Prev</button>
+       <button class="anim-btn">Next step</button>
+       <span class="anim-count">step 3 of 26</span>
+     </div>
+     <p class="anim-caption">What just happened.</p>
+   </div>
+   ============================================================ */
+
+.anim-btn {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    padding: 7px 26px;
+    background: #f0f4ff;
+    color: #1e40af;
+    border: 1.5px solid #2563eb;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.anim-btn.secondary {
+    background: #fff;
+    color: var(--muted);
+    border-color: #ccc;
+    padding: 7px 18px;
+}
+
+.anim-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 12px 0 0;
+}
+
+.anim-count {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 0.78em;
+    color: var(--muted);
+    margin-left: 4px;
+}
+
+/* min-height reserves room for the longest caption so stepping does not
+   reflow the page under the reader's cursor */
+.anim-caption {
+    max-width: 620px;
+    margin: 12px auto 2px;
+    text-align: left;
+    font-size: 0.93em;
+    line-height: 1.7;
+    min-height: 5.4em;
+}
+
+.anim-caption strong { color: #1e40af; }
