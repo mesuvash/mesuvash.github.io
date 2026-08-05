@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XB18VJ73B7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XB18VJ73B7');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suvash Sedhain | Speculative Decoding and the Art of Fast LLM Inference</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Speculative Decoding and the Art of Fast LLM Inference" />
+    <meta property="og:description" content="Why autoregressive decoding is slow, how speculative decoding breaks the one-token-per-pass barrier, and the surrounding toolkit: batching, quantization, FlashAttention, PagedAttention, and disaggregated serving." />
+    <meta property="og:url" content="https://mesuvash.github.io/blog/2026/speculative-decoding/" />
+    <meta property="og:type" content="article" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Speculative Decoding and the Art of Fast LLM Inference" />
+    <meta name="twitter:description" content="Why autoregressive decoding is slow, how speculative decoding breaks the one-token-per-pass barrier, and the surrounding toolkit for fast LLM inference." />
+
+    <link rel="shortcut icon" href="/assets/img/favicon.ico">
+    <link rel="stylesheet" href="/assets/css/blog.css">
+    <link rel="stylesheet" href="/assets/css/blog-components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="site-title">Suvash Sedhain</a>
+    <nav class="site-nav">
+      <a href="/">About</a>
+      <a href="/blog/" class="active">Blog</a>
+      <a href="/projects/">Projects</a>
+      <a href="/publications/">Publications</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-content">
+
+<header class="post-header">
+    <h1>Speculative Decoding and the Art of Fast LLM Inference</h1>
+    <p class="post-meta">Aug 4, 2026</p>
+    <p class="follow-links">Follow me on <a href="https://x.com/suvsh" target="_blank" rel="noopener">X</a> and <a href="https://www.linkedin.com/in/suvashsedhain/" target="_blank" rel="noopener">LinkedIn</a></p>
+    <div class="share-buttons">
+        <span>Share:</span>
+        <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fspeculative-decoding%2F&text=Speculative%20Decoding%20and%20the%20Art%20of%20Fast%20LLM%20Inference" target="_blank" rel="noopener" title="Share on X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fspeculative-decoding%2F" target="_blank" rel="noopener" title="Share on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fmesuvash.github.io%2Fblog%2F2026%2Fspeculative-decoding%2F&title=Speculative%20Decoding%20and%20the%20Art%20of%20Fast%20LLM%20Inference" target="_blank" rel="noopener" title="Share on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 000-.463.327.327 0 00-.231-.094c-.06 0-.12.02-.169.07-.572.573-1.7.76-2.546.76-.846 0-1.989-.187-2.561-.76a.291.291 0 00-.184-.07z"/></svg>
+        </a>
+    </div>
+</header>
+
+<article class="post-content">
+
+<p class="subtitle">
+    Generating one token at a time wastes most of your GPU. Speculative decoding lets a model verify several guessed tokens in a single forward pass without changing what it outputs. This is the idea, the math that proves it is exact, and the rest of the inference toolkit it sits inside.
+</p>
+
+<nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#why">Why Decoding Is Slow</a></li>
+        <li><a href="#idea">The Core Idea: Guess and Verify</a></li>
+        <li><a href="#algorithm">The Algorithm, Step by Step</a></li>
+        <li><a href="#correctness">Why It Stays Exact</a></li>
+        <li><a href="#drafters">Where the Draft Comes From</a></li>
+        <li><a href="#economics">When It Pays Off</a></li>
+        <li><a href="#toolkit">The Rest of the Inference Toolkit</a></li>
+        <li><a href="#choosing">Choosing What to Apply</a></li>
+    </ol>
+</nav>
+
+<!-- ───────────────────────── Why ───────────────────────── -->
+<h2 id="why">Why Decoding Is Slow</h2>
+
+<p>
+A transformer generates text one token at a time. To produce token $t$, it needs token $t-1$ as input. That dependency is the whole problem: you cannot compute token 50 until you have committed to token 49, so generation is an inherently serial loop of forward passes.
+</p>
+
+<p>
+Each forward pass in that loop is brutally inefficient. With a <a href="/blog/2026/kv-cache/">KV cache</a>, generating one new token means multiplying a single token's worth of activations against the full weight matrices of the model. You load tens of gigabytes of weights from GPU memory, use them for one token, and throw them away. The arithmetic is trivial; the memory traffic is enormous.
+</p>
+
+<div class="note-box">
+    <p><strong>Intuition:</strong> Decoding is <em>memory-bound</em>, not compute-bound. The GPU spends almost all its time waiting for weights to arrive from HBM, and almost none doing math. A modern GPU can do hundreds of floating-point operations in the time it takes to fetch one number from memory. During decode, most of that compute sits idle.</p>
+</div>
+
+<p>
+This is the key asymmetry that speculative decoding exploits. The cost of a forward pass is dominated by reading the weights, which you pay <em>whether you push one token through or fifty</em>. Pushing 50 tokens through in one pass costs almost the same wall-clock time as pushing one, because the bottleneck is memory bandwidth, not the matrix multiplies.
+</p>
+
+<div class="equation-block">
+    <span class="equation-label">Why one token wastes the GPU</span>
+    $$\text{Arithmetic intensity} = \frac{\text{FLOPs}}{\text{bytes moved}} \approx \frac{2 \cdot d}{2 \cdot d} = O(1) \;\text{per weight, per token}$$
+</div>
+
+<p>
+For a single token, each weight is loaded once and used in one multiply-add: arithmetic intensity near 1. GPUs need intensity in the hundreds to saturate their compute units. If you could process $k$ tokens per weight load, you would multiply your useful work by $k$ for nearly free. Batching does this across <em>different requests</em>. Speculative decoding does it across <em>future tokens of the same request</em>.
+</p>
+
+<!-- ───────────────────────── Idea ───────────────────────── -->
+<h2 id="idea">The Core Idea: Guess and Verify</h2>
+
+<p>
+The expensive model, the one you actually want to sample from, is called the <strong>target model</strong>. The trick of speculative decoding is to bring in a cheap <strong>draft model</strong> that guesses the next several tokens quickly, then have the target model check all those guesses in a single forward pass.
+</p>
+
+<p>
+The draft model is small, so running it 5 times is cheap. The target model runs once over all 5 guesses at once, scoring them in parallel. If the guesses are good, you accept several tokens from one expensive forward pass instead of one. If they are bad, you fall back gracefully and lose almost nothing.
+</p>
+
+<div class="note-box">
+    <p><strong>Intuition:</strong> Reading is faster than writing. It is hard to write the next sentence of a document one word at a time, but easy to read a proposed sentence and say "yes, that is what I would have written, up until this word." The target model becomes a fast proofreader of the draft model's quick guesses.</p>
+</div>
+
+<p>
+The non-obvious part, the result that made this technique matter, is that you can do this <em>without changing the output distribution at all</em>. The tokens you emit are sampled from exactly the same distribution as if the target model had generated them alone, one at a time. Speculative decoding is not an approximation. It is a pure speedup.
+</p>
+
+<!-- big picture diagram -->
+<div style="text-align:center; margin: 2em 0;">
+<svg viewBox="0 0 520 300" xmlns="http://www.w3.org/2000/svg" style="max-width:520px; width:100%; font-family:Georgia, serif;">
+    <defs>
+        <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#888"/>
+        </marker>
+        <filter id="ds" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/>
+        </filter>
+    </defs>
+
+    <!-- draft -->
+    <rect x="20" y="20" width="180" height="50" rx="8" fill="#f9fafb" stroke="#bbb" filter="url(#ds)"/>
+    <text x="110" y="42" text-anchor="middle" font-size="14" fill="#333" font-style="italic">Draft model (small)</text>
+    <text x="110" y="60" text-anchor="middle" font-size="12" fill="#555">guesses k tokens, fast</text>
+
+    <line x1="200" y1="45" x2="300" y2="45" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- guessed tokens -->
+    <g>
+        <rect x="310" y="25" width="40" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb"/>
+        <rect x="355" y="25" width="40" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb"/>
+        <rect x="400" y="25" width="40" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb"/>
+        <rect x="445" y="25" width="40" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb"/>
+        <text x="330" y="50" text-anchor="middle" font-size="13" fill="#1e40af">g₁</text>
+        <text x="375" y="50" text-anchor="middle" font-size="13" fill="#1e40af">g₂</text>
+        <text x="420" y="50" text-anchor="middle" font-size="13" fill="#1e40af">g₃</text>
+        <text x="465" y="50" text-anchor="middle" font-size="13" fill="#1e40af">g₄</text>
+    </g>
+
+    <line x1="400" y1="70" x2="400" y2="120" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="410" y="98" font-size="11" fill="#555" font-style="italic">all at once</text>
+
+    <!-- target -->
+    <rect x="160" y="125" width="280" height="50" rx="8" fill="#fff" stroke="#333" stroke-width="1.5" filter="url(#ds)"/>
+    <text x="300" y="147" text-anchor="middle" font-size="14" fill="#333" font-style="italic">Target model (large)</text>
+    <text x="300" y="165" text-anchor="middle" font-size="12" fill="#555">one forward pass scores all guesses</text>
+
+    <line x1="300" y1="175" x2="300" y2="220" stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+    <!-- accepted / rejected -->
+    <rect x="120" y="225" width="40" height="40" rx="6" fill="#f0fdf4" stroke="#16a34a"/>
+    <rect x="165" y="225" width="40" height="40" rx="6" fill="#f0fdf4" stroke="#16a34a"/>
+    <rect x="210" y="225" width="40" height="40" rx="6" fill="#f0fdf4" stroke="#16a34a"/>
+    <rect x="255" y="225" width="40" height="40" rx="6" fill="#fff5f5" stroke="#dc2626"/>
+    <text x="140" y="250" text-anchor="middle" font-size="13" fill="#166534">✓</text>
+    <text x="185" y="250" text-anchor="middle" font-size="13" fill="#166534">✓</text>
+    <text x="230" y="250" text-anchor="middle" font-size="13" fill="#166534">✓</text>
+    <text x="275" y="250" text-anchor="middle" font-size="13" fill="#991b1b">✗</text>
+
+    <rect x="320" y="225" width="100" height="40" rx="6" fill="#f0f4ff" stroke="#2563eb"/>
+    <text x="370" y="244" text-anchor="middle" font-size="12" fill="#1e40af">corrected</text>
+    <text x="370" y="259" text-anchor="middle" font-size="12" fill="#1e40af">token</text>
+
+    <text x="190" y="288" text-anchor="middle" font-size="11" fill="#555" font-style="italic">accept the matching prefix</text>
+    <text x="370" y="288" text-anchor="middle" font-size="11" fill="#555" font-style="italic">resample at first reject</text>
+</svg>
+</div>
+
+<!-- ───────────────────────── Algorithm ───────────────────────── -->
+<h2 id="algorithm">The Algorithm, Step by Step</h2>
+
+<p>
+Let the target model define the true distribution $p(x)$ over the next token, and the draft model define $q(x)$. One iteration of speculative decoding works like this:
+</p>
+
+<div class="numbered-steps">
+    <div class="step">
+        <strong>Draft.</strong> Run the draft model autoregressively for $k$ steps (say $k = 4$). At each step it samples a token from $q$ and feeds it back to itself. This produces a guessed continuation $g_1, g_2, \dots, g_k$ and the draft probabilities $q(g_i)$ at each position.
+    </div>
+    <div class="step">
+        <strong>Verify in parallel.</strong> Feed the original context plus all $k$ guesses into the target model in a <em>single</em> forward pass. Because of the causal mask, this returns the target distribution $p$ at every one of the $k$ positions simultaneously: $p_1, p_2, \dots, p_k$, plus a bonus $p_{k+1}$ for the position after the last guess.
+    </div>
+    <div class="step">
+        <strong>Accept or reject, left to right.</strong> For each guessed token $g_i$, accept it with probability $\min\left(1, \frac{p_i(g_i)}{q_i(g_i)}\right)$. If the target likes the token at least as much as the draft did, accept it outright. Otherwise accept it with reduced probability.
+    </div>
+    <div class="step">
+        <strong>Stop at the first rejection.</strong> The moment a token is rejected, discard it and everything after it. Then sample one corrected token from the adjusted distribution $\text{norm}(\max(0, \, p_i - q_i))$ at that position.
+    </div>
+    <div class="step">
+        <strong>Bonus token.</strong> If <em>all</em> $k$ guesses were accepted, you also get a free token sampled from $p_{k+1}$, the bonus position. So a fully-accepted round yields $k+1$ tokens from one target forward pass.
+    </div>
+</div>
+
+<p>
+Each iteration emits somewhere between 1 token (everything rejected, plus the resample) and $k+1$ tokens (everything accepted, plus the bonus). The expected number of tokens per iteration is what drives the speedup.
+</p>
+
+<details class="example">
+<summary>Worked example: one round with k = 4 guesses</summary>
+<div class="example-body">
+<p>Context so far: <code>"The capital of France is"</code>. The draft model guesses 4 tokens:</p>
+<p><code>g = [" Paris", ",", " which", " has"]</code></p>
+<p>The target model verifies all four in one pass and we walk left to right:</p>
+<ul>
+    <li><code>" Paris"</code>: target loves it ($p > q$), accept.</li>
+    <li><code>","</code>: target is fine with it, accept.</li>
+    <li><code>" which"</code>: target assigned this low probability while the draft was confident ($p \ll q$). The acceptance ratio $p/q$ is small, the random draw fails, <strong>reject</strong>.</li>
+    <li><code>" has"</code>: discarded, because it came after a rejection.</li>
+</ul>
+<p>We resample at the third position from $\max(0, p - q)$ and get <code>" a"</code>. This round emitted 3 tokens (<code>" Paris", ",", " a"</code>) from a single target forward pass. Next round starts from the new context.</p>
+</div>
+</details>
+
+<h3>Watching it run</h3>
+
+<p>
+The animation below runs the loop end to end. Both sides produce the identical 19-token output: the left does it the ordinary way, one target forward pass per token, while the right drafts $k = 4$ guesses with a draft model costing an eighth of a target pass and verifies them together. The two timelines share one clock.
+</p>
+
+<p>
+Press <strong>Next step</strong> to advance one beat at a time, where each draft step and each verification is its own beat with a note on what just happened, or <strong>Play</strong> to run it straight through. Watch for the rounds where a guess is rejected (the round still commits the accepted prefix plus a resampled token) and the rounds where all four survive and earn the bonus token.
+</p>
+
+<div class="diagram" style="padding: 14px 14px 10px; overflow: visible;">
+    <canvas id="spec-canvas" width="960" height="600" style="width:100%; height:auto;"></canvas>
+    <div class="anim-controls">
+        <button id="spec-prev" class="anim-btn secondary">Prev</button>
+        <button id="spec-next" class="anim-btn">Next step</button>
+        <button id="spec-play" class="anim-btn secondary">Play</button>
+        <button id="spec-reset" class="anim-btn secondary">Reset</button>
+        <span id="spec-count" class="anim-count"></span>
+    </div>
+    <p id="spec-caption" class="anim-caption"></p>
+</div>
+
+<p>
+The counters under each timeline are the thing to watch. By the end the left has spent 19 target forward passes and the right has spent 5, plus 20 cheap draft steps and some wasted work on rejected guesses. Speculation does <em>more</em> total arithmetic; it just arranges that arithmetic into fewer serial steps, and serial steps are what you wait on.
+</p>
+
+<!-- ───────────────────────── Correctness ───────────────────────── -->
+<h2 id="correctness">Why It Stays Exact</h2>
+
+<p>
+The acceptance rule is not a heuristic. It is the same construction as <strong>rejection sampling</strong>, arranged so that the final token distribution equals the target $p$ exactly. This is worth seeing because it is the entire justification for using the technique at all.
+</p>
+
+<p>
+Consider a single position. The draft proposes a token from $q$. The probability that the algorithm ultimately emits a specific token $x$ has two parts: it could be emitted as an accepted draft token, or as a resample after rejection.
+</p>
+
+<div class="equation-block">
+    <span class="equation-label">Probability x is emitted</span>
+    $$P(x) = \underbrace{q(x)\min\!\left(1, \tfrac{p(x)}{q(x)}\right)}_{\text{accepted}} \;+\; \underbrace{P(\text{reject})\cdot\frac{\max(0,\,p(x)-q(x))}{\sum_{x'}\max(0,\,p(x')-q(x'))}}_{\text{resampled}}$$
+</div>
+
+<p>
+The first term simplifies to $\min(q(x), p(x))$. The total rejection probability works out to $\sum_{x'} \max(0, p(x') - q(x'))$, which exactly cancels the normalizer in the resample term. Adding the two pieces:
+</p>
+
+<div class="equation-block">
+    <span class="equation-label">The two terms collapse</span>
+    $$P(x) = \min(q(x), p(x)) + \max(0,\, p(x)-q(x)) = p(x)$$
+</div>
+
+<p>
+The split $\min(q, p) + \max(0, p-q) = p$ holds for every $x$ regardless of what $q$ is. The draft model can be wrong, biased, or barely related to the target, and the output is <em>still</em> distributed as $p$. A bad draft model only makes you slower (more rejections), never less correct.
+</p>
+
+<div class="note-box">
+    <p><strong>Intuition:</strong> The draft's job is to propose, not to decide. Where the draft over-claims a token's probability ($q > p$), the acceptance test trims it down. Where the draft under-claims ($q < p$), the resample step adds the missing mass back. The two corrections are exactly balanced so the result matches the target distribution, token for token.</p>
+</div>
+
+<div class="warning-box">
+    <p><strong>Key limitation:</strong> Exactness holds only when the draft and target share the same tokenizer and the verification uses the identical sampling parameters (temperature, top-p) as the target would have. If you change temperature between draft and target, or use mismatched vocabularies, you break the guarantee. Most implementations require draft and target to be from the same model family for this reason.</p>
+</div>
+
+<!-- ───────────────────────── Drafters ───────────────────────── -->
+<h2 id="drafters">Where the Draft Comes From</h2>
+
+<p>
+Everything above assumes you have a draft. The acceptance rate, the fraction of guessed tokens that survive, depends entirely on how well the draft predicts the target. This is where the variants differ.
+</p>
+
+<div class="note-box">
+    <p><strong>Note:</strong> This section is a summary. For the full jungle, including ReDrafter, native multi-token prediction, suffix decoding, block drafters, and the arithmetic that decides which one wins on your workload, see <a href="/blog/2026/spec-decoding-zoo/">The Speculative Decoding Zoo</a>.</p>
+</div>
+
+<h3>A smaller model from the same family</h3>
+
+<p>
+The original approach: pair a large target (say 70B) with a small draft (say 1B) trained on similar data. The draft is a real, independent model. This works well but has two costs: you must serve a second model (extra memory), and the draft's own autoregressive loop is still serial, just cheaper.
+</p>
+
+<h3>Self-speculation and early exit</h3>
+
+<p>
+Instead of a separate model, use the target model's own early layers as the draft. <strong>Medusa</strong> bolts several extra prediction heads onto the target so it predicts tokens $t+1, t+2, t+3$ all at once from the same hidden state. No second model, no separate weights to load, but the heads need training.
+</p>
+
+<h3>EAGLE: drafting in feature space</h3>
+
+<p>
+<strong>EAGLE</strong> is the current workhorse. Rather than predicting tokens directly, it trains a tiny autoregressive head that operates on the target model's <em>feature</em> vectors (the second-to-last layer activations), which are far more predictable than raw token IDs. It reuses the target's own LM head to turn features into tokens. EAGLE-2 and EAGLE-3 add a tree of candidate continuations verified together, pushing accepted tokens per pass to 4-5 on typical workloads.
+</p>
+
+<h3>n-gram and prompt lookup: no model at all</h3>
+
+<p>
+For tasks with heavy copying (summarization, code editing, RAG), the next tokens often appear verbatim in the prompt. <strong>Prompt lookup decoding</strong> skips the draft model entirely: it searches the existing context for a recent matching n-gram and proposes the tokens that followed it last time. Zero extra parameters, and on copy-heavy tasks the acceptance rate is high.
+</p>
+
+<table>
+    <thead>
+        <tr><th>Method</th><th>Draft source</th><th>Extra memory</th><th>Needs training</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Two-model</td><td>Separate small model</td><td>High (full draft model)</td><td>No (use existing model)</td></tr>
+        <tr><td>Medusa</td><td>Extra heads on target</td><td>Low</td><td>Yes (the heads)</td></tr>
+        <tr><td>EAGLE-2/3</td><td>Feature-space head + tree</td><td>Low</td><td>Yes (the head)</td></tr>
+        <tr><td>Prompt lookup</td><td>n-gram match in context</td><td>None</td><td>No</td></tr>
+    </tbody>
+</table>
+
+<!-- ───────────────────────── Economics ───────────────────────── -->
+<h2 id="economics">When It Pays Off</h2>
+
+<p>
+Speculative decoding trades extra compute (running the draft, and verifying tokens you may throw away) for fewer serial target passes. Whether that trade wins depends on three numbers: the acceptance rate $\alpha$, the number of guesses $k$, and the cost ratio $c$ between a draft step and a target step.
+</p>
+
+<div class="equation-block">
+    <span class="equation-label">Expected tokens per round (greedy/uniform-α model)</span>
+    $$\mathbb{E}[\text{tokens}] = \frac{1 - \alpha^{k+1}}{1 - \alpha}$$
+</div>
+
+<p>
+Here $\alpha$ is the per-token acceptance probability and $k$ is the number of drafted tokens. With $\alpha = 0.8$ and $k = 4$, you emit about 3.4 tokens per target pass instead of 1, roughly a 3x reduction in expensive forward passes. The actual speedup is lower because the draft and verification add overhead, but 2-3x end-to-end is typical and well documented.
+</p>
+
+<div class="warning-box">
+    <p><strong>Key limitation:</strong> Speculative decoding helps most at <em>low batch sizes</em>, where decode is memory-bound and the GPU has spare compute. At high batch sizes, the GPU is already saturated doing useful work across many requests, so the "free" verification compute is no longer free, you are stealing it from other requests. In a heavily batched server, naive speculative decoding can <em>reduce</em> total throughput even as it improves single-request latency. Tune it for your operating point.</p>
+</div>
+
+<div class="note-box">
+    <p><strong>Intuition:</strong> The acceptance rate is everything. A draft that agrees with the target 80% of the time gives a big win; one that agrees 40% of the time barely helps and may hurt, because you keep paying for rejected tokens. This is why feature-space drafting (EAGLE) beat the two-model approach: predicting the target's own internal features is far easier than predicting its tokens from scratch.</p>
+</div>
+
+<!-- ───────────────────────── Toolkit ───────────────────────── -->
+<h2 id="toolkit">The Rest of the Inference Toolkit</h2>
+
+<p>
+Speculative decoding attacks the serial-latency problem. It is one tool among several, and they compose. A production server uses most of these at once. Here is how the others fit, and what bottleneck each one removes.
+</p>
+
+<h3>Continuous batching</h3>
+
+<p>
+The single biggest throughput lever. Because decode is memory-bound, the marginal cost of adding another request to a batch is nearly zero, you load the weights once and run them against many requests' tokens together. <strong>Continuous (in-flight) batching</strong> goes further than static batching: instead of waiting for a whole batch to finish, it swaps a completed request out and a waiting request in at every decode step, keeping the GPU full. This is why vLLM and TensorRT-LLM exist.
+</p>
+
+<h3>PagedAttention and prefix caching</h3>
+
+<p>
+The KV cache is the memory hog that limits batch size. <strong>PagedAttention</strong> stores the cache in fixed-size blocks like OS virtual memory pages, eliminating the fragmentation waste of contiguous allocation and letting you fit more concurrent requests. <strong>Prefix caching</strong> shares cache blocks across requests that begin with the same tokens (a shared system prompt, few-shot examples), so common prefixes are computed once. Covered in depth in the <a href="/blog/2026/kv-cache/">KV cache post</a>.
+</p>
+
+<h3>FlashAttention</h3>
+
+<p>
+Attention's intermediate $L \times L$ score matrix is huge and, written to HBM, dominates memory traffic during prefill. <strong>FlashAttention</strong> fuses the whole attention computation into one kernel that never materializes that matrix in global memory, tiling the work in fast on-chip SRAM instead. It does not change the math; it removes the memory round-trips. This is what makes long-context prefill tractable.
+</p>
+
+<h3>Quantization</h3>
+
+<p>
+Since decode is memory-bound, shrinking the weights directly shrinks the dominant cost. <strong>Weight quantization</strong> to INT8 or INT4 (GPTQ, AWQ) halves or quarters the bytes you move per token, with small quality loss. You can also quantize the KV cache to INT8 for the same reason. Quantization is the most direct attack on the memory wall, and it stacks cleanly with everything else.
+</p>
+
+<h3>Prefill-decode disaggregation</h3>
+
+<p>
+Prefill (processing the prompt) is compute-bound; decode (generating tokens) is memory-bound. Running them on the same GPU means each interferes with the other. <strong>Disaggregated serving</strong> runs prefill on one pool of GPUs and decode on another, sized and tuned independently, then ships the KV cache between them. See the <a href="/blog/2026/dualpath/">DualPath post</a> for how the cache transfer itself becomes the next bottleneck.
+</p>
+
+<table>
+    <thead>
+        <tr><th>Technique</th><th>Bottleneck it removes</th><th>Helps latency</th><th>Helps throughput</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Speculative decoding</td><td>Serial token dependency</td><td>Yes (large)</td><td>Only at low batch</td></tr>
+        <tr><td>Continuous batching</td><td>Idle GPU between requests</td><td>Modest</td><td>Yes (large)</td></tr>
+        <tr><td>PagedAttention</td><td>KV cache fragmentation</td><td>Indirect</td><td>Yes (more concurrency)</td></tr>
+        <tr><td>Prefix caching</td><td>Recomputing shared prompts</td><td>Yes (prefill)</td><td>Yes</td></tr>
+        <tr><td>FlashAttention</td><td>Attention memory traffic</td><td>Yes (prefill)</td><td>Yes</td></tr>
+        <tr><td>Quantization</td><td>Weight/cache memory bandwidth</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Disaggregation</td><td>Prefill/decode interference</td><td>Yes</td><td>Yes (at scale)</td></tr>
+    </tbody>
+</table>
+
+<!-- ───────────────────────── Choosing ───────────────────────── -->
+<h2 id="choosing">Choosing What to Apply</h2>
+
+<p>
+These techniques are not alternatives; they are layers. A sensible order of adoption, by effort-to-payoff:
+</p>
+
+<div class="numbered-steps">
+    <div class="step">
+        <strong>Continuous batching + PagedAttention.</strong> Non-negotiable baseline. Just use vLLM, SGLang, or TensorRT-LLM. Massive throughput gain, no quality cost, no tuning.
+    </div>
+    <div class="step">
+        <strong>FlashAttention.</strong> Already built into those frameworks. Free win for long contexts.
+    </div>
+    <div class="step">
+        <strong>Quantization.</strong> INT8 weights almost always; INT4 when memory is tight and you have validated quality on your tasks. 2-4x on the dominant cost.
+    </div>
+    <div class="step">
+        <strong>Prefix caching.</strong> Turn it on if requests share system prompts or few-shot examples. Big win for chat and agent workloads.
+    </div>
+    <div class="step">
+        <strong>Speculative decoding (EAGLE or prompt lookup).</strong> Add when single-request <em>latency</em> matters and your batch sizes are moderate. Prompt lookup first for copy-heavy tasks (it is nearly free); EAGLE when you can afford to train a draft head.
+    </div>
+    <div class="step">
+        <strong>Disaggregated serving.</strong> Only at large scale, when prefill and decode genuinely contend and you have enough GPUs to pool them separately.
+    </div>
+</div>
+
+<p>
+The unifying lesson: LLM decode is bottlenecked on memory bandwidth, not arithmetic. Every technique here is, at heart, a way to do more useful work per byte moved out of GPU memory, whether by batching requests, shrinking the weights, reusing cache, or verifying several future tokens in the pass you were going to pay for anyway.
+</p>
+
+</article>
+</div>
+
+<footer class="site-footer">
+  <p>&copy; 2026 Suvash Sedhain</p>
+</footer>
+
+<script src="/assets/js/spec-decoding-anim.js"></script>
+
+</body>
+</html>
